@@ -4,12 +4,11 @@
 
 @layer base {
   body {
-    /* Default scrollbar color for light mode */
+    @apply text-slate-900 dark:text-slate-50;
     scrollbar-color: #cbd5e1 transparent;
   }
   @media (prefers-color-scheme: dark) {
     body {
-      /* Scrollbar color for dark mode */
       scrollbar-color: #334155 transparent;
     }
   }

@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@/contexts/theme-context";
+import { ThemeProvider } from "@/components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import EnquiryForm from "./components/form/EnquiryForm";
 import AddCustomerPages from "./pages/AddCustomerPages";
@@ -42,7 +42,7 @@ const App = () => {
   ]);
 
   return (
-    <ThemeProvider storageKey="theme">
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <RouterProvider router={router} />
     </ThemeProvider>
   );

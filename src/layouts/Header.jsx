@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/hooks/use-theme";
+// import { useTheme } from "@/hooks/use-theme";
 import {
   CloudMoon,
   CloudSun,
@@ -10,6 +10,7 @@ import {
 import PropTypes from "prop-types";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/components/theme-provider"
 
 export const Header = ({ collapsed, setCollapsed }) => {
   const { userData, logout } = useAuth();
@@ -44,25 +45,28 @@ export const Header = ({ collapsed, setCollapsed }) => {
     <header className="relative z-10 flex h-[60px] items-center justify-between bg-white px-4 shadow-md transition-colors dark:bg-slate-900">
       <div className="flex items-center gap-x-3">
         <button
-          className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700"
+          className="p-2 rounded-lg  hover:bg-gray-200 dark:hover:bg-slate-700"
           onClick={() => setCollapsed(!collapsed)}
         >
-          <PanelLeftClose className={collapsed ? "rotate-180" : ""} />
+          <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
         </button>
       </div>
 
-      <nav className="flex items-center justify-between w-full">
+      <nav className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
+          <div className="border border-gray-700 px-2 py-2 rounded-lg text-sm font-semibold">
+            {userData.organization}
+          </div>
 
-        </div>
-
-        <div className="flex items-center gap-2">
           <button
             className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
-            <CloudSun size={20} className="dark:hidden" />
-            <CloudMoon size={20} className="hidden dark:block" />
+            {theme === "dark" ? (
+              <CloudSun size={20} />
+            ) : (
+              <CloudMoon size={20} />
+            )}
           </button>
 
           <button
