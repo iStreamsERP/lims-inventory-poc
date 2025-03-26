@@ -13,6 +13,9 @@
       scrollbar-color: #334155 transparent;
     }
   }
+  :root {
+    --radius: 0.5rem;
+  }
 }
 
 @layer components {
