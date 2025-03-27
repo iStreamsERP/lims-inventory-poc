@@ -40,6 +40,11 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
+        label: "Register List",
+        icon: UserPlus,
+        path: "/register-list-page",
+      },
+      {
         label: "Product List",
         icon: ShoppingBag,
         path: "/product-list",

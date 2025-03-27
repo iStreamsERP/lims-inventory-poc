@@ -2,9 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-1: #000;
+  --color-2: #f97316;
+  --color-3: #f59e0b;
+  --color-4: #10b981;
+  --color-5: #6366f1;
+  --color-6: #8b5cf6;
+}
+
 @layer base {
   body {
     @apply text-slate-900 dark:text-slate-50;
+
     scrollbar-color: #cbd5e1 transparent;
   }
   @media (prefers-color-scheme: dark) {
