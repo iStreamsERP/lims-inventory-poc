@@ -65,16 +65,13 @@ const remaining = 100 - percentage;
 
 
 const DashboardPage = () => {
-
-
-
   return (
     <div className="flex flex-col gap-y-4">
       <div>
         <h1 className="font-semibold">Welcome back, Ajeeth 👋</h1>
         <p className="text-gray-400 text-sm">here's what's happening with your account today</p>
       </div>
-      <h1 className="title">Dashboard</h1>
+      <h1 className="title">Sales Dashboard</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         <div className="col-span-1 md:col-span-2">
           <SalesSummaryCard />

@@ -40,9 +40,14 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
-        label: "Register List",
+        label: "User Register List",
         icon: UserPlus,
-        path: "/register-list-page",
+        path: "/user-register-list",
+      },
+      {
+        label: "Order Creation",
+        icon: UserPlus,
+        path: "/order-creation",
       },
       {
         label: "Product List",
