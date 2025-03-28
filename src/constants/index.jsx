@@ -1,4 +1,4 @@
-import { ChartColumn, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users } from "lucide-react";
+import { BaggageClaim, ChartColumn, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users } from "lucide-react";
 
 export const navbarLinks = [
   {
@@ -46,7 +46,7 @@ export const navbarLinks = [
       },
       {
         label: "Order Creation",
-        icon: UserPlus,
+        icon: BaggageClaim,
         path: "/order-creation",
       },
       {

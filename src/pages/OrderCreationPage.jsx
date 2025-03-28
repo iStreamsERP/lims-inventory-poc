@@ -414,7 +414,7 @@ const OrderCreationPage = () => {
           </Table>
         </CardContent>
       </Card>
-      <div className="w-[328px] sm:w-full">
+      <div className="lg:w-[328px] w-full">
         <Card className="mb-2 h-[179px]">
           <CardHeader>
             <div className="flex items-center justify-between gap-1 space-y-1">

@@ -85,18 +85,18 @@ const validateInput = (name, value) => {
     return "";
 };
 
-const UserDialog = () => {
+const UserDialog = ({ handleAddUser }) => {
     const [open, setOpen] = useState(false);
     const [errors, setErrors] = useState({});
     const [userFormData, setUserFormData] = useState({
-        userName: "",
-        password: "",
+        userName: "Ajeeth",
+        password: "Ajeeth123",
         userType: "user",
-        email: "",
-        mobileNumber: "",
-        fullName: "",
-        employeeNumber: "",
-        domainName: "",
+        email: "ajeeth@gmail.com",
+        mobileNumber: "1234567890",
+        fullName: "Ajeeth Kumar",
+        employeeNumber: "A00012",
+        domainName: "gmail.com",
         employeeImage: "",
         accountExpired: false,
         accountLocked: false,
@@ -152,14 +152,13 @@ const UserDialog = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         const validationErrors = validateForm(userFormData);
-        console.table(validationErrors);
-
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return
         }
         setErrors({});
-        console.log("Form Data:", userFormData);
+
+        handleAddUser(userFormData);
         setOpen(false);
     };
 

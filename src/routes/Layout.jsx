@@ -5,6 +5,7 @@ import { cn } from "../utils/cn";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/use-click-outside";
+import Footer from "@/layouts/Footer";
 
 const Layout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -25,7 +26,7 @@ const Layout = () => {
       <div
         className={cn(
           "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
-          !collapsed && "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30",
+          !collapsed && "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30"
         )}
       />
       <Sidebar
