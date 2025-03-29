@@ -186,7 +186,7 @@ const UserTable = () => {
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center pb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
         <Input
           placeholder="Global Search..."
           value={(table.getColumn("email")?.getFilterValue()) ?? ""}

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export const Header = ({ collapsed, setCollapsed }) => {
   const { userData, logout } = useAuth();
@@ -59,7 +59,9 @@ export const Header = ({ collapsed, setCollapsed }) => {
         >
           <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
         </button>
-        <Button variant="ghost">iStreams ERP Solutions - CRM</Button>
+        <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer">
+          iStreams ERP Solutions - CRM
+        </Link>
       </div>
 
       <nav className="flex items-center justify-end w-full">
