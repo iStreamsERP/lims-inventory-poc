@@ -41,9 +41,6 @@ const newLeadByMonthChartConfig = {
     newLeads: {
         label: "New Leads",
     },
-    newLeads: {
-        label: "New Leads",
-    },
     january: {
         label: "January",
         color: palette[0],

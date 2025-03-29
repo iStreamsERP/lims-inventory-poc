@@ -1,7 +1,12 @@
-import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
-import React, { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import logoDark from "@/assets/logo-dark.png";
+import logoLight from "@/assets/logo-light.png";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
+import { Eye, EyeOff, Loader2, MailOpen } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { verifyauthentication } from "../services/authenticationService";
 import { getDefaultCompanyName } from "../services/dmsService";
 import {
@@ -10,6 +15,7 @@ import {
 } from "../services/employeeService";
 import { doConnectionPublic, getServiceURL } from "../services/publicService";
 import { getNameFromEmail } from "../utils/emailHelpers";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -121,66 +127,112 @@ const LoginPage = () => {
     },
     [email, password, login, setUserData, navigate]
   );
-
   return (
-    <div className="flex min-h-screen items-center justify-center primary-content dark:bg-gray-900">
-      <div className=" dark:bg-gray-800 bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl shadow-lg max-w-sm w-full ">
-        <h2 className="text-2xl font-semibold text-center mb-4 dark:text-gray-200">
-          Login
-        </h2>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="relative">
-            <label className="input input-bordered flex items-center gap-2">
-              <Mail />
-              <input
-                type="email"
-                className="grow"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </label>
+    <div className="grid grid-cols-1 lg:grid-cols-2 h-screen">
+      <div className="hidden lg:flex flex-col justify-between p-10 bg-slate-200 dark:bg-slate-900">
+        <div>
+          <img
+            src={logoLight}
+            alt="iStreams ERP Solutions | CRM"
+            className="dark:hidden"
+          />
+          <img
+            src={logoDark}
+            alt="iStreams ERP Solutions | CRM"
+            className="hidden dark:block"
+          />
+        </div>
+        <div>
+          <blockquote className="space-y-2">
+            <p className="text-lg">
+              &ldquo;Manage your customers efficiently and streamline your business operations with our powerful CRM system.&rdquo;
+            </p>
+
+            <footer className="text-sm text-gray-400">- iStreams ERP Solutions</footer>
+          </blockquote>
+        </div>
+      </div>
+      <div className="flex flex-col justify-center lg:p-8 bg-slate-100 dark:bg-slate-950 px-6">
+        <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight ">
+              Welcome Back!
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Please enter log in details below
+            </p>
           </div>
-          <div className="relative">
-            <label className="input input-bordered flex items-center gap-2">
-              <KeyRound />
-              <input
-                type={showPassword ? "text" : "password"}
-                className="grow"
-                placeholder="******"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <span
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </span>
-            </label>
-          </div>
-          {error && (
-            <div className="bg-red-500 text-white p-2 mb-4 rounded">
-              {error}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="grid w-full items-center gap-4">
+              <div className="flex flex-col space-y-1.5">
+                <Input name="email" id="email" placeholder="username@domain.com" value={email} onChange={(e) => setEmail(e.target.value)}
+                  required />
+              </div>
+
+              <div className="flex flex-col space-y-1.5">
+                <div className="flex gap-2 relative">
+                  <Input name="email" id="email" placeholder="*******" type={showPassword ? "text" : "password"} value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required />
+                  <span
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
-          <button
-            type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition-all duration-300"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="loading loading-spinner loading-md"></span>
-            ) : (
-              "Login"
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="terms" />
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Remember me
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Link to="/forgot-password" className="text-sm font-medium leading-none underline">Forgot Password?</Link>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-500 text-white p-2 mb-4 rounded">
+                {error}
+              </div>
             )}
-          </button>
-        </form>
+
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Please wait
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+            <div className="flex items-center text-xs uppercase">
+              <Separator className="flex-1" />
+              <span className="px-2 whitespace-nowrap text-gray-400">Or continue with</span>
+              <Separator className="flex-1" />
+            </div>
+            <Button variant="outline" className="w-full">
+              <MailOpen /> Login with Email
+            </Button>
+
+            <p className="text-xs text-gray-400 text-center">Already have an account?
+              <Link to="/signup" className="text-blue-500"> Sign Up</Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage

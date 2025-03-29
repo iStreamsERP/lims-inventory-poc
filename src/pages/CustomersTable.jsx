@@ -14,7 +14,7 @@ const CustomerTable = () => {
       natureofbusiness: "Software Development",
       phonenumber: "+1 234 567 8901",
       country: "USA",
-      city: "New York"
+      city: "New York",
     },
     {
       companyname: "Beta Manufacturing Co.",
@@ -22,7 +22,7 @@ const CustomerTable = () => {
       natureofbusiness: "Manufacturing",
       phonenumber: "+44 123 456 7890",
       country: "UK",
-      city: "London"
+      city: "London",
     },
     {
       companyname: "Gamma Consulting",
@@ -30,7 +30,7 @@ const CustomerTable = () => {
       natureofbusiness: "Consulting",
       phonenumber: "+49 151 2345 6789",
       country: "Germany",
-      city: "Berlin"
+      city: "Berlin",
     },
     {
       companyname: "Delta Logistics",
@@ -38,7 +38,7 @@ const CustomerTable = () => {
       natureofbusiness: "Logistics",
       phonenumber: "+33 612 345 678",
       country: "France",
-      city: "Paris"
+      city: "Paris",
     },
     {
       companyname: "Epsilon Traders",
@@ -46,7 +46,7 @@ const CustomerTable = () => {
       natureofbusiness: "Trading",
       phonenumber: "+91 98765 43210",
       country: "India",
-      city: "Mumbai"
+      city: "Mumbai",
     },
     {
       companyname: "Zeta HealthCare",
@@ -54,7 +54,7 @@ const CustomerTable = () => {
       natureofbusiness: "Healthcare",
       phonenumber: "+1 310 555 6789",
       country: "USA",
-      city: "Los Angeles"
+      city: "Los Angeles",
     },
     {
       companyname: "Eta Financial Services",
@@ -62,7 +62,7 @@ const CustomerTable = () => {
       natureofbusiness: "Finance",
       phonenumber: "+61 432 876 543",
       country: "Australia",
-      city: "Sydney"
+      city: "Sydney",
     },
     {
       companyname: "Theta Automobiles",
@@ -70,7 +70,7 @@ const CustomerTable = () => {
       natureofbusiness: "Automobile Manufacturing",
       phonenumber: "+81 90 1234 5678",
       country: "Japan",
-      city: "Tokyo"
+      city: "Tokyo",
     },
     {
       companyname: "Iota Media Group",
@@ -78,7 +78,7 @@ const CustomerTable = () => {
       natureofbusiness: "Media & Entertainment",
       phonenumber: "+55 21 99999 8888",
       country: "Brazil",
-      city: "Rio de Janeiro"
+      city: "Rio de Janeiro",
     },
     {
       companyname: "Kappa Retail Stores",
@@ -86,7 +86,7 @@ const CustomerTable = () => {
       natureofbusiness: "Retail",
       phonenumber: "+27 82 345 6789",
       country: "South Africa",
-      city: "Johannesburg"
+      city: "Johannesburg",
     },
     {
       companyname: "Lambda Electronics",
@@ -94,7 +94,7 @@ const CustomerTable = () => {
       natureofbusiness: "Electronics Manufacturing",
       phonenumber: "+82 10 9876 5432",
       country: "South Korea",
-      city: "Seoul"
+      city: "Seoul",
     },
     {
       companyname: "Mu Engineering",
@@ -102,7 +102,7 @@ const CustomerTable = () => {
       natureofbusiness: "Engineering Services",
       phonenumber: "+971 50 123 4567",
       country: "UAE",
-      city: "Dubai"
+      city: "Dubai",
     },
     {
       companyname: "Nu Pharmaceuticals",
@@ -110,7 +110,7 @@ const CustomerTable = () => {
       natureofbusiness: "Pharmaceuticals",
       phonenumber: "+39 320 456 7890",
       country: "Italy",
-      city: "Rome"
+      city: "Rome",
     },
     {
       companyname: "Xi Fashion",
@@ -118,7 +118,7 @@ const CustomerTable = () => {
       natureofbusiness: "Fashion & Apparel",
       phonenumber: "+34 600 123 456",
       country: "Spain",
-      city: "Barcelona"
+      city: "Barcelona",
     },
     {
       companyname: "Omicron Construction",
@@ -126,7 +126,7 @@ const CustomerTable = () => {
       natureofbusiness: "Construction",
       phonenumber: "+7 911 234 5678",
       country: "Russia",
-      city: "Moscow"
+      city: "Moscow",
     },
     {
       companyname: "Pi Food Processing",
@@ -134,7 +134,7 @@ const CustomerTable = () => {
       natureofbusiness: "Food Processing",
       phonenumber: "+86 139 1234 5678",
       country: "China",
-      city: "Shanghai"
+      city: "Shanghai",
     },
     {
       companyname: "Rho Renewable Energy",
@@ -142,7 +142,7 @@ const CustomerTable = () => {
       natureofbusiness: "Renewable Energy",
       phonenumber: "+1 305 678 1234",
       country: "USA",
-      city: "Miami"
+      city: "Miami",
     },
     {
       companyname: "Sigma Security",
@@ -150,7 +150,7 @@ const CustomerTable = () => {
       natureofbusiness: "Cybersecurity",
       phonenumber: "+32 478 123 456",
       country: "Belgium",
-      city: "Brussels"
+      city: "Brussels",
     },
     {
       companyname: "Tau Education Services",
@@ -158,7 +158,7 @@ const CustomerTable = () => {
       natureofbusiness: "Education",
       phonenumber: "+66 89 456 7890",
       country: "Thailand",
-      city: "Bangkok"
+      city: "Bangkok",
     },
     {
       companyname: "Upsilon Tourism",
@@ -166,45 +166,45 @@ const CustomerTable = () => {
       natureofbusiness: "Travel & Tourism",
       phonenumber: "+52 55 7890 1234",
       country: "Mexico",
-      city: "Mexico City"
-    }
+      city: "Mexico City",
+    },
   ]);
 
   return (
-    <Card className="w-full  bg-transparent">
-      <CardContent className="pt-6">
-      <div className="grid gap-2 grid-cols-12">
-  {/* Button Section */}
-  <div className="col-span-12 md:col-span-2  text-xs lg:col-span-2 lg:col-start-7 md:col-start-7 flex justify-end w-full">
-    <Button className="btn-sm lg:ms-4 lg:w-32 md:w-32 md:ms-0 w-full sm:w-full text-xs ">
-      <PlusIcon size={64} />
-      Add Customer 
-    </Button>
-  </div>
+    <div className="flex flex-col gap-y-4">
+      <h1 className="title">Customer Table</h1>
+      <div>
+        <div className="grid grid-cols-12 gap-2 mb-2">
+          {/* Button Section */}
+          <div className="col-span-12 flex w-full justify-end text-xs md:col-span-2 md:col-start-7 lg:col-span-2 lg:col-start-7">
+            <Button className="btn-sm w-full text-xs sm:w-full md:ms-0 md:w-32 lg:ms-4 lg:w-32">
+              <PlusIcon size={64} />
+              Add Customer
+            </Button>
+          </div>
 
-  {/* Input Field */}
-  <div className="col-span-12 md:col-span-4 lg:col-span-4">
-    <Input
-      type="text"
-      placeholder="Search ItemCode"
-      className="w-full"
-    />
-  </div>
-</div>
+          {/* Input Field */}
+          <div className="col-span-12 md:col-span-4 lg:col-span-4">
+            <Input
+              type="text"
+              placeholder="Search customers..."
+              className="w-full"
+            />
+          </div>
+        </div>
 
-
-        <Table className="mt-4 whitespace-nowrap">
-          <ScrollArea className="h-[68vh] w-full rounded-md border  p-4">
+        <Table className="whitespace-nowrap">
+          <ScrollArea className="h-[68vh] w-full rounded-md border p-4">
             <TableHeader>
               <TableRow>
                 <TableHead>S.No</TableHead>
                 <TableHead>Company Name</TableHead>
-                <TableHead className="text-center">Eamil</TableHead>
-                <TableHead className="text-center">Nature Of Business</TableHead>
-                <TableHead className="text-center">Phone Number</TableHead>
-                <TableHead className="text-center">Contry</TableHead>
-                <TableHead className="text-center">City</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="text-start">Eamil</TableHead>
+                <TableHead className="text-start">Nature Of Business</TableHead>
+                <TableHead className="text-start">Phone Number</TableHead>
+                <TableHead className="text-start">Contry</TableHead>
+                <TableHead className="text-start">City</TableHead>
+                <TableHead className="text-start">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -225,13 +225,11 @@ const CustomerTable = () => {
                   <TableRow key={index}>
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell>{cart.companyname}</TableCell>
-                    <TableCell >
-                    {cart.email}
-                    </TableCell>
-                    <TableCell >{cart.natureofbusiness}</TableCell>
-                    <TableCell >{cart.phonenumber}</TableCell>
-                    <TableCell >{cart.country}</TableCell>
-                    <TableCell >{cart.city}</TableCell>
+                    <TableCell>{cart.email}</TableCell>
+                    <TableCell>{cart.natureofbusiness}</TableCell>
+                    <TableCell>{cart.phonenumber}</TableCell>
+                    <TableCell>{cart.country}</TableCell>
+                    <TableCell>{cart.city}</TableCell>
                     <TableCell className="text-center text-xs">
                       <Button
                         variant="gost"
@@ -252,8 +250,8 @@ const CustomerTable = () => {
             )}
           </ScrollArea>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

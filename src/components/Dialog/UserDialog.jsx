@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { SquarePen, UserPlus } from "lucide-react";
+import { Check, SquarePen, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 // Validate the entire form on submission.
@@ -284,6 +284,9 @@ const UserDialog = ({ handleAddUser }) => {
                                 </div>
                                 <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2">
                                     <SquarePen className="h-5 w-5" />
+                                </Button>
+                                <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
+                                    <Check className="h-5 w-5" />
                                 </Button>
                             </div>
 

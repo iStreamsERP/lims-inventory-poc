@@ -13,12 +13,19 @@ import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import UserRegisterListPage from "./pages/UserRegisterListPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
+import ItemList from "./pages/ItemsList";
+import SignUpPage from "./pages/SignUpPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 const App = () => {
   const router = createBrowserRouter([
     {
       path: "/login",
       element: <LoginPage />,
+    },
+    {
+      path: "/signup",
+      element: <SignUpPage />,
     },
     {
       path: "/",
@@ -35,11 +42,16 @@ const App = () => {
             { path: "customers-table", element: <CustomersTable /> },
             { path: "enquiry-form", element: <EnquiryForm /> },
             { path: "user-register-list", element: <UserRegisterListPage /> },
+            { path: "item-list", element: <ItemList /> },
             { path: "order-creation", element: <OrderCreationPage /> },
             { path: "cart-page", element: <CartPage /> },
           ]
         }
       ],
+    },
+    {
+      path: "*",
+      element: <NotFoundPage />,
     },
   ]);
 

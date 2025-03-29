@@ -31,126 +31,138 @@ import {
 import UserDialog from "../Dialog/UserDialog"
 import { useState } from "react"
 
-export const columns = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "id",
-    header: "S.No",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("id")}</div>
-    ),
-  },
-  {
-    accessorKey: "userName",
-    header: "User Name",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("userName")}</div>
-    ),
-  },
-  {
-    accessorKey: "password",
-    header: "Password",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("password")}</div>
-    ),
-  },
-  {
-    accessorKey: "userType",
-    header: "User Type",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("userType")}</div>
-    ),
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Email
-          <ArrowUpDown />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div>{row.getValue("email")}</div>,
-  },
-  {
-    accessorKey: "mobileNumber",
-    header: () => <div>Mobile </div>,
-    cell: ({ row }) => <div>{row.getValue("mobileNumber")}</div>,
-  },
-  {
-    accessorKey: "employeeNumber",
-    header: () => <div>Employee</div>,
-    cell: ({ row }) => <div>{row.getValue("employeeNumber")}</div>,
-  },
-  {
-    accessorKey: "action",
-    header: () => <div>Action</div>,
-    id: "actions",
-    // enableHiding: false,
-    cell: ({ row }) => <div>{row.getValue("employeeNumber")}</div>,
-    cell: ({ row }) => {
-      const payment = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
-            >
-              Copy Reference ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Edit </DropdownMenuItem>
-            <DropdownMenuItem>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-  },
-
-]
 
 const UserTable = () => {
   const [userTableData, setUserTableData] = useState([]);
   const [sorting, setSorting] = useState([])
-  const [columnFilters, setColumnFilters] = useState(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    useState({})
+  const [columnFilters, setColumnFilters] = useState([])
+  const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
+
+  const handleAddUser = (users) => {
+    setUserTableData((prev) => {
+      return [...prev, { ...users, id: prev.length + 1 }];
+    })
+  }
+
+  const handleDeleteUser = (users) => {
+    setUserTableData((prev) => prev.filter(user => user.id !== users.id))
+  }
+
+  const handleEditUser = (users) => {
+    setUserTableData((prev) => {
+      return [...prev, { ...users, id: prev.length + 1 }];
+    })
+  }
+
+  const columns = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "id",
+      header: "S.No",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("id")}</div>
+      ),
+    },
+    {
+      accessorKey: "userName",
+      header: "User Name",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("userName")}</div>
+      ),
+    },
+    {
+      accessorKey: "fullName",
+      header: "Full Name",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("fullName")}</div>
+      ),
+    },
+    {
+      accessorKey: "userType",
+      header: "User Type",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("userType")}</div>
+      ),
+    },
+    {
+      accessorKey: "email",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Email
+            <ArrowUpDown />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div>{row.getValue("email")}</div>,
+    },
+    {
+      accessorKey: "mobileNumber",
+      header: () => <div>Mobile No</div>,
+      cell: ({ row }) => <div>{row.getValue("mobileNumber")}</div>,
+    },
+    {
+      accessorKey: "employeeNumber",
+      header: () => <div>Employee No</div>,
+      cell: ({ row }) => <div>{row.getValue("employeeNumber")}</div>,
+    },
+    {
+      accessorKey: "action",
+      header: () => <div>Action</div>,
+      id: "actions",
+      // enableHiding: false,
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(row.getValue("id"))}
+              >
+                Copy Reference ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit </DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user)}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+
+  ]
 
   const table = useReactTable({
     data: userTableData,
@@ -171,15 +183,10 @@ const UserTable = () => {
     },
   })
 
-  const handleAddUser = (users) => {
-    setUserTableData((prevuser) => {
-      return [...prevuser, { ...users, id: prevuser.length + 1 }];
-    })
-  }
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center py-4">
+      <div className="flex justify-between items-center pb-2">
         <Input
           placeholder="Global Search..."
           value={(table.getColumn("email")?.getFilterValue()) ?? ""}

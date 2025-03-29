@@ -45,14 +45,14 @@ export const navbarLinks = [
         path: "/user-register-list",
       },
       {
+        label: "Item List",
+        icon: ShoppingBag,
+        path: "/item-list",
+      },
+      {
         label: "Order Creation",
         icon: BaggageClaim,
         path: "/order-creation",
-      },
-      {
-        label: "Product List",
-        icon: ShoppingBag,
-        path: "/product-list",
       },
       {
         label: "Service List",
