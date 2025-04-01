@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Loader2, MailOpen } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { verifyauthentication } from "../services/authenticationService";
 import { getDefaultCompanyName } from "../services/dmsService";
@@ -16,6 +16,8 @@ import {
 import { doConnectionPublic, getServiceURL } from "../services/publicService";
 import { getNameFromEmail } from "../utils/emailHelpers";
 import { Checkbox } from "@/components/ui/checkbox";
+import Lottie from 'react-lottie';
+import animationData from "@/lotties/crm-animation-lotties.json";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -25,6 +27,15 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login, setUserData } = useAuth();
+
+  const defaultOptions = {
+    loop: true,
+    autoplay: true,
+    animationData: animationData,
+    rendererSettings: {
+      preserveAspectRatio: "xMidYMid slice"
+    }
+  };
 
   // Memoized login handler to prevent re-creation on each render.
   const handleLogin = useCallback(
@@ -127,6 +138,7 @@ const LoginPage = () => {
     },
     [email, password, login, setUserData, navigate]
   );
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 h-screen">
       <div className="hidden lg:flex flex-col justify-between p-10 bg-slate-200 dark:bg-slate-900">
@@ -142,6 +154,15 @@ const LoginPage = () => {
             className="hidden dark:block"
           />
         </div>
+
+        <div>
+          <Lottie
+            options={defaultOptions}
+            height={400}
+            width={400}
+          />
+        </div>
+
         <div>
           <blockquote className="space-y-2">
             <p className="text-lg">
@@ -225,7 +246,7 @@ const LoginPage = () => {
               <MailOpen /> Login with Email
             </Button>
 
-            <p className="text-xs text-gray-400 text-center">Already have an account?
+            <p className="text-xs text-gray-400 text-center">Don't have an account?
               <Link to="/signup" className="text-blue-500"> Sign Up</Link>
             </p>
           </form>

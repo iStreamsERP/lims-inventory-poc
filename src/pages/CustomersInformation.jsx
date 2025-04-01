@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SquarePen, Trash2 } from 'lucide-react';
 
 const CustomersInformation = () => {
   return (
@@ -148,9 +149,48 @@ const CustomersInformation = () => {
               <CardContent>
 
                 <div className="flex flex-wrap flex-col gap-4 ">
-                  <Card className="w-full h-[100px]"></Card>
-                  <Card className="w-full h-[100px]"></Card>
-                  <Card className="w-full h-[100px]"></Card>
+                  <Card className="w-full h-[100px] flex flex-col gap-2 text-xs justify-center p-2">
+                    <div className="flex justify-between">
+                    <div>
+                      <p className="">Haneesh</p>
+                      <p>Manager</p>
+                      <p>Haneesh@gmail.com</p>
+                      <p>9865748541</p>
+                      </div>
+                      <div className="flex flex-row gap-2">
+                        <SquarePen size={18} />
+                        <Trash2 size={18}/>
+                      </div>
+                      </div>
+                  </Card>
+                  <Card className="w-full h-[100px] flex flex-col gap-2 text-xs justify-center p-2">
+                    <div className="flex justify-between">
+                    <div>
+                      <p className="">Haneesh</p>
+                      <p>Manager</p>
+                      <p>Haneesh@gmail.com</p>
+                      <p>9865748541</p>
+                      </div>
+                      <div className="flex flex-row gap-2">
+                        <SquarePen size={18} />
+                        <Trash2 size={18}/>
+                      </div>
+                      </div>
+                  </Card>
+                  <Card className="w-full h-[100px] flex flex-col gap-2 text-xs justify-center p-2">
+                    <div className="flex justify-between">
+                    <div>
+                      <p className="">Haneesh</p>
+                      <p>Manager</p>
+                      <p>Haneesh@gmail.com</p>
+                      <p>9865748541</p>
+                      </div>
+                      <div className="flex flex-row gap-2">
+                        <SquarePen size={18} />
+                        <Trash2 size={18}/>
+                      </div>
+                      </div>
+                  </Card>
                 </div>
 
               </CardContent>
@@ -208,23 +248,22 @@ const CustomersInformation = () => {
                           />
                         </div>
 
-                        {/* Mobile & Alternative Contact */}
-                        <div className="flex flex-col gap-4 md:flex-row">
-                          <div className="flex w-full flex-col space-y-1.5 md:w-1/2">
+                          <div className="flex w-full flex-col space-y-1.5">
                             <Label htmlFor="MOBILE_NO">Mobile Number</Label>
                             <Input
                               id="MOBILE_NO"
                               placeholder="Mobile No"
                             />
                           </div>
-                          <div className="flex w-full flex-col space-y-1.5 md:w-1/2">
+
+                          <div className="flex w-full flex-col space-y-1.5">
                             <Label htmlFor="ALTERNATIVE_CONTACT">Alternative Number</Label>
                             <Input
                               id="ALTERNATIVE_CONTACT"
                               placeholder="Alternative No"
                             />
                           </div>
-                        </div>
+                       
                       </div>
                       <DialogFooter className="justify-center mt-auto">
                         <Button className="w-full" type="submit">Save Contact</Button>

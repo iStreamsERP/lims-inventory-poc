@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   CloudMoon,
   CloudSun,
+  LogOut,
   Maximize,
   Minimize,
   PanelLeftClose,
@@ -59,14 +60,14 @@ export const Header = ({ collapsed, setCollapsed }) => {
         >
           <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
         </button>
-        <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer">
+        <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer hover:text-gray-300">
           iStreams ERP Solutions - CRM
         </Link>
       </div>
 
       <nav className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
-          <div className="border border-gray-700 px-2 py-2 rounded-lg text-sm font-semibold hidden md:block">
+          <div className="border border-gray-700 px-2 py-2 rounded-lg text-sm font-semibold hidden lg:block">
             {userData.organization}
           </div>
 
@@ -96,8 +97,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
             <DropdownMenuTrigger asChild>
               <Button variant="seconsdary">
                 <Avatar>
-                  <AvatarImage src={userData.currentUserImageData} alt="@shadcn" />
-                  <AvatarFallback>CN</AvatarFallback>
+                  <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
+                  <AvatarFallback>{userData.currentUserName}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start">
                   <span className="text-lg font-semibold">
@@ -119,8 +120,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                Log out
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut />  Log out
                 <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>

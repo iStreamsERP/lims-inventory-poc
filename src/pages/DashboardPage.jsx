@@ -44,6 +44,7 @@ import OpportunitiesHorizontalBarChart from "@/components/charts/OpportunitiesHo
 import SalesFunnelChart from "@/components/charts/SalesFunnelChart";
 import NewLeadsPieChart from "@/components/charts/NewLeadsPieChart";
 import SalesSummaryCard from "@/components/card/SalesSummaryCard";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Define a multi-color palette
 const palette = ["#ef4444", "#f97316", "#f59e0b", "#10b981", "#6366f1", "#8b5cf6"];
@@ -65,10 +66,12 @@ const remaining = 100 - percentage;
 
 
 const DashboardPage = () => {
+    const { userData, logout } = useAuth();
+  
   return (
     <div className="flex flex-col gap-y-4">
       <div>
-        <h1 className="font-semibold">Welcome back, Ajeeth 👋</h1>
+        <h1 className="font-semibold">Welcome back, {userData.currentUserName} 👋</h1>
         <p className="text-gray-400 text-sm">here's what's happening with your account today</p>
       </div>
       <h1 className="title">Sales Dashboard</h1>

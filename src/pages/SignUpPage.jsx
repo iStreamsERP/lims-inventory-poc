@@ -16,6 +16,8 @@ import {
 import { doConnectionPublic, getServiceURL } from "../services/publicService";
 import { getNameFromEmail } from "../utils/emailHelpers";
 import { Checkbox } from "@/components/ui/checkbox"
+import Lottie from 'react-lottie';
+import animationData from "@/lotties/crm-animation-lotties.json";
 
 const SignUpPage = () => {
     const [email, setEmail] = useState("");
@@ -25,6 +27,15 @@ const SignUpPage = () => {
     const [error, setError] = useState("");
     const navigate = useNavigate();
     const { login, setUserData } = useAuth();
+
+    const defaultOptions = {
+        loop: true,
+        autoplay: true,
+        animationData: animationData,
+        rendererSettings: {
+            preserveAspectRatio: "xMidYMid slice"
+        }
+    };
 
     // Memoized login handler to prevent re-creation on each render.
     const handleLogin = useCallback(
@@ -142,6 +153,16 @@ const SignUpPage = () => {
                         className="hidden dark:block"
                     />
                 </div>
+
+                <div>
+                    <Lottie
+                        options={defaultOptions}
+                        height={400}
+                        width={400}
+                    />
+                </div>
+
+
                 <div>
                     <blockquote className="space-y-2">
                         <p className="text-lg">
@@ -196,7 +217,7 @@ const SignUpPage = () => {
                                     htmlFor="terms"
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                   I agree to all the terms & conditions
+                                    I agree to all the terms & conditions
                                 </label>
                             </div>
                         </div>
