@@ -45,6 +45,8 @@ import SalesFunnelChart from "@/components/charts/SalesFunnelChart";
 import NewLeadsPieChart from "@/components/charts/NewLeadsPieChart";
 import SalesSummaryCard from "@/components/card/SalesSummaryCard";
 import { useAuth } from "@/contexts/AuthContext";
+import { Overview } from "@/components/charts/OverviewChart";
+import RecentSales from "@/components/RecentSales";
 
 // Define a multi-color palette
 const palette = ["#ef4444", "#f97316", "#f59e0b", "#10b981", "#6366f1", "#8b5cf6"];
@@ -66,33 +68,106 @@ const remaining = 100 - percentage;
 
 
 const DashboardPage = () => {
-    const { userData, logout } = useAuth();
-  
+  const { userData, logout } = useAuth();
+
   return (
     <div className="flex flex-col gap-y-4">
       <div>
         <h1 className="font-semibold">Welcome back, {userData.currentUserName} 👋</h1>
         <p className="text-gray-400 text-sm">here's what's happening with your account today</p>
       </div>
+
       <h1 className="title">Sales Dashboard</h1>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-        <div className="col-span-1 md:col-span-2">
-          <SalesSummaryCard />
-        </div>
 
-        <SalesTargetRadialChart />
 
-        <SalesActivityChart />
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        <SalesSummaryCard />
+      </div>
 
-        <OpportunitiesHorizontalBarChart />
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-8 lg:grid-cols-9">
+        <Card className="col-span-full md:col-span-8 lg:col-span-6">
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <Overview />
+          </CardContent>
+        </Card>
 
-        <AccountByTypeChart />
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Sales</CardTitle>
+            <CardDescription>
+              You made 265 sales this month.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-6">
+            <RecentSales />
+          </CardContent>
+        </Card>
 
-        <SalesFunnelChart />
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Sales Target</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <SalesTargetRadialChart />
+          </CardContent>
+        </Card>
 
-        <NewLeadsPieChart />
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Sales Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <SalesActivityChart />
+          </CardContent>
+        </Card>
 
-        <ProfitEarnedChart />
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Opportunities won by months</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <OpportunitiesHorizontalBarChart />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Account By Type</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <AccountByTypeChart />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Sales Funnel</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <SalesFunnelChart />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>New Leads by Month</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <NewLeadsPieChart />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-full md:col-span-4 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Profit Earned</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ProfitEarnedChart />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

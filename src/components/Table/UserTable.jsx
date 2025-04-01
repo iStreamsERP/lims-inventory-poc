@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react"
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,30 +29,57 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import UserDialog from "../Dialog/UserDialog"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { getAllUsersList } from "@/services/userManagementService"
+import { PacmanLoader } from "react-spinners"
 
 
 const UserTable = () => {
   const [userTableData, setUserTableData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
+  const { userData } = useAuth();
 
-  const handleAddUser = (users) => {
-    setUserTableData((prev) => {
-      return [...prev, { ...users, id: prev.length + 1 }];
-    })
+  // New state for editing
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const fetchAllUsersData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
+      setUserTableData(data);
+
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchAllUsersData();
+  }, [])
+
+  const handleOnSuccess = (users) => {
+    fetchAllUsersData();
   }
 
   const handleDeleteUser = (users) => {
     setUserTableData((prev) => prev.filter(user => user.id !== users.id))
   }
 
-  const handleEditUser = (users) => {
-    setUserTableData((prev) => {
-      return [...prev, { ...users, id: prev.length + 1 }];
-    })
+  const handleEditUser = (user) => {
+    console.table(user);
+
+    setSelectedUser(user);
+    setEditModalOpen(true);
   }
 
   const columns = [
@@ -86,50 +113,62 @@ const UserTable = () => {
       ),
     },
     {
-      accessorKey: "userName",
-      header: "User Name",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("userName")}</div>
-      ),
-    },
-    {
-      accessorKey: "fullName",
-      header: "Full Name",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("fullName")}</div>
-      ),
-    },
-    {
-      accessorKey: "userType",
-      header: "User Type",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("userType")}</div>
-      ),
-    },
-    {
-      accessorKey: "email",
+      accessorKey: "USER_NAME",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="p-0"
+          >
+            User Name
+            <ArrowUpDown />
+          </Button>
+        )
+      },
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
+      ),
+    },
+    {
+      accessorKey: "FULL_NAME",
+      header: "Full Name",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
+      ),
+    },
+    {
+      accessorKey: "USER_TYPE",
+      header: "User Type",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("USER_TYPE")}</div>
+      ),
+    },
+    {
+      accessorKey: "EMAIL_ADDRESS",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="p-0"
           >
             Email
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("email")}</div>,
+      cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
     },
     {
-      accessorKey: "mobileNumber",
+      accessorKey: "MOBILE_NO",
       header: () => <div>Mobile No</div>,
-      cell: ({ row }) => <div>{row.getValue("mobileNumber")}</div>,
+      cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
     },
     {
-      accessorKey: "employeeNumber",
+      accessorKey: "EMP_NO",
       header: () => <div>Employee No</div>,
-      cell: ({ row }) => <div>{row.getValue("employeeNumber")}</div>,
+      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
     },
     {
       accessorKey: "action",
@@ -148,14 +187,9 @@ const UserTable = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(row.getValue("id"))}
-              >
-                Copy Reference ID
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditUser(user)}>  <Pencil /> Edit </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user)}>Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -163,6 +197,11 @@ const UserTable = () => {
     },
 
   ]
+
+  const fuzzyFilter = (row, columnId, filterValue) => {
+    return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
+  };
+
 
   const table = useReactTable({
     data: userTableData,
@@ -175,6 +214,7 @@ const UserTable = () => {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    globalFilterFn: fuzzyFilter,
     state: {
       sorting,
       columnFilters,
@@ -189,9 +229,8 @@ const UserTable = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
         <Input
           placeholder="Global Search..."
-          value={(table.getColumn("email")?.getFilterValue()) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+          value={(table.getState().globalFilter) ?? ""}
+          onChange={(event) => table.setGlobalFilter(event.target.value)
           }
           className="max-w-sm"
         />
@@ -199,7 +238,7 @@ const UserTable = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown />
+                <Settings2 /> View
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -222,7 +261,11 @@ const UserTable = () => {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <UserDialog handleAddUser={handleAddUser} />
+          <UserDialog
+            open={editModalOpen}
+            setOpen={setEditModalOpen}
+            user={selectedUser}
+            handleOnSuccess={handleOnSuccess} />
         </div>
       </div>
       <div className="rounded-md border">
@@ -246,29 +289,32 @@ const UserTable = () => {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <PacmanLoader color="#6366f1" />
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No users found.
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No results.
                 </TableCell>
               </TableRow>
             )}

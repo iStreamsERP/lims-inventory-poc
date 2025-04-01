@@ -3,24 +3,30 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Check, SquarePen, UserPlus } from "lucide-react";
+import {
+    ToggleGroup,
+    ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+import { useAuth } from "@/contexts/AuthContext";
+import { createNewUser } from "@/services/userManagementService";
+import { getDomainFromEmail } from "@/utils/emailHelpers";
+import { Check, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 // Validate the entire form on submission.
 const validateForm = (data) => {
     const errors = {};
 
-    if (!data.userName || data.userName.trim().length < 2) {
-        errors.userName = "Username must be at least 2 characters.";
+    if (!data.newUserName || data.newUserName.trim().length < 2) {
+        errors.newUserName = "Username must be at least 2 characters.";
     }
     if (!data.password || data.password.trim().length < 6) {
         errors.password = "Password must be at least 6 characters.";
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!data.email || !emailRegex.test(data.email)) {
-        errors.email = "Please enter a valid email address.";
+    if (!data.emailAddress || !emailRegex.test(data.emailAddress)) {
+        errors.emailAddress = "Please enter a valid email address.";
     }
     if (!data.mobileNumber || data.mobileNumber.trim().length < 10) {
         errors.mobileNumber = "Mobile number must be at least 10 digits.";
@@ -28,11 +34,8 @@ const validateForm = (data) => {
     if (!data.fullName || data.fullName.trim().length < 2) {
         errors.fullName = "Full name is required.";
     }
-    if (!data.employeeNumber || data.employeeNumber.trim().length < 2) {
-        errors.employeeNumber = "Employee number is required.";
-    }
-    if (!data.domainName || data.domainName.trim().length < 2) {
-        errors.domainName = "Domain name is required.";
+    if (!data.empNo || data.empNo.trim().length < 2) {
+        errors.empNo = "Employee number is required.";
     }
 
     return errors;
@@ -41,7 +44,7 @@ const validateForm = (data) => {
 // Validate a single field on blur.
 const validateInput = (name, value) => {
     switch (name) {
-        case "userName":
+        case "newUserName":
             if (!value || value.trim().length < 2) {
                 return "Username must be at least 2 characters.";
             }
@@ -51,7 +54,7 @@ const validateInput = (name, value) => {
                 return "Password must be at least 6 characters.";
             }
             break;
-        case "email":
+        case "emailAddress":
             {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!value || !emailRegex.test(value)) {
@@ -69,14 +72,9 @@ const validateInput = (name, value) => {
                 return "Full name must be at least 2 characters.";
             }
             break;
-        case "employeeNumber":
+        case "empNo":
             if (!value || value.trim().length < 2) {
                 return "Employee number must be at least 2 characters.";
-            }
-            break;
-        case "domainName":
-            if (!value || value.trim().length < 2) {
-                return "Domain name must be at least 2 characters.";
             }
             break;
         default:
@@ -85,22 +83,45 @@ const validateInput = (name, value) => {
     return "";
 };
 
-const UserDialog = ({ handleAddUser }) => {
-    const [open, setOpen] = useState(false);
+const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) => {
+    const { userData } = useAuth();
+    const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
+
     const [errors, setErrors] = useState({});
     const [userFormData, setUserFormData] = useState({
-        userName: "Ajeeth",
-        password: "Ajeeth123",
-        userType: "user",
-        email: "ajeeth@gmail.com",
-        mobileNumber: "1234567890",
-        fullName: "Ajeeth Kumar",
-        employeeNumber: "A00012",
-        domainName: "gmail.com",
+        loginUserName: userData.currentUserName,
+        newUserName: "",
+        password: "",
+        isAdminUser: false,
+        emailAddress: "",
+        mobileNumber: "",
+        fullName: "",
+        empNo: "",
+        domainName: DOMAIN_NAME,
         employeeImage: "",
         accountExpired: false,
         accountLocked: false,
     });
+
+    useEffect(() => {
+        const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
+        if (user) {
+            setUserFormData({
+                loginUserName: userData.currentUserName,
+                newUserName: user?.USER_NAME || "",
+                password: "",
+                isAdminUser: user?.USER_TYPE || false,
+                emailAddress: user?.EMAIL_ADDRESS || "",
+                mobileNumber: user?.MOBILE_NO || "",
+                fullName: user?.FULL_NAME || "",
+                empNo: user?.EMP_NO || "",
+                domainName: DOMAIN_NAME,
+                employeeImage: user?.employeeImage || "",
+                accountExpired: user?.ACCOUNT_EXPIRED || false,
+                accountLocked: user?.ACCOUNT_LOCKED || false,
+            });
+        }
+    }, [user])
 
     // General change handler for inputs.
     const handleChange = (eventOrValue, fieldName) => {
@@ -148,7 +169,6 @@ const UserDialog = ({ handleAddUser }) => {
         fileInputRef.current.click();
     };
 
-    // Form submit handler validates the entire form.
     const handleSubmit = (e) => {
         e.preventDefault();
         const validationErrors = validateForm(userFormData);
@@ -158,14 +178,25 @@ const UserDialog = ({ handleAddUser }) => {
         }
         setErrors({});
 
-        handleAddUser(userFormData);
+        if (!user) {
+            const handleCreateNewUser = async () => {
+                try {
+                    const createNewUserResponse = await createNewUser(userFormData, userData.currentUserLogin, userData.clientURL)
+                    handleOnSuccess(userFormData);
+                    console.log(createNewUserResponse);
+                } catch (error) {
+                    console.log(error);
+                }
+            }
+            handleCreateNewUser();
+        }
         setOpen(false);
     };
 
     return (
         <Dialog open={open} onOpenChange={setOpen} className="z-50">
             <DialogTrigger asChild>
-                <Button variant="outline">Add User</Button>
+                <Button>Add User</Button>
             </DialogTrigger>
             <DialogContent className="max-h-[80vh] w-full overflow-y-auto sm:w-[600px] sm:max-w-[600px] z-[999]">
                 <DialogHeader>
@@ -185,21 +216,21 @@ const UserDialog = ({ handleAddUser }) => {
                         {/* Left Side */}
                         <div className="grid gap-2">
                             <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="userName" className="text-left">
+                                <Label htmlFor="newUserName" className="text-left">
                                     Username
                                 </Label>
                                 <Input
-                                    name="userName"
-                                    id="userName"
+                                    name="newUserName"
+                                    id="newUserName"
                                     type="text"
                                     placeholder="Type username"
                                     className="w-full"
-                                    value={userFormData.userName}
+                                    value={userFormData.newUserName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                 />
-                                {errors.userName && (
-                                    <span className="text-xs text-red-500">{errors.userName}</span>
+                                {errors.newUserName && (
+                                    <span className="text-xs text-red-500">{errors.newUserName}</span>
                                 )}
                             </div>
 
@@ -223,54 +254,54 @@ const UserDialog = ({ handleAddUser }) => {
                             </div>
 
                             <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="userType" className="text-left">
+                                <Label htmlFor="isAdminUser" className="text-left">
                                     User Type
                                 </Label>
-                                <Select
-                                    value={userFormData.userType}
-                                    onChange={(value) =>
-                                        setUserFormData((prevData) => ({ ...prevData, userType: value }))
+                                <ToggleGroup
+                                    type="single"
+                                    value={userFormData.isAdminUser ? "true" : "false"}
+                                    onValueChange={(value) =>
+                                        setUserFormData((prev) => ({ ...prev, isAdminUser: value === "true" }))
                                     }
+                                    className="flex justify-start"
                                 >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select a user type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem value="user">User</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
+                                    <ToggleGroupItem value="false" aria-label="Toggle user">
+                                        User
+                                    </ToggleGroupItem>
+                                    <ToggleGroupItem value="true" aria-label="Toggle admin">
+                                        Admin
+                                    </ToggleGroupItem>
+                                </ToggleGroup>
                             </div>
 
+
                             <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="email" className="text-left">
+                                <Label htmlFor="emailAddress" className="text-left">
                                     Email Address
                                 </Label>
                                 <Input
-                                    name="email"
-                                    id="email"
+                                    name="emailAddress"
+                                    id="emailAddress"
                                     type="email"
                                     placeholder="Enter email address"
                                     className="w-full"
-                                    value={userFormData.email}
+                                    value={userFormData.emailAddress}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                 />
-                                {errors.email && (
-                                    <span className="text-xs text-red-500">{errors.email}</span>
+                                {errors.emailAddress && (
+                                    <span className="text-xs text-red-500">{errors.emailAddress}</span>
                                 )}
                             </div>
 
                             <div className="flex w-full items-end gap-1">
                                 <div className="flex-grow">
-                                    <Label htmlFor="mobile" className="text-left">
+                                    <Label htmlFor="mobileNumber" className="text-left">
                                         Mobile Number
                                     </Label>
                                     <Input
                                         name="mobileNumber"
-                                        id="mobile"
+                                        id="mobileNumber"
                                         type="text"
                                         placeholder="Enter mobile number"
                                         className="w-full"
@@ -282,9 +313,6 @@ const UserDialog = ({ handleAddUser }) => {
                                         <span className="text-xs text-red-500">{errors.mobileNumber}</span>
                                     )}
                                 </div>
-                                <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2">
-                                    <SquarePen className="h-5 w-5" />
-                                </Button>
                                 <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
                                     <Check className="h-5 w-5" />
                                 </Button>
@@ -310,21 +338,21 @@ const UserDialog = ({ handleAddUser }) => {
                             </div>
 
                             <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="employeeNumber" className="text-left">
+                                <Label htmlFor="empNo" className="text-left">
                                     Employee Number
                                 </Label>
                                 <Input
-                                    name="employeeNumber"
-                                    id="employeeNumber"
+                                    name="empNo"
+                                    id="empNo"
                                     type="text"
                                     placeholder="Enter employee number"
                                     className="w-full"
-                                    value={userFormData.employeeNumber}
+                                    value={userFormData.empNo}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                 />
-                                {errors.employeeNumber && (
-                                    <span className="text-xs text-red-500">{errors.employeeNumber}</span>
+                                {errors.empNo && (
+                                    <span className="text-xs text-red-500">{errors.empNo}</span>
                                 )}
                             </div>
                         </div>
@@ -344,6 +372,7 @@ const UserDialog = ({ handleAddUser }) => {
                                     value={userFormData.domainName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    readOnly={true}
                                 />
                                 {errors.domainName && (
                                     <span className="text-xs text-red-500">{errors.domainName}</span>

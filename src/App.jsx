@@ -16,6 +16,7 @@ import SignUpPage from "./pages/SignUpPage";
 import UserRegisterListPage from "./pages/UserRegisterListPage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import SubMaterialPage from "./pages/SubMaterialPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -40,6 +41,7 @@ const App = () => {
             { path: "category", element: <CategoryPage /> },
             { path: "category/:category", element: <CategoryDetailsPage /> },
             { path: "user-register-list", element: <UserRegisterListPage /> },
+            { path: "sub-material-page", element: <SubMaterialPage /> },
             { path: "item-list", element: <ItemList /> },
             { path: "order-creation", element: <OrderCreationPage /> },
             { path: "service-list", element: <ServicePricingPage /> },

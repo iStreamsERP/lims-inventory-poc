@@ -4,6 +4,7 @@ import {
     CartesianGrid,
     Cell,
     LabelList,
+    ResponsiveContainer,
     XAxis
 } from "recharts";
 
@@ -28,12 +29,12 @@ const salesActivityChartConfig = {
 };
 
 const salesActivityChartData = [
-    { Name: "Ajeeth", Sales: 186 },
-    { Name: "Harish", Sales: 305 },
-    { Name: "Arafath", Sales: 237 },
-    { Name: "Haneesh", Sales: 73 },
-    { Name: "Yogesh", Sales: 209 },
-    { Name: "Sneha", Sales: 214 },
+    { Name: "Ajeeth", Sales: Math.floor(Math.random() * 500) + 50 },
+    { Name: "Harish", Sales: Math.floor(Math.random() * 500) + 50 },
+    { Name: "Arafath", Sales: Math.floor(Math.random() * 500) + 50 },
+    { Name: "Haneesh", Sales: Math.floor(Math.random() * 500) + 50 },
+    { Name: "Yogesh", Sales: Math.floor(Math.random() * 500) + 50 },
+    { Name: "Sneha", Sales: Math.floor(Math.random() * 500) + 50 },
 ];
 
 const maxSales = Math.max(...salesActivityChartData.map(item => item.Sales));
@@ -46,11 +47,7 @@ const salesActivityChartDataWithPercentage = salesActivityChartData.map(item => 
 
 export const SalesActivityChart = () => {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Sales Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <ResponsiveContainer width="100%" height={200}>
                 <ChartContainer config={salesActivityChartConfig}>
                     <BarChart
                         accessibilityLayer
@@ -82,7 +79,6 @@ export const SalesActivityChart = () => {
                         </Bar>
                     </BarChart>
                 </ChartContainer>
-            </CardContent>
-        </Card>
+        </ResponsiveContainer>
     )
 }

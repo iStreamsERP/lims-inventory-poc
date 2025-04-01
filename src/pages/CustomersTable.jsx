@@ -7,6 +7,7 @@ import { EditIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
 const CustomerTable = () => {
+  
   const [carts, setCarts] = useState([
     {
       companyname: "Alpha Tech Solutions",

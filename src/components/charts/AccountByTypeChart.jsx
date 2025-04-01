@@ -4,6 +4,7 @@ import {
     CartesianGrid,
     Cell,
     LabelList,
+    ResponsiveContainer,
     XAxis,
     YAxis
 } from "recharts";
@@ -40,10 +41,10 @@ const accountTypeConfig = {
 }
 
 const accountTypeChartData = [
-    { Type: "Customer", Conversion: 275 },
-    { Type: "Propspect", Conversion: 50 },
-    { Type: "Supplier", Conversion: 157 },
-    { Type: "Suspect", Conversion: 220 },
+    { Type: "Customer", Conversion: Math.floor(Math.random() * 500) + 50 },
+    { Type: "Propspect", Conversion: Math.floor(Math.random() * 500) + 50 },
+    { Type: "Supplier", Conversion: Math.floor(Math.random() * 500) + 50 },
+    { Type: "Suspect", Conversion: Math.floor(Math.random() * 500) + 50 },
 ];
 
 const maxSales = Math.max(...accountTypeChartData.map(item => item.Conversion));
@@ -57,44 +58,39 @@ const accountTypeChartDataWithPercentage = accountTypeChartData.map(item => ({
 
 const AccountByTypeChart = () => {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Account By Type</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ChartContainer config={accountTypeConfig}>
-                    <BarChart
-                        accessibilityLayer
-                        data={accountTypeChartDataWithPercentage}
-                        margin={{ top: 20 }}
-                    >
-                        <CartesianGrid vertical={false} />
-                        <XAxis
-                            dataKey="Type"
-                            tickLine={false}
-                            tickMargin={5}
-                            axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 10)}
+        <ResponsiveContainer width="100%" height={200}>
+            <ChartContainer config={accountTypeConfig}>
+                <BarChart
+                    accessibilityLayer
+                    data={accountTypeChartDataWithPercentage}
+                    margin={{ top: 20 }}
+                >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                        dataKey="Type"
+                        tickLine={false}
+                        tickMargin={5}
+                        axisLine={false}
+                        tickFormatter={(value) => value.slice(0, 10)}
+                    />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Bar dataKey="Conversion" radius={8}>
+                        {accountTypeChartDataWithPercentage.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getDynamicColor(entry.Percentage)} />
+                        ))}
+                        <LabelList
+                            position="top"
+                            offset={12}
+                            className="fill-foreground"
+                            fontSize={12}
                         />
-                        <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent hideLabel />}
-                        />
-                        <Bar dataKey="Conversion" radius={8}>
-                            {accountTypeChartDataWithPercentage.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={getDynamicColor(entry.Percentage)} />
-                            ))}
-                            <LabelList
-                                position="top"
-                                offset={12}
-                                className="fill-foreground"
-                                fontSize={12}
-                            />
-                        </Bar>
-                    </BarChart>
-                </ChartContainer>
-            </CardContent>
-        </Card>
+                    </Bar>
+                </BarChart>
+            </ChartContainer>
+        </ResponsiveContainer>
     )
 }
 

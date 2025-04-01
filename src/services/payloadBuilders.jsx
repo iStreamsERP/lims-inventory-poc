@@ -189,3 +189,30 @@ export const getDashboardOverallSummaryPayload = (noOfDays) => ({
 export const getDashboardChannelSummaryPayload = (noOfDays) => ({
   NoOfDays: noOfDays,
 });
+
+export const createNewUserPayload = (formData) => ({
+  LOGIN_USER_NAME: formData.loginUserName,
+  NEW_USER_NAME: formData.newUserName,
+  PASSWORD: formData.password,
+  IsAdminUser: formData.isAdminUser,
+  DOMAIN_NAME: formData.domainName,
+  EMAIL_ADDRESS: formData.emailAddress,
+  MOBILE_NUMBER: formData.mobileNumber,
+  FULL_NAME: formData.fullName,
+  EMP_NO: formData.empNo,
+});
+
+export const deleteUserPayload = (formData) => ({
+  FQ_USER_NAME: formData.fqUserName,
+  USER_NAME_ONLY: formData.userNameOnly,
+  COLUMN_NAME: formData.columnName,
+  VALUE: formData.value,
+});
+
+
+export const updateUserPayload = (formData) => ({
+  FQ_USER_NAME: formData.fqUserName,
+  USER_NAME_ONLY: formData.userNameOnly,
+  COLUMN_NAME: formData.columnName,
+  VALUE: formData.value,
+});

@@ -1,32 +1,63 @@
-import * as React from "react"
 
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
-    CardTitle,
+    CardTitle
 } from "@/components/ui/card"
-import StatsCard from "./StatsCard"
+import { BarChart, DollarSign, Handshake, TrendingUp } from "lucide-react"
+
+
+const data = [
+    {
+        title: "Total Revenue",
+        value: "$45,231.89",
+        percentage: "20.1%",
+        icon: <DollarSign size={18} color="green" />
+    },
+    {
+        title: "Deals",
+        value: Math.floor(Math.random() * 1000),
+        percentage: "60.1%",
+        icon: <Handshake size={18} color="blue" />
+    },
+    {
+        title: "No.of Deals Closed",
+        value: Math.floor(Math.random() * 1000),
+        percentage: "86%",
+        icon: <BarChart size={18} color="purple" />
+    },
+    {
+        title: "Estimated Revenue",
+        value: "₹45,231.89",
+        percentage: "90.1%",
+        icon: <TrendingUp size={18} color="orange" />
+    },
+]
 
 const SalesSummaryCard = () => {
     return (
-        <Card className="h-full">
-            <CardHeader className="pb-2">
-                <CardTitle>Sales Overview</CardTitle>
-                <CardDescription>
-                    Data updated as of July 2025. Overview of key sales metrics for the current period.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <StatsCard title="Total Revenue" value="₹ 1,00,000" />
-                    <StatsCard title="Deals" value="126" />
-                    <StatsCard title="No. of Deals Closed" value="126" />
-                    <StatsCard title="Estimated Revenue" value="₹ 1,00,000" />
-                </div>
-            </CardContent>
-        </Card>
+        data.map((data, index) => {
+            return (
+                <Card key={index} className="bg-gradient-to-t from-slate-900 to-blue-900 text-white">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            {data.title}
+                        </CardTitle>
+                        <div className="p-2 bg-white rounded-full">
+                            {data.icon}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.value}</div>
+                        <p className="text-xs text-muted-foreground">
+                            <span className="text-green-600 font-semibold">+{data.percentage}</span> from last month
+                        </p>
+                    </CardContent>
+                </Card>
+            )
+        })
+
     )
 }
 

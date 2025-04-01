@@ -15,12 +15,7 @@ export const navbarLinks = [
     title: "Customers",
     links: [
       {
-        label: "Customer Information",
-        icon: Users,
-        path: "/customers-information",
-      },
-      {
-        label: "Customer Table",
+        label: "Customers",
         icon: UserPlus,
         path: "/customers-table",
       },
@@ -40,7 +35,7 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
-        label: "User Register List",
+        label: "Users",
         icon: UserPlus,
         path: "/user-register-list",
       },

@@ -2,6 +2,7 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
+    ResponsiveContainer,
     XAxis
 } from "recharts";
 
@@ -21,12 +22,12 @@ import {
 
 
 const profitEarnedChartData = [
-    { month: "January", profitEarned: 186, totalSales: 80 },
-    { month: "February", profitEarned: 305, totalSales: 200 },
-    { month: "March", profitEarned: 237, totalSales: 120 },
-    { month: "April", profitEarned: 73, totalSales: 190 },
-    { month: "May", profitEarned: 209, totalSales: 130 },
-    { month: "June", profitEarned: 214, totalSales: 140 },
+    { month: "January", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
+    { month: "February", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
+    { month: "March", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
+    { month: "April", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
+    { month: "May", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
+    { month: "June", profitEarned: Math.floor(Math.random() * 500) + 50, totalSales: Math.floor(Math.random() * 500) + 50 },
 ]
 
 const profitEarnedChartConfig = {
@@ -39,31 +40,26 @@ const profitEarnedChartConfig = {
 }
 const ProfitEarnedChart = () => {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Profit Earned</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ChartContainer config={profitEarnedChartConfig}>
-                    <BarChart accessibilityLayer data={profitEarnedChartData}>
-                        <CartesianGrid vertical={false} />
-                        <XAxis
-                            dataKey="month"
-                            tickLine={false}
-                            tickMargin={10}
-                            axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 3)}
-                        />
-                        <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent indicator="dashed" />}
-                        />
-                        <Bar dataKey="profitEarned" fill="#3b82f6" radius={4} />
-                        <Bar dataKey="totalSales" fill="#a2d2ff" radius={4} />
-                    </BarChart>
-                </ChartContainer>
-            </CardContent>
-        </Card>
+        <ResponsiveContainer width="100%" height={200}>
+            <ChartContainer config={profitEarnedChartConfig}>
+                <BarChart accessibilityLayer data={profitEarnedChartData}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        tickFormatter={(value) => value.slice(0, 3)}
+                    />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dashed" />}
+                    />
+                    <Bar dataKey="profitEarned" fill="#3b82f6" radius={4} />
+                    <Bar dataKey="totalSales" fill="#a2d2ff" radius={4} />
+                </BarChart>
+            </ChartContainer>
+        </ResponsiveContainer>
     )
 }
 
