@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -28,11 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import UserDialog from "../Dialog/UserDialog"
-import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { getAllUsersList } from "@/services/userManagementService"
+import { useEffect, useState } from "react"
 import { PacmanLoader } from "react-spinners"
+import UserDialog from "../Dialog/UserDialog"
+import { Dialog, DialogTrigger } from "../ui/dialog"
 
 
 const UserTable = () => {
@@ -45,9 +46,12 @@ const UserTable = () => {
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
 
-  // New state for editing
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    fetchAllUsersData();
+  }, [])
 
   const fetchAllUsersData = async () => {
     setLoading(true);
@@ -55,7 +59,6 @@ const UserTable = () => {
     try {
       const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
       setUserTableData(data);
-
     } catch (error) {
       setError(error.message);
     } finally {
@@ -63,24 +66,21 @@ const UserTable = () => {
     }
   }
 
-  useEffect(() => {
-    fetchAllUsersData();
-  }, [])
-
-  const handleOnSuccess = (users) => {
-    fetchAllUsersData();
-  }
-
   const handleDeleteUser = (users) => {
     setUserTableData((prev) => prev.filter(user => user.id !== users.id))
   }
 
   const handleEditUser = (user) => {
-    console.table(user);
-
     setSelectedUser(user);
-    setEditModalOpen(true);
+    setIsDialogOpen(true);
   }
+
+  const handleUserDialogClose = () => {
+    setSelectedUser(null); // Reset when closing
+    setIsDialogOpen(false);
+    fetchAllUsersData();
+  };
+
 
   const columns = [
     {
@@ -187,8 +187,8 @@ const UserTable = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleEditUser(user)}>  <Pencil /> Edit </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleEditUser(user)}>  <Pencil /> Edit </DropdownMenuItem>
               <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -261,11 +261,19 @@ const UserTable = () => {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <UserDialog
-            open={editModalOpen}
-            setOpen={setEditModalOpen}
-            user={selectedUser}
-            handleOnSuccess={handleOnSuccess} />
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            if (!open) handleUserDialogClose();
+            setIsDialogOpen(open);
+          }} className="z-50">
+            <DialogTrigger asChild>
+              <Button onClick={() => setIsDialogOpen(true)}>Add User</Button>
+            </DialogTrigger>
+            <UserDialog
+              open={isDialogOpen}
+              onClose={handleUserDialogClose}
+              user={selectedUser} />
+          </Dialog>
+
         </div>
       </div>
       <div className="rounded-md border">

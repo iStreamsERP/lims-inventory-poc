@@ -35,8 +35,8 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
-        label: "Users",
-        icon: UserPlus,
+        label: "User Management",
+        icon: Users,
         path: "/user-register-list",
       },
       {

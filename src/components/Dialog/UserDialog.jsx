@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -9,10 +9,11 @@ import {
     ToggleGroupItem,
 } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
-import { createNewUser } from "@/services/userManagementService";
+import { createNewUser, updateUser } from "@/services/userManagementService";
 import { getDomainFromEmail } from "@/utils/emailHelpers";
 import { Check, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { BeatLoader } from "react-spinners";
 
 // Validate the entire form on submission.
 const validateForm = (data) => {
@@ -83,11 +84,14 @@ const validateInput = (name, value) => {
     return "";
 };
 
-const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) => {
+const UserDialog = ({ user, open, onClose }) => {
     const { userData } = useAuth();
     const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
 
+    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
+    const [image, setImage] = useState(null);
+    const fileInputRef = useRef(null);
     const [userFormData, setUserFormData] = useState({
         loginUserName: userData.currentUserName,
         newUserName: "",
@@ -102,10 +106,22 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
         accountExpired: false,
         accountLocked: false,
     });
+    const [isFocused, setIsFocused] = useState({
+        newUserName: false,
+        password: false,
+        isAdminUser: false,
+        emailAddress: false,
+        mobileNumber: false,
+        fullName: false,
+        empNo: false,
+        employeeImage: false,
+        accountExpired: false,
+        accountLocked: false,
+    });
 
     useEffect(() => {
-        const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
         if (user) {
+            const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
             setUserFormData({
                 loginUserName: userData.currentUserName,
                 newUserName: user?.USER_NAME || "",
@@ -120,8 +136,23 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                 accountExpired: user?.ACCOUNT_EXPIRED || false,
                 accountLocked: user?.ACCOUNT_LOCKED || false,
             });
+        } else {
+            setUserFormData({
+                loginUserName: userData.currentUserName,
+                newUserName: "",
+                password: "",
+                isAdminUser: false,
+                emailAddress: "",
+                mobileNumber: "",
+                fullName: "",
+                empNo: "",
+                domainName: DOMAIN_NAME,
+                employeeImage: "",
+                accountExpired: false,
+                accountLocked: false,
+            })
         }
-    }, [user])
+    }, [user, open])
 
     // General change handler for inputs.
     const handleChange = (eventOrValue, fieldName) => {
@@ -148,12 +179,34 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
             ...prev,
             [name]: errorMessage,
         }));
+        setIsFocused((prev) => ({ ...prev, [name]: false }));
     };
 
-    const [image, setImage] = useState(null);
-    const fileInputRef = useRef(null);
+    const handleFocus = (e) => {
+        const { name } = e.target;
+        setIsFocused((prev) => ({ ...prev, [name]: true }))
+    }
 
-    // Handle image file upload.
+    const handleUpdate = (key, value) => {
+        console.log(key, value);
+
+        // setLoading(true);
+        // try {
+        //     const updateUserPayload = {
+        //         fqUserName: userData.currentUserLogin,
+        //         userNameOnly: userData.currentUserName,
+        //         columnName: field,
+        //         value: field,
+        //     }
+        //     const updateUserResponse = await updateUser(updateUserPayload, userData.currentUserLogin, userData.clientURL)
+        // } catch (error) {
+        //     console.log(error);
+        // } finally {
+        //     setLoading(false);
+        // }
+    }
+
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -169,8 +222,9 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
         fileInputRef.current.click();
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
         const validationErrors = validateForm(userFormData);
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
@@ -178,47 +232,57 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
         }
         setErrors({});
 
-        if (!user) {
-            const handleCreateNewUser = async () => {
-                try {
-                    const createNewUserResponse = await createNewUser(userFormData, userData.currentUserLogin, userData.clientURL)
-                    handleOnSuccess(userFormData);
-                    console.log(createNewUserResponse);
-                } catch (error) {
-                    console.log(error);
-                }
+        try {
+            if (!user) {
+                const createNewUserResponse = await createNewUser(userFormData, userData.currentUserLogin, userData.clientURL)
+                console.log(createNewUserResponse);
+            } else {
+                // Handle edit user case if needed
             }
-            handleCreateNewUser();
+
+            setUserFormData({
+                loginUserName: userData.currentUserName,
+                newUserName: "",
+                password: "",
+                isAdminUser: false,
+                emailAddress: "",
+                mobileNumber: "",
+                fullName: "",
+                empNo: "",
+                domainName: DOMAIN_NAME,
+                employeeImage: "",
+                accountExpired: false,
+                accountLocked: false,
+            })
+            onClose();
+        } catch (error) {
+            console.log("Error creating user:", error);
         }
-        setOpen(false);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen} className="z-50">
-            <DialogTrigger asChild>
-                <Button>Add User</Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[80vh] w-full overflow-y-auto sm:w-[600px] sm:max-w-[600px] z-[999]">
-                <DialogHeader>
-                    <DialogTitle>
-                        <div className="flex flex-row items-center gap-1">
-                            <UserPlus className="h-5 w-5" />
-                            <span>Add User</span>
-                        </div>
-                    </DialogTitle>
-                    <DialogDescription>
-                        Please fill in the details to add a new user.
-                    </DialogDescription>
-                </DialogHeader>
+        <DialogContent className="max-h-[80vh] w-full overflow-y-auto sm:w-[600px] sm:max-w-[600px] z-[999]">
+            <DialogHeader>
+                <DialogTitle>
+                    <div className="flex flex-row items-center gap-1">
+                        <UserPlus className="h-5 w-5" />
+                        <span>Add User</span>
+                    </div>
+                </DialogTitle>
+                <DialogDescription>
+                    Please fill in the details to add a new user.
+                </DialogDescription>
+            </DialogHeader>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 gap-2 sm:gap-6 py-2 sm:grid-cols-2">
-                        {/* Left Side */}
-                        <div className="grid gap-2">
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="newUserName" className="text-left">
-                                    Username
-                                </Label>
+            <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 gap-2 sm:gap-6 py-2 sm:grid-cols-2">
+                    {/* Left Side */}
+                    <div className="grid gap-2">
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="newUserName" className="text-left">
+                                Username
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <Input
                                     name="newUserName"
                                     id="newUserName"
@@ -228,16 +292,25 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                     value={userFormData.newUserName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    onFocus={handleFocus}
                                 />
-                                {errors.newUserName && (
-                                    <span className="text-xs text-red-500">{errors.newUserName}</span>
-                                )}
+                                {
+                                    (loading || (isFocused.newUserName && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={() => handleUpdate("newUserName", userFormData.newUserName)}>
+                                            {loading ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
+                                        </Button> : null
+                                }
                             </div>
+                            {errors.newUserName && (
+                                <span className="text-xs text-red-500">{errors.newUserName}</span>
+                            )}
+                        </div>
 
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="password" className="text-left">
-                                    Password
-                                </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="password" className="text-left">
+                                Password
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <Input
                                     name="password"
                                     id="password"
@@ -247,16 +320,25 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                     value={userFormData.password}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    onFocus={handleFocus}
                                 />
-                                {errors.password && (
-                                    <span className="text-xs text-red-500">{errors.password}</span>
-                                )}
+                                {
+                                    (loading || (isFocused.newUserName && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={handleUpdate}>
+                                            {loading ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
+                                        </Button> : null
+                                }
                             </div>
+                            {errors.password && (
+                                <span className="text-xs text-red-500">{errors.password}</span>
+                            )}
+                        </div>
 
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="isAdminUser" className="text-left">
-                                    User Type
-                                </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="isAdminUser" className="text-left">
+                                User Type
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <ToggleGroup
                                     type="single"
                                     value={userFormData.isAdminUser ? "true" : "false"}
@@ -272,13 +354,20 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                         Admin
                                     </ToggleGroupItem>
                                 </ToggleGroup>
+                                {
+                                    (isFocused.isAdminUser && user) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
+                                            <Check className="h-5 w-5" />
+                                        </Button> : null
+                                }
                             </div>
+                        </div>
 
-
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="emailAddress" className="text-left">
-                                    Email Address
-                                </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="emailAddress" className="text-left">
+                                Email Address
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <Input
                                     name="emailAddress"
                                     id="emailAddress"
@@ -288,17 +377,26 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                     value={userFormData.emailAddress}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    onFocus={handleFocus}
                                 />
-                                {errors.emailAddress && (
-                                    <span className="text-xs text-red-500">{errors.emailAddress}</span>
-                                )}
+                                {
+                                    (isFocused.emailAddress && user) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
+                                            <Check className="h-5 w-5" />
+                                        </Button> : null
+                                }
                             </div>
+                            {errors.emailAddress && (
+                                <span className="text-xs text-red-500">{errors.emailAddress}</span>
+                            )}
+                        </div>
 
-                            <div className="flex w-full items-end gap-1">
-                                <div className="flex-grow">
-                                    <Label htmlFor="mobileNumber" className="text-left">
-                                        Mobile Number
-                                    </Label>
+                        <div className="flex w-full items- gap-1">
+                            <div className="flex-grow">
+                                <Label htmlFor="mobileNumber" className="text-left">
+                                    Mobile Number
+                                </Label>
+                                <div className="flex items-center gap-1">
                                     <Input
                                         name="mobileNumber"
                                         id="mobileNumber"
@@ -308,20 +406,26 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                         value={userFormData.mobileNumber}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
+                                        onFocus={handleFocus}
                                     />
-                                    {errors.mobileNumber && (
-                                        <span className="text-xs text-red-500">{errors.mobileNumber}</span>
-                                    )}
+                                    {
+                                        isFocused.mobileNumber ?
+                                            <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
+                                                <Check className="h-5 w-5" />
+                                            </Button> : null
+                                    }
                                 </div>
-                                <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
-                                    <Check className="h-5 w-5" />
-                                </Button>
+                                {errors.mobileNumber && (
+                                    <span className="text-xs text-red-500">{errors.mobileNumber}</span>
+                                )}
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="fullName" className="text-left">
-                                    Full Name
-                                </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="fullName" className="text-left">
+                                Full Name
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <Input
                                     name="fullName"
                                     id="fullName"
@@ -331,16 +435,26 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                     value={userFormData.fullName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    onFocus={handleFocus}
                                 />
-                                {errors.fullName && (
-                                    <span className="text-xs text-red-500">{errors.fullName}</span>
-                                )}
-                            </div>
 
-                            <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="empNo" className="text-left">
-                                    Employee Number
-                                </Label>
+                                {
+                                    isFocused.fullName ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
+                                            <Check className="h-5 w-5" />
+                                        </Button> : null
+                                }
+                            </div>
+                            {errors.fullName && (
+                                <span className="text-xs text-red-500">{errors.fullName}</span>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="empNo" className="text-left">
+                                Employee Number
+                            </Label>
+                            <div className="flex items-center gap-1">
                                 <Input
                                     name="empNo"
                                     id="empNo"
@@ -350,113 +464,119 @@ const UserDialog = ({ open, setOpen, user, handleEditUser, handleOnSuccess }) =>
                                     value={userFormData.empNo}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    onFocus={handleFocus}
                                 />
-                                {errors.empNo && (
-                                    <span className="text-xs text-red-500">{errors.empNo}</span>
-                                )}
+                                {
+                                    isFocused.empNo ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={handleUpdate}>
+                                            <Check className="h-5 w-5" />
+                                        </Button> : null
+                                }
                             </div>
+                            {errors.empNo && (
+                                <span className="text-xs text-red-500">{errors.empNo}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Side */}
+                    <div className="flex flex-col gap-2">
+                        <div>
+                            <Label htmlFor="domainName" className="text-left">
+                                Domain Name
+                            </Label>
+                            <Input
+                                name="domainName"
+                                id="domainName"
+                                type="text"
+                                placeholder="Enter domain name"
+                                className="w-full"
+                                value={userFormData.domainName}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
+                                readOnly={true}
+                            />
+                            {errors.domainName && (
+                                <span className="text-xs text-red-500">{errors.domainName}</span>
+                            )}
                         </div>
 
-                        {/* Right Side */}
-                        <div className="flex flex-col gap-2">
-                            <div>
-                                <Label htmlFor="domainName" className="text-left">
-                                    Domain Name
-                                </Label>
-                                <Input
-                                    name="domainName"
-                                    id="domainName"
-                                    type="text"
-                                    placeholder="Enter domain name"
-                                    className="w-full"
-                                    value={userFormData.domainName}
-                                    onChange={handleChange}
-                                    onBlur={handleBlur}
-                                    readOnly={true}
-                                />
-                                {errors.domainName && (
-                                    <span className="text-xs text-red-500">{errors.domainName}</span>
+                        <div className="space-y-0">
+                            <Label htmlFor="employeeImage" className="text-left">
+                                Upload Picture
+                            </Label>
+                            <div
+                                className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-gray-200"
+                                onClick={handleClick}
+                            >
+                                {image ? (
+                                    <img
+                                        src={image}
+                                        alt="Profile Preview"
+                                        className="h-full w-full rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="text-center text-sm text-gray-500">Click to Upload</div>
                                 )}
                             </div>
+                            <input
+                                name="employeeImage"
+                                type="file"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageChange}
+                            />
+                        </div>
 
-                            <div className="space-y-0">
-                                <Label htmlFor="employeeImage" className="text-left">
-                                    Upload Picture
-                                </Label>
-                                <div
-                                    className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-gray-200"
-                                    onClick={handleClick}
-                                >
-                                    {image ? (
-                                        <img
-                                            src={image}
-                                            alt="Profile Preview"
-                                            className="h-full w-full rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="text-center text-sm text-gray-500">Click to Upload</div>
-                                    )}
-                                </div>
-                                <input
-                                    name="employeeImage"
-                                    type="file"
-                                    ref={fileInputRef}
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleImageChange}
+                        <div className="flex flex-col space-y-1">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    name="accountExpired"
+                                    id="accountExpired"
+                                    checked={userFormData.accountExpired}
+                                    onCheckedChange={(checked) => handleChange(checked, "accountExpired")}
                                 />
+                                <label
+                                    htmlFor="accountExpired"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Account Expired
+                                </label>
                             </div>
 
-                            <div className="flex flex-col space-y-1">
+                            <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
                                 <div className="flex items-center space-x-2">
                                     <Checkbox
-                                        name="accountExpired"
-                                        id="accountExpired"
-                                        checked={userFormData.accountExpired}
-                                        onCheckedChange={(checked) => handleChange(checked, "accountExpired")}
+                                        name="accountLocked"
+                                        id="accountLocked"
+                                        checked={userFormData.accountLocked}
+                                        onCheckedChange={(checked) => handleChange(checked, "accountLocked")}
                                     />
                                     <label
-                                        htmlFor="accountExpired"
+                                        htmlFor="accountLocked"
                                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                     >
-                                        Account Expired
+                                        Account Locked
                                     </label>
-                                </div>
-
-                                <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            name="accountLocked"
-                                            id="accountLocked"
-                                            checked={userFormData.accountLocked}
-                                            onCheckedChange={(checked) => handleChange(checked, "accountLocked")}
-                                        />
-                                        <label
-                                            htmlFor="accountLocked"
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                            Account Locked
-                                        </label>
-                                    </div>
-                                    <Button className="w-full px-3 py-1 text-sm sm:w-28">Reset Password</Button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <Separator />
+                <Separator />
 
-                    <div className="mt-2 flex justify-end gap-2">
-                        <Button variant="outline" type="button" onClick={() => setOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button variant="default" type="submit">
-                            Save
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
+                <div className="mt-2 flex justify-end gap-2">
+                    <Button variant="outline" type="button" onClick={() => onClose()}>
+                        Cancel
+                    </Button>
+                    <Button variant="default" type="submit">
+                        Save
+                    </Button>
+                </div>
+            </form>
+        </DialogContent>
     );
 };
 

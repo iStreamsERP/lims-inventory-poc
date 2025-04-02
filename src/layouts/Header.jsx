@@ -23,6 +23,7 @@ import {
   Maximize,
   Minimize,
   PanelLeftClose,
+  ShoppingCart,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useState } from "react";
@@ -53,13 +54,13 @@ export const Header = ({ collapsed, setCollapsed }) => {
 
   return (
     <header className="relative z-10 flex h-[60px] items-center justify-between bg-white px-4 shadow-md transition-colors dark:bg-slate-900">
-      <div className="flex items-center gap-x-1">
-        <button
-          className="p-2 rounded-lg  hover:bg-gray-200 dark:hover:bg-slate-700"
+      <div className="flex items-center gap-x-2">
+        <Button
+          variant="ghost"
           onClick={() => setCollapsed(!collapsed)}
         >
           <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
-        </button>
+        </Button>
         <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer hover:text-gray-300">
           iStreams ERP Solutions - CRM
         </Link>
@@ -71,46 +72,51 @@ export const Header = ({ collapsed, setCollapsed }) => {
             {userData.organization}
           </div>
 
-          <button
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700"
+          <Button
+            variant="ghost"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? (
-              <CloudSun size={20} />
+              <CloudSun />
             ) : (
-              <CloudMoon size={20} />
+              <CloudMoon />
             )}
-          </button>
+          </Button>
 
-          <button
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 hidden md:block"
+          <Button
+            variant="ghost"
+            className="hidden md:block"
             onClick={toggleFullScreen}
           >
             {isFullscreen ? (
-              <Minimize size={20} />
+              <Minimize />
             ) : (
-              <Maximize size={20} />
+              <Maximize />
             )}
-          </button>
+          </Button>
+
+          <Button
+            variant="ghost"
+          >
+            <ShoppingCart />
+          </Button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="seconsdary">
-                <Avatar>
-                  <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
-                  <AvatarFallback>{userData.currentUserName}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col items-start">
-                  <span className="text-lg font-semibold">
-                    {userData.currentUserName}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {userData.currentUserLogin}
-                  </span>
-                </div>
-              </Button>
+            <DropdownMenuTrigger className="flex items-start gap-2">
+              <Avatar>
+                <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
+                <AvatarFallback>{userData.currentUserName}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col items-start">
+                <span className="text-lg font-semibold leading-6">
+                  {userData.currentUserName}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {userData.currentUserLogin}
+                </span>
+              </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
+            <DropdownMenuContent>
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -118,12 +124,11 @@ export const Header = ({ collapsed, setCollapsed }) => {
                   Profile
                   <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <LogOut />  Log out
+                  <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                <LogOut />  Log out
-                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -1,7 +1,5 @@
-// import { Link } from "react-router-dom";
 import { Link } from "react-router-dom";
 
-// const categories = ["jeans", "t-shirts", "shoes", "glasses", "jackets", "suits", "bags"];
 const categories = [
 	{ href: "/jeans", name: "jeans", imageUrl: "/jeans.jpg" },
 	{ href: "/t-shirts", name: "t-shirts", imageUrl: "/tshirts.jpg" },
@@ -14,28 +12,29 @@ const categories = [
 
 const CategoryPage = () => {
 	return (
-		<div className="p-6">
-			<h2 className="text-2xl font-semibold text-blue-300 mb-4">Categories</h2>
+		<div className="flex flex-col gap-y-4">
+			<h1 className="title text-3xl font-bold">Categories</h1>
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				{categories.map((category, index) => (
-					<div key={index} className='relative overflow-hidden h-96 w-full rounded-lg group'>
+				{categories.map((category) => (
+					<div
+						key={category.name}
+						className="relative overflow-hidden h-48 w-full rounded-lg shadow-md group"
+					>
 						<Link to={`/category/${category.name}`}>
-							<div className='w-full h-full cursor-pointer'>
-								<div className='absolute inset-0 bg-gradient-to-b from-transparent to-gray-900 opacity-50 z-10' />
+							<div className="w-full h-full cursor-pointer relative">
 								<img
 									src={category.imageUrl}
 									alt={category.name}
-									className='w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110'
-									loading='lazy'
+									loading="lazy"
+									className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
 								/>
-								<div className='absolute bottom-0 left-0 right-0 p-4 z-20'>
-									<h3 className='text-white text-2xl font-bold mb-2'>{category.name}</h3>
-									<p className='text-gray-200 text-sm'>Explore {category.name}</p>
+								<div className="absolute bottom-0 left-0 right-0 px-4 py-2 z-20 bg-gray-300/50 backdrop-blur-sm">
+									<h3 className="text-white text-2xl font-bold">{category.name}</h3>
+									<p className="text-gray-100 text-sm">Explore {category.name}</p>
 								</div>
 							</div>
 						</Link>
 					</div>
-
 				))}
 			</div>
 		</div>
