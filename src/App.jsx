@@ -17,6 +17,7 @@ import UserRegisterListPage from "./pages/UserRegisterListPage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import SubMaterialPage from "./pages/SubMaterialPage";
+import AccountSettings from "./pages/AccountSettings";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -36,6 +37,7 @@ const App = () => {
           element: <Layout />,
           children: [
             { index: true, element: <DashboardPage /> },
+            { path: "account-settings", element: <AccountSettings /> },
             { path: "customers-information", element: <CustomersInformation /> },
             { path: "customers-table", element: <CustomersTable /> },
             { path: "category", element: <CategoryPage /> },

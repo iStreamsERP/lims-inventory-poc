@@ -1,340 +1,630 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@radix-ui/react-checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
+import { CheckIcon, ChevronDown, SquarePen, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const CustomersInformation = () => {
-  const [newContact, setNewContact] = useState({
-    id: null,
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [editingContactId, setEditingContactId] = useState(null);
+  const [editingCustomerId, setEditingCustomerId] = useState(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [customer, setCustomer] = useState({
+    id: null, // ID will be assigned dynamically
     name: "",
-    designation: "",
-    contactFor: "",
     email: "",
+    businessType: "",
+    othernatureofbuisness: [],
+    vatNumber: "",
+    groupofcompany: "",
     phone: "",
-    alternativePhone: "",
+    website: "",
+    country: "",
+    state: "",
+    city: "",
+    communicationAddress: "",
+    invoiceAddress: "",
+    deliveryAddress: "",
+    contacts: [],
   });
 
-  const [data, SetData] = useState([]);
+  const [contact, setContact] = useState({
+    id: null, // ID will be assigned dynamically
+    contactname: "",
+    contactdesignation: "",
+    contactcontactFor: "",
+    contactemail: "",
+    contactphone: "",
+    contactalternativePhone: "",
+  });
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const othernatureofbuisness = [
+    { value: "IT", label: "IT" },
+    { value: "Finance", label: "Finance" },
+    { value: "Healthcare", label: "Healthcare" },
+    { value: "Education", label: "Education" },
+    { value: "Retail", label: "Retail" },
+  ];
+  const businessType = [
+    { value: "IT", label: "IT" },
+    { value: "Finance", label: "Finance" },
+    { value: "Healthcare", label: "Healthcare" },
+    { value: "Education", label: "Education" },
+    { value: "Retail", label: "Retail" },
+  ];
+  const country = [
+    { value: "Nigeria", label: "Nigeria" },
+    { value: "Ghana", label: "Ghana" },
+    { value: "Togo", label: "Togo" },
+    { value: "Benin", label: "Benin" },
+  ];
 
-  const handleSaveContact = (e) => {
+  useEffect(() => {
+    if (location.state?.customer) {
+      const storedData = JSON.parse(localStorage.getItem("customersData")) || [];
+      console.log("Stored Data:", storedData);
+      setCustomer((prev) => ({
+        ...prev,
+        ...location.state.customer,
+      }));
+    }
+  }, [location.state]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCustomer((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSelectChange = (value) => {
+    setCustomer((prev) => ({
+      ...prev,
+      country: [value], // Replace the entire array with the selected value
+    }));
+  };
+
+  const handleSelectedChange = (value) => {
+    setCustomer((prev) => ({
+      ...prev,
+      businessType: [value], // Replace the entire array with the selected value
+    }));
+  };
+  const handleMultiSelectChange = (value) => {
+    setCustomer((prev) => {
+      const updatedList = prev.othernatureofbuisness.includes(value)
+        ? prev.othernatureofbuisness.filter((item) => item !== value)
+        : [...prev.othernatureofbuisness, value];
+
+      return {
+        ...prev,
+        othernatureofbuisness: updatedList,
+      };
+    });
+  };
+
+  const handleContactChange = (e) => {
+    const { name, value } = e.target;
+    setContact((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const addContact = () => {
+    setCustomer((prev) => {
+      const nextContactId = editingContactId ? editingContactId : prev.contacts.length + 1; // Assign ID as index+1
+
+      const updatedContacts = editingContactId
+        ? prev.contacts.map((c) => (c.id === editingContactId ? { ...contact, id: editingContactId } : c))
+        : [...prev.contacts, { ...contact, id: nextContactId }];
+
+      return {
+        ...prev,
+        contacts: updatedContacts,
+      };
+    });
+
+    setIsDialogOpen(false);
+    setEditingContactId(null);
+    setContact({
+      id: null,
+      contactname: "",
+      contactdesignation: "",
+      contactcontactFor: "",
+      contactemail: "",
+      contactphone: "",
+      contactalternativePhone: "",
+    });
+  };
+
+  const removeContact = (id) => {
+    setCustomer((prev) => ({
+      ...prev,
+      contacts: prev.contacts.filter((c) => c.id !== id),
+    }));
+  };
+
+  const editContact = (id) => {
+    const selectedContact = customer.contacts.find((c) => c.id === id);
+    setContact(selectedContact);
+    setEditingContactId(id);
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = (e) => {
     e.preventDefault();
-    if (newContact.name && newContact.email && newContact.phone) {
-      SetData((prevData) => {
-        if (newContact.id) {
-          return prevData.map((item) => (item.id === newContact.id ? newContact : item));
-        } else {
-          return [...prevData, { ...newContact, id: prevData.length + 1 }];
-        }
-      });
-      setNewContact({ name: "", designation: "", contactFor: "", email: "", phone: "", alternativePhone: "" });
-      setDialogOpen(false);
+    let savedCustomers = JSON.parse(localStorage.getItem("customersData")) || [];
+    let updatedCustomer;
+
+    if (location.state?.customer) {
+      updatedCustomer = { ...customer, id: location.state.customer.id };
+      savedCustomers = savedCustomers.map((cust) => (cust.id === location.state.customer.id ? updatedCustomer : cust));
     } else {
-      alert("Please fill in all required fields!");
+      updatedCustomer = { ...customer, id: savedCustomers.length + 1 };
+      savedCustomers.push(updatedCustomer);
     }
+
+    console.log("Saving Customer:", updatedCustomer); // Debugging
+    localStorage.setItem("customersData", JSON.stringify(savedCustomers));
+    navigate("/customers-table");
   };
-
-  const handleCancel = () => {
-    setDialogOpen(false);
-
-    if (!newContact.id) {
-      setNewContact({ name: "", designation: "", contactFor: "", email: "", phone: "", alternativePhone: "" });
-    }
-  };
-
-  const handleDeleteContact = (id) => {
-    SetData((prevData) => prevData.filter((item) => item.id !== id));
-  };
-
-  const handleEditContact = (id) => {
-    const contactToEdit = data.find((item) => item.id === id);
-    if (contactToEdit) {
-      setNewContact(contactToEdit);
-      setDialogOpen(true);
-    }
-  };
-
   return (
-
-    <div className="flex flex-col gap-y-4">
-      <h1 className="title">Customer Information</h1>
-      <div className="flex w-full flex-col gap-4">
-        <form>
-          <div className="flex w-full flex-col gap-4 lg:flex-row">
-            <Card className="w-full lg:w-[70%]">
-              <CardHeader>
-                <CardTitle>Add Customer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-4 overflow-y-auto">
-                  <div className="flex w-full flex-col gap-2 md:flex-row">
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="CLIENT_NAME">Company Name</Label>
-                      <Input
-                        id="CLIENT_NAME"
-                        placeholder="Name of your Company"
-                      />
-                    </div>
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="EMAIL_ADDRESS">Email</Label>
-                      <Input
-                        id="EMAIL_ADDRESS"
-                        placeholder="Enter Email"
-                      />
-                    </div>
-
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="NATURE_OF_BUSINESS">Select Business</Label>
-                      <Select>
-                        <SelectTrigger id="NATURE_OF_BUSINESS">
-                          <SelectValue placeholder="Select Business" />
-                        </SelectTrigger>
-                        <SelectContent position="popper">
-                          <SelectItem value="software">Software</SelectItem>
-                          <SelectItem value="hardware">Hardware</SelectItem>
-                          <SelectItem value="wholesale">Wholesale</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
-                          <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+    <div className="flex w-full flex-col gap-4">
+      <form>
+        <div className="flex w-full flex-col gap-4 lg:flex-row">
+          <Card className="w-full lg:w-[70%]">
+            <CardHeader>
+              <CardTitle>{location.state?.customer ? "Edit Customer" : "Add Customer"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4 p-1">
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                  <div className="w-full md:w-1/2">
+                 
+                    <Label htmlFor="name">Customer / Company Name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="Name of your Company"
+                      value={customer.name}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
-
-                  <div className="flex w-full flex-col gap-2 md:flex-row">
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="TRN_VAT_NO">VAT/GST/TAX No</Label>
-                      <Input
-                        id="TRN_VAT_NO"
-                        placeholder="Enter Tax.no"
-                      />
-                    </div>
-
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="GROUP_NAME">Group of</Label>
-                      <Input
-                        id="GROUP_NAME"
-                        placeholder="Enter Group Name"
-                      />
-                    </div>
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="TELEPHONE_NO">Phone Number</Label>
-                      <Input
-                        id="TELEPHONE_NO"
-                        placeholder="Enter Phone Number"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex w-full flex-col gap-2 md:flex-row">
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="CITY_NAME">City</Label>
-                      <Input
-                        id="CITY_NAME"
-                        placeholder="Enter City Name"
-                      />
-                    </div>
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="COUNTRY">Select Country</Label>
-                      <Select>
-                        <SelectTrigger id="COUNTRY">
-                          <SelectValue placeholder="Select Country" />
-                        </SelectTrigger>
-                        <SelectContent position="popper">
-                          <SelectItem value="india">India</SelectItem>
-                          <SelectItem value="usa">USA</SelectItem>
-                          <SelectItem value="uk">UK</SelectItem>
-                          <SelectItem value="canada">Canada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="WEB_ADDRESS">Website</Label>
-                      <Input
-                        id="WEB_ADDRESS"
-                        placeholder="Enter Website"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex w-full flex-col gap-2 md:flex-row">
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="COMMUNICATION_ADDRESS">Comm Address</Label>
-                      <Textarea
-                        id="COMMUNICATION_ADDRESS"
-                        placeholder="Communication Address"
-                      />
-                    </div>
-
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="INVOICE_ADDRESS">Invoice Address</Label>
-                      <Textarea
-                        id="INVOICE_ADDRESS"
-                        placeholder="Invoice Address"
-                      />
-                    </div>
-                    <div className="w-full space-y-1.5 md:w-1/2">
-                      <Label htmlFor="DELIVERY_ADDRESS">Delivery Address</Label>
-                      <Textarea
-                        id="DELIVERY_ADDRESS"
-                        placeholder="Delivery Address"
-                      />
-                    </div>
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      placeholder="Enter Email"
+                      value={customer.email}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                  <div className="mt-3 w-full md:w-1/2">
+                    <Label className="block text-sm font-medium">Select Nature Of Business</Label>
 
-            {/* Add Contacts Card - 30% width on medium screens and above */}
-            <Card className="w-full lg:w-[30%]">
-              <CardHeader>
-                <CardTitle>Add Contacts</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[350px] overflow-y-scroll">
-                <div className="flex flex-col flex-wrap gap-4">
-                  {data &&
-                    data.map((item) => (
-                      <Card
-                        className="flex h-[100px] w-full flex-col justify-center gap-2 p-3"
-                        key={item.email}
-                      >
-                        <div className="flex justify-between">
-                          <div>
-                            <p className="text-sm font-bold leading-none text-gray-700">{item.name}</p>
-                            <p className="mb-1 text-xs font-semibold text-gray-500">{item.designation}</p>
-                            <p className="text-xs text-gray-600">{item.email}</p>
-                            <p className="text-xs text-blue-600">+91 {item.phone}</p>
-                          </div>
-                          <div className="flex flex-row gap-2">
-                            <SquarePen
-                              size={14}
-                              className="cursor-pointer text-blue-700"
-                              onClick={() => handleEditContact(item.id)}
-                            />
-                            <Trash2
-                              size={14}
-                              className="cursor-pointer text-red-700"
-                              onClick={() => handleDeleteContact(item.id)}
-                            />
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                </div>
-              </CardContent>
-              <CardFooter
-                className="flex items-center justify-center"
-                id="addContact"
-              >
-                <Dialog
-                  open={dialogOpen}
-                  onOpenChange={setDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button className="w-1/2">Add Contact</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <form>
-                      <DialogHeader>
-                        <DialogTitle>{newContact.name ? "Edit Contact" : "Add Contact"}</DialogTitle>
-                        <DialogDescription>Enter the contact details and click save.</DialogDescription>
-                      </DialogHeader>
-                      <div className="flex flex-col gap-4 py-4">
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="NAME">Name</Label>
-                          <Input
-                            id="NAME"
-                            placeholder="Contact Name"
-                            value={newContact.name || ""}
-                            onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="DESIGNATION">Designation</Label>
-                          <Input
-                            id="DESIGNATION"
-                            placeholder="Designation"
-                            value={newContact.designation || ""}
-                            onChange={(e) => setNewContact({ ...newContact, designation: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="CONTACT_FOR">Contact for</Label>
-                          <Select
-                            id="CONTACT_FOR"
-                            value={newContact.contactFor || ""}
-                            onValueChange={(value) => setNewContact({ ...newContact, contactFor: value })}
-                          >
-                            <SelectTrigger id="CONTACT_FOR">
-                              <SelectValue placeholder="Contact for" />
-                            </SelectTrigger>
-                            <SelectContent position="popper">
-                              <SelectItem value="sales">Sales</SelectItem>
-                              <SelectItem value="enquiry">Enquiry</SelectItem>
-                              <SelectItem value="transportation">Transportation</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="EMAIL_ADDRESS">Email</Label>
-                          <Input
-                            id="EMAIL_ADDRESS"
-                            placeholder="Contact Email"
-                            value={newContact.email || ""}
-                            onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="flex w-full flex-col space-y-1.5">
-                          <Label htmlFor="MOBILE_NO">Mobile Number</Label>
-                          <Input
-                            id="MOBILE_NO"
-                            placeholder="Mobile No"
-                            value={newContact.phone || ""}
-                            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="flex w-full flex-col space-y-1.5">
-                          <Label htmlFor="ALTERNATIVE_PHONE">Alternative Phone</Label>
-                          <Input
-                            id="ALTERNATIVE_PHONE"
-                            placeholder="Alternative Phone"
-                            value={newContact.alternativePhone || ""}
-                            onChange={(e) => setNewContact({ ...newContact, alternativePhone: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <Button
-                          variant="secondary"
-                          onClick={handleSaveContact}
+                          variant="outline"
+                          className="flex w-full items-center justify-between overflow-hidden"
                         >
-                          Cancel
+                          {customer.businessType.length > 0 ? (
+                            customer.businessType[0] // Display only the selected option
+                          ) : (
+                            <span className="font-normal text-gray-500">Select Business</span>
+                          )}
+                          <ChevronDown className="ml-2 h-4 w-4" />
                         </Button>
-                        <Button onClick={handleSaveContact}>Save</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </CardFooter>
-            </Card>
-          </div>
-        </form>
-      </div>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-56 rounded-md bg-white p-2 shadow-md">
+                        {businessType.map((option) => (
+                          <div
+                            key={option.value}
+                            className="flex items-center space-x-2 rounded-md p-2 hover:bg-gray-100"
+                          >
+                            <Checkbox
+                              id={option.value}
+                              checked={customer.businessType.includes(option.value)}
+                              onCheckedChange={() => handleSelectedChange(option.value)} // Ensure only one option is selected
+                            />
+                            <label
+                              htmlFor={option.value}
+                              className="flex w-full cursor-pointer justify-between text-sm"
+                            >
+                              {option.label}
+                              {customer.businessType.includes(option.value) && (
+                                <CheckIcon
+                                  className="mt-1"
+                                  size={12}
+                                />
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="mt-3 w-full md:w-1/2">
+                    <Label className="block text-sm font-medium">Select Other Nature Of Business</Label>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="flex w-full items-center justify-between overflow-hidden"
+                        >
+                          {customer.othernatureofbuisness.length > 0 ? (
+                            customer.othernatureofbuisness.join(", ")
+                          ) : (
+                            <span className="font-normal text-gray-500"> Select Business</span>
+                          )}
+                          <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-56 rounded-md bg-white p-2 shadow-md">
+                        {othernatureofbuisness.map((option) => (
+                          <div
+                            key={option.value}
+                            className="flex items-center space-x-2 rounded-md p-2 hover:bg-gray-100"
+                          >
+                            <Checkbox
+                              id={option.value}
+                              checked={customer.othernatureofbuisness.includes(option.value)}
+                              onCheckedChange={() => handleMultiSelectChange(option.value)}
+                            />
+                            <label
+                              htmlFor={option.value}
+                              className="flex w-full cursor-pointer justify-between text-sm"
+                            >
+                              {option.label}
+                              <CheckIcon
+                                className="mt-1"
+                                size={12}
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="vatNumber">VAT/GST/TAX No</Label>
+                    <Input
+                      id="vatNumber"
+                      placeholder="Enter Tax.no"
+                      value={customer.vatNumber}
+                      name="vatNumber"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="groupofcompany">Group of Company</Label>
+                    <Input
+                      id="groupofcompany"
+                      name="groupofcompany"
+                      placeholder="Enter Group Name"
+                      value={customer.groupofcompany}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      placeholder="Enter Phone"
+                      name="phone"
+                      value={customer.phone}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      name="website"
+                      placeholder="Enter Website"
+                      value={customer.website}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                <div className="mt-3 w-full md:w-1/2">
+                    <Label className="block text-sm font-medium">Select Contry</Label>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="flex w-full items-center justify-between overflow-hidden"
+                        >
+                          {customer.country.length > 0 ? (
+                            customer.country[0] // Display only the selected option
+                          ) : (
+                            <span className="font-normal text-gray-500">Select Country</span>
+                          )}
+                          <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-56 rounded-md bg-white p-2 shadow-md">
+                        {country.map((option) => (
+                          <div
+                            key={option.value}
+                            className="flex items-center space-x-2 rounded-md p-2 hover:bg-gray-100"
+                          >
+                            <Checkbox
+                              id={option.value}
+                              checked={customer.country.includes(option.value)}
+                              onCheckedChange={() => handleSelectChange(option.value)} // Ensure only one option is selected
+                            />
+                            <label
+                              htmlFor={option.value}
+                              className="flex w-full cursor-pointer justify-between text-sm"
+                            >
+                              {option.label}
+                              {customer.country.includes(option.value) && (
+                                <CheckIcon
+                                  className="mt-1"
+                                  size={12}
+                                />
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      name="state"
+                      placeholder="Enter City Name"
+                      value={customer.state}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      placeholder="Enter City Name"
+                      value={customer.city}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-2 md:flex-row">
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="communicationAddress">Communication Address</Label>
+                    <Textarea
+                      id="communicationAddress"
+                      placeholder="Communication Address"
+                      name="communicationAddress"
+                      value={customer.communicationAddress}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="invoiceAddress">Invoice Address</Label>
+                    <Textarea
+                      id="invoiceAddress"
+                      placeholder="Invoice Address"
+                      name="invoiceAddress"
+                      value={customer.invoiceAddress}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <Label htmlFor="deliveryAddress">Delivery Address</Label>
+                    <Textarea
+                      id="deliveryAddress"
+                      placeholder="Delivery Address"
+                      name="deliveryAddress"
+                      value={customer.deliveryAddress}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Add Contacts Card - 30% width on medium screens and above */}
+          <Card className="w-full lg:w-[30%]">
+            <CardHeader>
+              <CardTitle>Add Contacts</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[530px] overflow-y-scroll">
+              <div className="flex flex-col flex-wrap gap-4">
+                {customer.contacts.map((item) => (
+                  <Card
+                    className="flex h-[100px] w-full flex-col justify-center gap-2 p-3"
+                    key={item.contactemail}
+                  >
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="text-sm font-bold leading-none text-gray-700">{item.contactname}</p>
+                        <p className="mb-1 text-xs font-semibold text-gray-500">{item.contactdesignation}</p>
+                        <p className="text-xs text-gray-600">{item.contactemail}</p>
+                        <p className="text-xs text-blue-600">+91 {item.contactphone}</p>
+                      </div>
+                      <div className="flex flex-row gap-2">
+                        <SquarePen
+                          size={14}
+                          className="cursor-pointer text-blue-700"
+                          onClick={() => editContact(item.id)}
+                        />
+                        <Trash2
+                          size={14}
+                          className="cursor-pointer text-red-700"
+                          onClick={() => removeContact(item.id)}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter
+              className="flex items-center justify-center"
+              id="addContact"
+            >
+              <Dialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    className="w-1/2"
+                    onClick={() => setIsDialogOpen(true)}
+                  >
+                    Add Contact
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <form>
+                    <DialogHeader>
+                      <DialogTitle>{contact.contactname ? "Edit Contact" : "Add Contact"}</DialogTitle>
+                      <DialogDescription>Enter the contact details and click save.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-4 py-4">
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor="contactname">Name</Label>
+                        <Input
+                          id="contactname"
+                          name="contactname"
+                          placeholder="Contact Name"
+                          value={contact.contactname}
+                          onChange={handleContactChange}
+                        />
+                      </div>
+
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor="designation">Designation</Label>
+                        <Input
+                          id="contactdesignation"
+                          placeholder="Designation"
+                          name="contactdesignation"
+                          value={contact.contactdesignation}
+                          onChange={handleContactChange}
+                        />
+                      </div>
+
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor="contactcontactFor">Contact for</Label>
+                        <Select
+                          id="contactcontactFor"
+                          value={contact.contactcontactFor || ""}
+                          onValueChange={(value) => setContact((prev) => ({ ...prev, contactcontactFor: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Contact for" />
+                          </SelectTrigger>
+                          <SelectContent position="popper">
+                            <SelectItem value="sales">Sales</SelectItem>
+                            <SelectItem value="enquiry">Enquiry</SelectItem>
+                            <SelectItem value="transportation">Transportation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor="contactemail">Email</Label>
+                        <Input
+                          id="contactemail"
+                          name="contactemail"
+                          placeholder="Contact Email"
+                          value={contact.contactemail}
+                          onChange={handleContactChange}
+                        />
+                      </div>
+
+                      <div className="flex w-full flex-col space-y-1.5">
+                        <Label htmlFor="contactphone">Mobile Number</Label>
+                        <Input
+                          id="contactphone"
+                          name="contactphone"
+                          placeholder="Mobile No"
+                          value={contact.contactphone}
+                          onChange={handleContactChange}
+                        />
+                      </div>
+
+                      <div className="flex w-full flex-col space-y-1.5">
+                        <Label htmlFor="contactalternativePhone">Alternative Phone</Label>
+                        <Input
+                          id="contactalternativePhone"
+                          name="contactalternativePhone"
+                          placeholder="Alternative Phone"
+                          value={contact.contactalternativePhone}
+                          onChange={handleContactChange}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setIsDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={addContact}
+                      >
+                        Save
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardFooter>
+          </Card>
+        </div>
+        <div className="mt-3 flex w-full justify-center">
+          <Button
+            className="mt-3 w-1/4"
+            onClick={handleSave}
+            type="button"
+          >
+            {location.state?.customer ? "Update Customer" : "Save"}
+          </Button>
+        </div>
+      </form>
     </div>
-
-
-
   );
 };
 

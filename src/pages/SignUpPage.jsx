@@ -18,10 +18,23 @@ import { getNameFromEmail } from "../utils/emailHelpers";
 import { Checkbox } from "@/components/ui/checkbox"
 import Lottie from 'react-lottie';
 import animationData from "@/lotties/crm-animation-lotties.json";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 const SignUpPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [userType, setUserType] = useState("");
+    const [gstNo, setGstNo] = useState("");
+    const [acknowledged, setAcknowledged] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -38,7 +51,7 @@ const SignUpPage = () => {
     };
 
     // Memoized login handler to prevent re-creation on each render.
-    const handleLogin = useCallback(
+    const handleSignup = useCallback(
         async (e) => {
             e.preventDefault();
             setLoading(true);
@@ -176,30 +189,83 @@ const SignUpPage = () => {
             <div className="flex flex-col justify-center lg:p-8 bg-slate-100 dark:bg-slate-950 px-6">
                 <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
-                        <h1 className="text-2xl font-semibold tracking-tight ">
+                        <h1 className="text-2xl font-semibold tracking-tight">
                             Create an account
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Enter your email below to create your account
+                            Enter your details below to create your account
                         </p>
                     </div>
-                    <form onSubmit={handleLogin} className="space-y-4">
+                    <form onSubmit={handleSignup} className="space-y-4">
                         <div className="grid w-full items-center gap-4">
+                            {/* Name Field */}
                             <div className="flex flex-col space-y-1.5">
-                                <Input name="name" id="name" placeholder="user name" value={email} onChange={(e) => setEmail(e.target.value)}
-                                    required />
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    name="name"
+                                    id="name"
+                                    placeholder="Your name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                />
                             </div>
 
+                            {/* Email Field */}
                             <div className="flex flex-col space-y-1.5">
-                                <Input name="email" id="email" placeholder="username@domain.com" value={email} onChange={(e) => setEmail(e.target.value)}
-                                    required />
+                                <Label htmlFor="email">Email ID</Label>
+                                <Input
+                                    name="email"
+                                    id="email"
+                                    placeholder="username@domain.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
                             </div>
 
+                            {/* Type Selection */}
                             <div className="flex flex-col space-y-1.5">
+                                <Label htmlFor="type">Type</Label>
+                                <Select onValueChange={(value) => setUserType(value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            <SelectItem value="individual">Individual</SelectItem>
+                                            <SelectItem value="business">Business</SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* GST NO Field */}
+                            <div className="flex flex-col space-y-1.5">
+                                <Label htmlFor="gstNo">GST NO</Label>
+                                <Input
+                                    name="gstNo"
+                                    id="gstNo"
+                                    placeholder="Your GST Number"
+                                    value={gstNo}
+                                    onChange={(e) => setGstNo(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            {/* Password Field */}
+                            <div className="flex flex-col space-y-1.5">
+                                <Label htmlFor="password">Password</Label>
                                 <div className="flex gap-2 relative">
-                                    <Input name="email" id="email" placeholder="*******" type={showPassword ? "text" : "password"} value={password}
+                                    <Input
+                                        name="password"
+                                        id="password"
+                                        placeholder="*******"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        required />
+                                        required
+                                    />
                                     <span
                                         className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
                                         onClick={() => setShowPassword((prev) => !prev)}
@@ -210,24 +276,31 @@ const SignUpPage = () => {
                             </div>
                         </div>
 
+                        {/* Terms and Conditions */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                                <Checkbox id="terms" />
+                                <Checkbox
+                                    id="terms"
+                                    checked={acknowledged}
+                                    onChange={(e) => setAcknowledged(e.target.checked)}
+                                />
                                 <label
                                     htmlFor="terms"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    className="text-sm font-medium leading-none"
                                 >
-                                    I agree to all the terms & conditions
+                                    I acknowledge and agree to collaborate in iStreams
                                 </label>
                             </div>
                         </div>
 
+                        {/* Error Message */}
                         {error && (
                             <div className="bg-red-500 text-white p-2 mb-4 rounded">
                                 {error}
                             </div>
                         )}
 
+                        {/* Submit Button */}
                         <Button type="submit" disabled={loading} className="w-full">
                             {loading ? (
                                 <>
@@ -235,20 +308,12 @@ const SignUpPage = () => {
                                     Please wait
                                 </>
                             ) : (
-                                "Sign In"
+                                "Sign Up"
                             )}
                         </Button>
-                        <div className="flex items-center text-xs uppercase">
-                            <Separator className="flex-1" />
-                            <span className="px-2 whitespace-nowrap text-gray-400">Or continue with</span>
-                            <Separator className="flex-1" />
-                        </div>
-                        <Button variant="outline" className="w-full">
-                            <MailOpen /> Login with Email
-                        </Button>
-
-                        <p className="text-xs text-gray-400 text-center">Already have an account?
-                            <Link to="/login" className="text-blue-500"> Log in</Link>
+                        <p className="text-xs text-gray-400 text-center">
+                            Already have an account?{" "}
+                            <Link to="/login" className="text-blue-500">Log in</Link>
                         </p>
                     </form>
                 </div>

@@ -23,6 +23,7 @@ import {
   Maximize,
   Minimize,
   PanelLeftClose,
+  Settings2,
   ShoppingCart,
 } from "lucide-react";
 import PropTypes from "prop-types";
@@ -101,7 +102,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
             <ShoppingCart />
           </Button>
 
-          <DropdownMenu>
+          <DropdownMenu >
             <DropdownMenuTrigger className="flex items-start gap-2">
               <Avatar>
                 <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
@@ -116,18 +117,34 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 </span>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent className="w-[250px]">
+              <DropdownMenuLabel className="flex flex-col justify-between items-start mb-2">
+                <p className="text-md font-medium">
+                  {userData.currentUserName}
+                </p>
+                <p className="text-xs font-normal text-gray-400">
+                  {userData.currentUserLogin}
+                </p>
+              </DropdownMenuLabel>
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-gray-400 cursor-pointer">
                   Profile
-                  <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut />  Log out
-                  <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                <DropdownMenuItem className="flex justify-between items-center text-gray-400 cursor-pointer" onClick={() => navigate("/account-settings")}>
+                  Account Settings  <Settings2 />
                 </DropdownMenuItem>
+                <DropdownMenuItem className="text-gray-400 cursor-text">
+                  Theme
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 flex justify-between items-center cursor-pointer">
+                  Log out <LogOut />
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <span className="flex justify-between items-center cursor-pointer">
+                  <Button className="w-full">
+                    Upgrade to Pro
+                  </Button>
+                </span>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
