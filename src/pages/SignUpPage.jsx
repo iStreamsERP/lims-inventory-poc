@@ -170,7 +170,7 @@ const SignUpPage = () => {
                 <div>
                     <Lottie
                         options={defaultOptions}
-                        height={400}
+                        height={350}
                         width={400}
                     />
                 </div>
@@ -186,7 +186,7 @@ const SignUpPage = () => {
                     </blockquote>
                 </div>
             </div>
-            <div className="flex flex-col justify-center lg:p-8 bg-slate-100 dark:bg-slate-950 px-6">
+            <div className="flex flex-col justify-center lg:p-8 bg-slate-100 dark:bg-slate-950 px-6 overflow-y-auto">
                 <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">

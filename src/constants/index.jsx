@@ -45,6 +45,11 @@ export const navbarLinks = [
         path: "/item-list",
       },
       {
+        label: "Order List",
+        icon: ChartColumn,
+        path: "/order-list",
+      },
+      {
         label: "Order Creation",
         icon: BaggageClaim,
         path: "/order-creation",
@@ -53,11 +58,6 @@ export const navbarLinks = [
         label: "Service List",
         icon: NotepadText,
         path: "/service-list",
-      },
-      {
-        label: "Order List",
-        icon: ChartColumn,
-        path: "/order-list",
       },
       {
         label: "Enquiry",

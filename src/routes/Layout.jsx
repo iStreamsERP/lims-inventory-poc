@@ -6,6 +6,7 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/use-click-outside";
 import Footer from "@/layouts/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 const Layout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -40,6 +41,7 @@ const Layout = () => {
         />
         <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6">
           <Outlet />
+          <Toaster />
         </div>
       </div>
     </div>

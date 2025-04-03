@@ -98,6 +98,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
 
           <Button
             variant="ghost"
+            onClick={() => navigate("/cart-page")}
           >
             <ShoppingCart />
           </Button>

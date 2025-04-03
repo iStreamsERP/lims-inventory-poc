@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Check, CheckIcon, ChevronsUpDown, EditIcon, Pencil, PencilIcon, PlusIcon, ShoppingCart, Trash2Icon, TrashIcon } from "lucide-react";
 import { useState } from "react";
-import { set } from "react-hook-form";
+
 
 const OrderCreationPage = () => {
   const CustomerList = [
@@ -107,8 +107,7 @@ const OrderCreationPage = () => {
       discount: 5,
     },
   ]);
-  const discount = 10;
-  const tax = 5;
+  
   const [isFocused, setIsFocused] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTermCustomer, setSearchTermCustomer] = useState("");
@@ -200,7 +199,7 @@ const OrderCreationPage = () => {
   };
   return (
     <div className="flex flex-col gap-2 lg:flex-row">
-      <Card className="w-full">
+      <Card className="w-full  lg:w-[74%] 2xl:w-[100%]">
         <CardHeader>
           <CardTitle>
             <div className="flex h-full w-full flex-col justify-between lg:flex-row">
@@ -270,8 +269,8 @@ const OrderCreationPage = () => {
             </Button>
           </div>
 
-          <Table className="mt-4 w-full">
-            <ScrollArea className="h-[400px] w-full overflow-x-scroll overflow-y-scroll rounded-md border p-4 xl:h-[399px]">
+          <Table className="mt-4 w-full ">
+            <ScrollArea className="max-h-[380px] w-full overflow-x-scroll overflow-y-scroll rounded-md border ps-3 xl:h-[399px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>S.No</TableHead>
@@ -291,8 +290,9 @@ const OrderCreationPage = () => {
                 {tableData.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
-                      className="py-5 text-center text-gray-500"
+                      colSpan={12}
+                      
+                      className=" h-[260px] text-center text-gray-500"
                     >
                       -- No Material Added Yet. Search to Add Material --
                     </TableCell>

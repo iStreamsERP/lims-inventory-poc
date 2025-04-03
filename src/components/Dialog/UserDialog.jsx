@@ -14,6 +14,7 @@ import { getDomainFromEmail } from "@/utils/emailHelpers";
 import { Check, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
+import { toast } from "sonner"
 
 // Validate the entire form on submission.
 const validateForm = (data) => {
@@ -235,7 +236,7 @@ const UserDialog = ({ user, open, onClose }) => {
         try {
             if (!user) {
                 const createNewUserResponse = await createNewUser(userFormData, userData.currentUserLogin, userData.clientURL)
-                console.log(createNewUserResponse);
+                toast(createNewUserResponse)
             } else {
                 // Handle edit user case if needed
             }

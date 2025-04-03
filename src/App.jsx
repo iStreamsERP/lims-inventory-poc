@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import EnquiryForm from "./components/form/EnquiryForm";
+import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
 import CategoryDetailsPage from "./pages/CategoryDetailsPage";
 import CategoryPage from "./pages/CategoryPage";
@@ -13,11 +14,12 @@ import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
 import ServicePricingPage from "./pages/ServicePricingpage";
 import SignUpPage from "./pages/SignUpPage";
+import SubMaterialPage from "./pages/SubMaterialPage";
 import UserRegisterListPage from "./pages/UserRegisterListPage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import SubMaterialPage from "./pages/SubMaterialPage";
-import AccountSettings from "./pages/AccountSettings";
+import ForgetPassword from "./pages/ForgetPassword";
+import OrderList from "./pages/OrderList";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -45,10 +47,12 @@ const App = () => {
             { path: "user-register-list", element: <UserRegisterListPage /> },
             { path: "sub-material-page", element: <SubMaterialPage /> },
             { path: "item-list", element: <ItemList /> },
+            { path: "order-list", element: <OrderList /> },
             { path: "order-creation", element: <OrderCreationPage /> },
             { path: "service-list", element: <ServicePricingPage /> },
             { path: "enquiry-form", element: <EnquiryForm /> },
             { path: "cart-page", element: <CartPage /> },
+            { path: "forgot-password", element: <ForgetPassword /> },
           ]
         }
       ],

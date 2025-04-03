@@ -188,8 +188,8 @@ const UserTable = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEditUser(user)}>  <Pencil /> Edit </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditUser(user)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
