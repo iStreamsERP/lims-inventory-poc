@@ -20,7 +20,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-export  function ItemDialog() {
+export function ItemDialog() {
   const [data, setData] = useState({
     itemcode: "",
     itemname: "",
@@ -57,21 +57,21 @@ export  function ItemDialog() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     let existingData = localStorage.getItem("itemData");// Retrieve existing data
     let itemsArray = existingData ? JSON.parse(existingData) : [];// Parse existing data
-  
+
     // Ensure it's always an array
     if (!Array.isArray(itemsArray)) {
       itemsArray = [];
     }
-  
+
     // Add the new item to the array
     itemsArray.push(data);
-  
+
     // Save back to localStorage
     localStorage.setItem("itemData", JSON.stringify(itemsArray));
-  
+
     // Reset form fields
     setData({
       itemcode: "",
@@ -87,14 +87,14 @@ export  function ItemDialog() {
       previewImage: "",
     });
   };
-  
+
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button className="btn-sm w-full text-xs sm:w-full md:ms-0 md:w-32 lg:ms-4 lg:w-32">
           <Plus />
-          Create Item
+          Create Product
         </Button>
       </DialogTrigger>
       <DialogContent className="w-full h-[80vh] overflow-y-scroll md:max-w-[40%]">

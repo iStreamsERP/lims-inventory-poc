@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { EditIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const ItemList = () => {
+const ProductList = () => {
   const [carts, setCarts] = useState([]);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const ItemList = () => {
     <div className="w-full">
 
       <div className="flex flex-col gap-y-4">
-        <h1 className="title">Item List</h1>
+        <h1 className="title">Product List</h1>
         <div>
           <div className="mb-2 grid grid-cols-12 gap-2">
             <div className="col-span-12 flex w-full justify-end text-xs md:col-span-2 md:col-start-7 lg:col-span-2 lg:col-start-7">
@@ -131,4 +131,4 @@ const ItemList = () => {
   );
 };
 
-export default ItemList;
+export default ProductList;

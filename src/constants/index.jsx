@@ -40,14 +40,14 @@ export const navbarLinks = [
         path: "/user-register-list",
       },
       {
-        label: "Item List",
+        label: "Products",
         icon: ShoppingBag,
-        path: "/item-list",
+        path: "/products-list",
       },
       {
-        label: "Order List",
-        icon: ChartColumn,
-        path: "/order-list",
+        label: "Product Category",
+        icon: ShoppingBag,
+        path: "/product-category",
       },
       {
         label: "Order Creation",
@@ -58,6 +58,11 @@ export const navbarLinks = [
         label: "Service List",
         icon: NotepadText,
         path: "/service-list",
+      },
+      {
+        label: "Order List",
+        icon: ChartColumn,
+        path: "/order-list",
       },
       {
         label: "Enquiry",

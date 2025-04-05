@@ -8,18 +8,19 @@ import CategoryPage from "./pages/CategoryPage";
 import CustomersInformation from "./pages/CustomersInformation";
 import CustomersTable from "./pages/CustomersTable";
 import DashboardPage from "./pages/DashboardPage";
-import ItemList from "./pages/ItemsList";
+import ForgetPassword from "./pages/ForgetPassword";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
+import OrderList from "./pages/OrderList";
+import ProductCategory from "./pages/ProductCategory";
+import ProductList from "./pages/ProductList";
 import ServicePricingPage from "./pages/ServicePricingpage";
 import SignUpPage from "./pages/SignUpPage";
 import SubMaterialPage from "./pages/SubMaterialPage";
 import UserRegisterListPage from "./pages/UserRegisterListPage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import ForgetPassword from "./pages/ForgetPassword";
-import OrderList from "./pages/OrderList";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -46,10 +47,11 @@ const App = () => {
             { path: "category/:category", element: <CategoryDetailsPage /> },
             { path: "user-register-list", element: <UserRegisterListPage /> },
             { path: "sub-material-page", element: <SubMaterialPage /> },
-            { path: "item-list", element: <ItemList /> },
+            { path: "products-list", element: <ProductList /> },
             { path: "order-list", element: <OrderList /> },
             { path: "order-creation", element: <OrderCreationPage /> },
             { path: "service-list", element: <ServicePricingPage /> },
+            { path: "product-category", element: <ProductCategory /> },
             { path: "enquiry-form", element: <EnquiryForm /> },
             { path: "cart-page", element: <CartPage /> },
             { path: "forgot-password", element: <ForgetPassword /> },

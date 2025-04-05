@@ -18,6 +18,7 @@ const CustomersInformation = () => {
   const [editingContactId, setEditingContactId] = useState(null);
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [Err, SetErr] = useState({});
   const [customer, setCustomer] = useState({
     id: null, // ID will be assigned dynamically
     name: "",
@@ -68,10 +69,36 @@ const CustomersInformation = () => {
     { value: "Benin", label: "Benin" },
   ];
 
+  const validate = () => {
+    const newErrors = {};
+
+    if (!customer.name.trim()) {
+      newErrors.name = "Customer name is required.";
+    }
+
+    if (!customer.email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!/\S+@\S+\.\S+/.test(customer.email)) {
+      newErrors.email = "Invalid email address.";
+    }
+
+    if (!customer.phone.trim()) {
+      newErrors.phone = "Phone number is required.";
+    } else if (!/^\d{10}$/.test(customer.phone)) {
+      newErrors.phone = "Phone number must be 10 digits.";
+    }
+    if (!customer.vatNumber.trim()) {
+      newErrors.vatNumber = "VatNumber Is Required.";
+    }
+    if (!customer.invoiceAddress.trim()) {
+      newErrors.invoiceAddress = "InvoiceAddress is required.";
+    }
+
+    return newErrors;
+  };
+
   useEffect(() => {
     if (location.state?.customer) {
-      const storedData = JSON.parse(localStorage.getItem("customersData")) || [];
-      console.log("Stored Data:", storedData);
       setCustomer((prev) => ({
         ...prev,
         ...location.state.customer,
@@ -84,6 +111,10 @@ const CustomersInformation = () => {
     setCustomer((prev) => ({
       ...prev,
       [name]: value,
+    }));
+    SetErr((prev) => ({
+      ...prev,
+      [name]: "",
     }));
   };
 
@@ -164,6 +195,14 @@ const CustomersInformation = () => {
 
   const handleSave = (e) => {
     e.preventDefault();
+
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      SetErr(validationErrors);
+      console.log("Validation failed", validationErrors);
+      return;
+    }
+
     let savedCustomers = JSON.parse(localStorage.getItem("customersData")) || [];
     let updatedCustomer;
 
@@ -175,7 +214,6 @@ const CustomersInformation = () => {
       savedCustomers.push(updatedCustomer);
     }
 
-    console.log("Saving Customer:", updatedCustomer); // Debugging
     localStorage.setItem("customersData", JSON.stringify(savedCustomers));
     navigate("/customers-table");
   };
@@ -191,7 +229,6 @@ const CustomersInformation = () => {
               <div className="flex flex-wrap gap-4 p-1">
                 <div className="flex w-full flex-col gap-2 md:flex-row">
                   <div className="w-full md:w-1/2">
-                 
                     <Label htmlFor="name">Customer / Company Name</Label>
                     <Input
                       id="name"
@@ -201,6 +238,7 @@ const CustomersInformation = () => {
                       onChange={handleInputChange}
                       required
                     />
+                    {Err.name && <p className="text-sm text-red-500">{Err.name}</p>}
                   </div>
                   <div className="w-full md:w-1/2">
                     <Label htmlFor="email">Email</Label>
@@ -212,6 +250,7 @@ const CustomersInformation = () => {
                       onChange={handleInputChange}
                       required
                     />
+                    {Err.email && <p className="text-sm text-red-500">{Err.email}</p>}
                   </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 md:flex-row">
@@ -318,6 +357,7 @@ const CustomersInformation = () => {
                       name="vatNumber"
                       onChange={handleInputChange}
                     />
+                    {Err.vatNumber && <p className="text-sm text-red-500">{Err.vatNumber}</p>}
                   </div>
 
                   <div className="w-full md:w-1/2">
@@ -334,14 +374,15 @@ const CustomersInformation = () => {
 
                 <div className="flex w-full flex-col gap-2 md:flex-row">
                   <div className="w-full md:w-1/2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span></Label>
                     <Input
                       id="phone"
-                      placeholder="Enter Phone"
+                      placeholder="e.g. +91XXXXXXXXXX"
                       name="phone"
                       value={customer.phone}
                       onChange={handleInputChange}
                     />
+                    {Err.phone && <p className="text-sm text-red-500">{Err.phone}</p>}
                   </div>
                   <div className="w-full md:w-1/2">
                     <Label htmlFor="website">Website</Label>
@@ -356,7 +397,7 @@ const CustomersInformation = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="mt-3 w-full md:w-1/2">
+                  <div className="mt-3 w-full md:w-1/2">
                     <Label className="block text-sm font-medium">Select Contry</Label>
 
                     <Popover>
@@ -445,7 +486,9 @@ const CustomersInformation = () => {
                       value={customer.invoiceAddress}
                       onChange={handleInputChange}
                     />
+                    {Err.invoiceAddress && <p className="text-sm text-red-500">{Err.invoiceAddress}</p>}
                   </div>
+
                   <div className="w-full md:w-1/2">
                     <Label htmlFor="deliveryAddress">Delivery Address</Label>
                     <Textarea
@@ -509,6 +552,7 @@ const CustomersInformation = () => {
                   <Button
                     className="w-1/2"
                     onClick={() => setIsDialogOpen(true)}
+                    disabled={customer.name === "" || customer.email === ""}
                   >
                     Add Contact
                   </Button>
@@ -529,6 +573,7 @@ const CustomersInformation = () => {
                           value={contact.contactname}
                           onChange={handleContactChange}
                         />
+                        {Err.contactname && <p className="text-sm text-red-500">{Err.contactname}</p>}
                       </div>
 
                       <div className="flex flex-col space-y-1.5">
@@ -540,6 +585,7 @@ const CustomersInformation = () => {
                           value={contact.contactdesignation}
                           onChange={handleContactChange}
                         />
+                        {Err.contactdesignation && <p className="text-sm text-red-500">{Err.contactdesignation}</p>}
                       </div>
 
                       <div className="flex flex-col space-y-1.5">
@@ -558,6 +604,7 @@ const CustomersInformation = () => {
                             <SelectItem value="transportation">Transportation</SelectItem>
                           </SelectContent>
                         </Select>
+                        {Err.contactcontactFor && <p className="text-sm text-red-500">{Err.contactcontactFor}</p>}
                       </div>
 
                       <div className="flex flex-col space-y-1.5">
@@ -569,25 +616,29 @@ const CustomersInformation = () => {
                           value={contact.contactemail}
                           onChange={handleContactChange}
                         />
+                        {Err.contactemail && <p className="text-sm text-red-500">{Err.contactemail}</p>}
                       </div>
 
                       <div className="flex w-full flex-col space-y-1.5">
-                        <Label htmlFor="contactphone">Mobile Number</Label>
+                        <Label htmlFor="contactphone">
+                          Mobile Number<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span>
+                        </Label>
                         <Input
                           id="contactphone"
                           name="contactphone"
-                          placeholder="Mobile No"
+                          placeholder="e.g. +91XXXXXXXXXX"
                           value={contact.contactphone}
                           onChange={handleContactChange}
                         />
+                        {Err.contactphone && <p className="text-sm text-red-500">{Err.contactphone}</p>}
                       </div>
 
                       <div className="flex w-full flex-col space-y-1.5">
-                        <Label htmlFor="contactalternativePhone">Alternative Phone</Label>
+                        <Label htmlFor="contactalternativePhone">Alternative Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span></Label>
                         <Input
                           id="contactalternativePhone"
                           name="contactalternativePhone"
-                          placeholder="Alternative Phone"
+                          placeholder="e.g. +91XXXXXXXXXX"
                           value={contact.contactalternativePhone}
                           onChange={handleContactChange}
                         />

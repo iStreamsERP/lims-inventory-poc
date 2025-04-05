@@ -89,7 +89,7 @@ const UserDialog = ({ user, open, onClose }) => {
     const { userData } = useAuth();
     const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState({});
     const [errors, setErrors] = useState({});
     const [image, setImage] = useState(null);
     const fileInputRef = useRef(null);
@@ -155,10 +155,9 @@ const UserDialog = ({ user, open, onClose }) => {
         }
     }, [user, open])
 
-    // General change handler for inputs.
     const handleChange = (eventOrValue, fieldName) => {
+        const { name, value, type, checked } = eventOrValue.target;
         if (eventOrValue && eventOrValue.target) {
-            const { name, value, type, checked } = eventOrValue.target;
             setUserFormData((prevData) => ({
                 ...prevData,
                 [name]: type === "checkbox" ? checked : value,
@@ -170,9 +169,13 @@ const UserDialog = ({ user, open, onClose }) => {
                 [fieldName]: eventOrValue,
             }));
         }
+        if (user) {
+            setIsFocused((prev) => ({ ...prev, [name]: true }))
+        }
     };
 
-    // Validate field on blur and update errors state.
+    // console.table(isFocused);
+
     const handleBlur = (e) => {
         const { name, value } = e.target;
         const errorMessage = validateInput(name, value);
@@ -183,28 +186,24 @@ const UserDialog = ({ user, open, onClose }) => {
         setIsFocused((prev) => ({ ...prev, [name]: false }));
     };
 
-    const handleFocus = (e) => {
-        const { name } = e.target;
-        setIsFocused((prev) => ({ ...prev, [name]: true }))
-    }
-
-    const handleUpdate = (key, value) => {
-        console.log(key, value);
-
-        // setLoading(true);
-        // try {
-        //     const updateUserPayload = {
-        //         fqUserName: userData.currentUserLogin,
-        //         userNameOnly: userData.currentUserName,
-        //         columnName: field,
-        //         value: field,
-        //     }
-        //     const updateUserResponse = await updateUser(updateUserPayload, userData.currentUserLogin, userData.clientURL)
-        // } catch (error) {
-        //     console.log(error);
-        // } finally {
-        //     setLoading(false);
-        // }
+    const handleUpdate = async (key, value) => {
+        try {
+            setLoading((prev) => ({ ...prev, [key]: true }));
+            const updateUserPayload = {
+                fqUserName: user.EMAIL_ADDRESS,
+                userNameOnly: user.USER_NAME,
+                columnName: key,
+                value: value,
+            }
+            const updateUserResponse = await updateUser(updateUserPayload, userData.currentUserLogin, userData.clientURL)
+            toast(updateUserResponse)
+        } catch (error) {
+            console.log("Error updating user:", error);
+            toast(error.message)
+        } finally {
+            setIsFocused((prev) => ({ ...prev, [key]: false }));
+            setLoading((prev) => ({ ...prev, [key]: false }));
+        }
     }
 
 
@@ -267,11 +266,11 @@ const UserDialog = ({ user, open, onClose }) => {
                 <DialogTitle>
                     <div className="flex flex-row items-center gap-1">
                         <UserPlus className="h-5 w-5" />
-                        <span>Add User</span>
+                        <span> {!user ? "Add New" : "Edit User"}</span>
                     </div>
                 </DialogTitle>
                 <DialogDescription>
-                    Please fill in the details to add a new user.
+                    {!user ? "Please fill in the details to add a new user." : `Please fill in the details to edit user ${user?.USER_NAME}.`}
                 </DialogDescription>
             </DialogHeader>
 
@@ -281,7 +280,7 @@ const UserDialog = ({ user, open, onClose }) => {
                     <div className="grid gap-2">
                         <div className="grid grid-cols-1 gap-2">
                             <Label htmlFor="newUserName" className="text-left">
-                                Username
+                                User Name
                             </Label>
                             <div className="flex items-center gap-1">
                                 <Input
@@ -293,12 +292,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.newUserName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    onFocus={handleFocus}
                                 />
                                 {
-                                    (loading || (isFocused.newUserName && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={() => handleUpdate("newUserName", userFormData.newUserName)}>
-                                            {loading ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
+                                    (loading["USER_NAME"] || (isFocused.newUserName && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_NAME", userFormData.newUserName)}>
+                                            {loading["USER_NAME"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -321,12 +319,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.password}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    onFocus={handleFocus}
                                 />
                                 {
-                                    (loading || (isFocused.newUserName && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={handleUpdate}>
-                                            {loading ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
+                                    (loading["password"] || (isFocused.password && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={handleUpdate}>
+                                            {loading["password"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -356,9 +353,9 @@ const UserDialog = ({ user, open, onClose }) => {
                                     </ToggleGroupItem>
                                 </ToggleGroup>
                                 {
-                                    (isFocused.isAdminUser && user) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
-                                            <Check className="h-5 w-5" />
+                                    (loading["USER_TYPE"] || (isFocused.isAdminUser && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_TYPE", userFormData.isAdminUser)}>
+                                            {loading["USER_TYPE"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -378,12 +375,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.emailAddress}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    onFocus={handleFocus}
                                 />
                                 {
-                                    (isFocused.emailAddress && user) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
-                                            <Check className="h-5 w-5" />
+                                    (loading["EMAIL_ADDRESS"] || (isFocused.emailAddress && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMAIL_ADDRESS", userFormData.emailAddress)}>
+                                            {loading["EMAIL_ADDRESS"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -407,12 +403,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                         value={userFormData.mobileNumber}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
-                                        onFocus={handleFocus}
                                     />
                                     {
-                                        isFocused.mobileNumber ?
-                                            <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
-                                                <Check className="h-5 w-5" />
+                                        (loading["MOBILE_NO"] || (isFocused.mobileNumber && user)) ?
+                                            <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("MOBILE_NO", userFormData.mobileNumber)}>
+                                                {loading["MOBILE_NO"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                             </Button> : null
                                     }
                                 </div>
@@ -436,13 +431,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.fullName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    onFocus={handleFocus}
                                 />
-
                                 {
-                                    isFocused.fullName ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500">
-                                            <Check className="h-5 w-5" />
+                                    (loading["FULL_NAME"] || (isFocused.fullName && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("FULL_NAME", userFormData.fullName)}>
+                                            {loading["FULL_NAME"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -465,12 +458,11 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.empNo}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    onFocus={handleFocus}
                                 />
                                 {
-                                    isFocused.empNo ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onClick={handleUpdate}>
-                                            <Check className="h-5 w-5" />
+                                    (loading["EMP_NO"] || (isFocused.empNo && user)) ?
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMP_NO", userFormData.empNo)}>
+                                            {loading["EMP_NO"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
                             </div>
@@ -566,16 +558,23 @@ const UserDialog = ({ user, open, onClose }) => {
                     </div>
                 </div>
 
-                <Separator />
 
-                <div className="mt-2 flex justify-end gap-2">
-                    <Button variant="outline" type="button" onClick={() => onClose()}>
-                        Cancel
-                    </Button>
-                    <Button variant="default" type="submit">
-                        Save
-                    </Button>
-                </div>
+                {
+                    !user ?
+                        (
+                            <>
+                                <Separator />
+                                <div className="mt-2 flex justify-end gap-2">
+                                    <Button variant="outline" type="button" onClick={() => onClose()}>
+                                        Cancel
+                                    </Button>
+                                    <Button variant="default" type="submit">
+                                        Save
+                                    </Button>
+                                </div>
+                            </>
+                        ) : null}
+
             </form>
         </DialogContent>
     );

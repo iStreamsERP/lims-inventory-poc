@@ -205,8 +205,6 @@ export const createNewUserPayload = (formData) => ({
 export const deleteUserPayload = (formData) => ({
   FQ_USER_NAME: formData.fqUserName,
   USER_NAME_ONLY: formData.userNameOnly,
-  COLUMN_NAME: formData.columnName,
-  VALUE: formData.value,
 });
 
 

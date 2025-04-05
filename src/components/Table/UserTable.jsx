@@ -29,11 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { getAllUsersList } from "@/services/userManagementService"
+import { deleteUser, getAllUsersList } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { PacmanLoader } from "react-spinners"
 import UserDialog from "../Dialog/UserDialog"
 import { Dialog, DialogTrigger } from "../ui/dialog"
+import { toast } from "sonner"
 
 
 const UserTable = () => {
@@ -66,8 +67,29 @@ const UserTable = () => {
     }
   }
 
-  const handleDeleteUser = (users) => {
-    setUserTableData((prev) => prev.filter(user => user.id !== users.id))
+  const handleDeleteUser = async (user) => {
+    alert("Are you sure you want to delete this user? This action cannot be undone.")
+    throw new Error("User deletion is not implemented yet.");
+
+    try {
+      const deleteUserPayload = {
+        fqUserName: user.EMAIL_ADDRESS,
+        userNameOnly: user.USER_NAME,
+      }
+      const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
+
+      fetchAllUsersData();
+
+      toast(deleteUserResponse);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: error?.message || "Unknown error occurred.",
+      })
+    }
   }
 
   const handleEditUser = (user) => {
