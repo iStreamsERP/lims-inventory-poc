@@ -1,155 +1,97 @@
-import { useState } from "react";
-import { toast } from "react-hot-toast";
-import { Button } from "../ui/button";
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Textarea } from "../ui/textarea";
-
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import React from 'react'
 
 const EnquiryForm = () => {
-  const [enquiry, setEnquiry] = useState({
-    name: "",
-    emailId: "",
-    phoneNumber: "",
-    companyName: "",
-    subject: "",
-    description: "",
-    details: "",
-  });
-
-  const handleChange = (e) => {
-    setEnquiry({ ...enquiry, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Enquiry Submitted:", enquiry);
-    toast.success("Enquiry submitted successfully!");
-
-    // Reset form after submission
-    setEnquiry({
-      name: "",
-      emailId: "",
-      phoneNumber: "",
-      companyName: "",
-      subject: "",
-      description: "",
-      details: "",
-    });
-  };
-
-
   return (
-    <div>
-        <h1 className="title mt-3">Enquiry Form</h1>
-<form>
-<Card className="w-full mt-5 ">
-      <CardContent>
-      <div className="flex flex-col md:flex-row gap-3 mt-3 mb-3">
-            <div className="w-full">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                name="name"
-                id="name"
-                type="text"
-                placeholder="Enter name"
-               
-              />
-            </div>
-            <div className="w-full">
-              <Label htmlFor="email">Email Id</Label>
-              <Input
-                name="email"
-                id="email"
-                type="email"
-                placeholder="Enter email"
-                
-              />
-            </div>
+    <div className="flex flex-col gap-y-4">
+      <h1 className="title">Enquiry Form</h1>
+      <form className="w-full grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor="newUserName" className="text-left">
+            Name
+          </Label>
+          <div className="flex items-center gap-1">
+            <Input
+              name="newUserName"
+              id="newUserName"
+              type="text"
+              placeholder="Type Email Id"
+              className="w-full"
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mb-3">
-            <div className="w-full">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                name="phone"
-                id="phone"
-                type="text"
-                placeholder="Enter phone"
-               
-              />
-            </div>
-            <div className="w-full">
-              <Label htmlFor="companyname">
-              Company Name</Label>
-              <Input
-                name="companyname"
-                id="companyname"
-                type="text"
-                placeholder="Enter companyname"
-                
-              />
-            </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor="newUserName" className="text-left">
+            Email Id
+          </Label>
+          <div className="flex items-center gap-1">
+            <Input
+              name="newUserName"
+              id="newUserName"
+              type="text"
+              placeholder="Type Email Id"
+              className="w-full"
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mb-3">
-            <div className="w-full">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                name="subject"
-                id="subject"
-                type="text"
-                placeholder="Enter subject"
-               
-              />
-            </div>
-            <div className="w-full">
-              <Label htmlFor="description">
-              Description</Label>
-              <Input
-                name="description"
-                id="description"
-                type="text"
-                placeholder="Enter description"
-                
-              />
-            </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor="newUserName" className="text-left">
+            Phone Number
+          </Label>
+          <div className="flex items-center gap-1">
+            <Input
+              name="newUserName"
+              id="newUserName"
+              type="text"
+              placeholder="Type Phone Number"
+              className="w-full"
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mb-3">
-            <div className="w-full">
-              <Label htmlFor="details">Details</Label>
-              <Textarea
-                name="details"
-                id="details"
-                type="text"
-                placeholder="Enter details"
-               
-               
-              />
-            </div>
-            
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor="newUserName" className="text-left">
+            Company Name
+          </Label>
+          <div className="flex items-center gap-1">
+            <Input
+              name="newUserName"
+              id="newUserName"
+              type="text"
+              placeholder="Type Company Name"
+              className="w-full"
+            />
           </div>
+        </div>
 
-          
-      </CardContent>
-      <CardFooter className="w-full flex justify-center">
-        <Button >
-           Submit Enquiry
-        </Button>
-      </CardFooter>
-    </Card>
-</form>
+        <div className="grid grid-cols-1 col-span-2 gap-2">
+          <Label htmlFor="newUserName" className="text-left">
+            Subject
+          </Label>
+          <div className="flex items-center gap-1">
+            <Textarea
+              name="newUserName"
+              id="newUserName"
+              type="text"
+              placeholder="Type Subject"
+              className="w-full"
+            />
+          </div>
+        </div>
 
+        <div className='w-full flex justify-center col-span-2'>
+          <Button variant="default">
+            Submit
+          </Button>
+        </div>
+      </form>
     </div>
-  );
-};
+  )
+}
 
-export default EnquiryForm;
+export default EnquiryForm

@@ -29,14 +29,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { deleteUser, getAllUsersList } from "@/services/userManagementService"
+import { getDataModelService } from "@/services/dataModelService"
+import { deleteUser } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 import { toast } from "sonner"
-import { useNavigate } from "react-router-dom"
 
-const ProductList = () => {
-  const [userTableData, setUserTableData] = useState([]);
+const CustomerMaster = () => {
+  const [customersData, setCustomersData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -44,21 +45,27 @@ const ProductList = () => {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
-  const navigate = useNavigate();
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
-    fetchAllUsersData();
+    fetchAllCustomersData();
   }, [])
 
-  const fetchAllUsersData = async () => {
+  const fetchAllCustomersData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
-      setUserTableData(data);
+      const getDataModelPayload = {
+        dataModelName: "CLIENT_MASTER",
+        whereCondition: "",
+        orderby: ""
+      }
+      const data = await getDataModelService(getDataModelPayload, userData.currentUserLogin, userData.clientURL)
+      setCustomersData(data);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -68,7 +75,7 @@ const ProductList = () => {
 
   const handleDeleteUser = async (user) => {
     alert("Are you sure you want to delete this user? This action cannot be undone.")
-    throw new Error("User deletion is not implemented yet.");
+    // throw new Error("User deletion is not implemented yet.");
 
     try {
       const deleteUserPayload = {
@@ -121,14 +128,14 @@ const ProductList = () => {
       enableHiding: false,
     },
     {
-      accessorKey: "id",
-      header: "S.No",
+      accessorKey: "CLIENT_ID",
+      header: "Client Id",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("id")}</div>
+        <div className="capitalize">{row.getValue("CLIENT_ID")}</div>
       ),
     },
     {
-      accessorKey: "USER_NAME",
+      accessorKey: "CLIENT_NAME",
       header: ({ column }) => {
         return (
           <Button
@@ -136,31 +143,31 @@ const ProductList = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            User Name
+            Client Name
             <ArrowUpDown />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "FULL_NAME",
-      header: "Full Name",
+      accessorKey: "TELEPHONE_NO",
+      header: "Telephone No",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
-      ),
-    },
-    {
-      accessorKey: "USER_TYPE",
-      header: "User Type",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_TYPE")}</div>
+        <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>
       ),
     },
     {
       accessorKey: "EMAIL_ADDRESS",
+      header: "Email ID",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>
+      ),
+    },
+    {
+      accessorKey: "COUNTRY",
       header: ({ column }) => {
         return (
           <Button
@@ -168,22 +175,22 @@ const ProductList = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            Email
+            Country
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("COUNTRY") || "-"}</div>,
     },
     {
-      accessorKey: "MOBILE_NO",
-      header: () => <div>Mobile No</div>,
-      cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
+      accessorKey: "GROUP_NAME",
+      header: () => <div>Group Name</div>,
+      cell: ({ row }) => <div>{row.getValue("GROUP_NAME") || "-"}</div>,
     },
     {
-      accessorKey: "EMP_NO",
+      accessorKey: "NATURE_OF_BUSINESS",
       header: () => <div>Employee No</div>,
-      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("NATURE_OF_BUSINESS") || "-"}</div>,
     },
     {
       accessorKey: "action",
@@ -217,9 +224,8 @@ const ProductList = () => {
     return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
   };
 
-
   const table = useReactTable({
-    data: userTableData,
+    data: customersData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -239,9 +245,8 @@ const ProductList = () => {
   })
 
   return (
-
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">All Products</h1>
+      <h1 className="title">All Customers</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
           <Input
@@ -278,9 +283,7 @@ const ProductList = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Button onClick={() => navigate("/products-list/create-product")}>Create Product</Button>
-
+            <Button onClick={() => navigate("/customer-master/customer-creation")}>Add Customers</Button>
           </div>
         </div>
         <div className="rounded-md border">
@@ -362,8 +365,7 @@ const ProductList = () => {
         </div>
       </div>
     </div>
-
-  );
+  )
 };
 
-export default ProductList;
+export default CustomerMaster;

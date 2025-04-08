@@ -35,7 +35,7 @@ import { PacmanLoader } from "react-spinners"
 import { toast } from "sonner"
 import { useNavigate } from "react-router-dom"
 
-const ProductList = () => {
+const ServiceList = () => {
   const [userTableData, setUserTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -95,7 +95,6 @@ const ProductList = () => {
     setSelectedUser(user);
     setIsDialogOpen(true);
   }
-
 
   const columns = [
     {
@@ -217,7 +216,6 @@ const ProductList = () => {
     return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
   };
 
-
   const table = useReactTable({
     data: userTableData,
     columns,
@@ -239,9 +237,8 @@ const ProductList = () => {
   })
 
   return (
-
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">All Products</h1>
+      <h1 className="title">All Services</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
           <Input
@@ -279,7 +276,7 @@ const ProductList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => navigate("/products-list/create-product")}>Create Product</Button>
+            <Button onClick={() => navigate("/services-list/create-service")}>Create Service</Button>
 
           </div>
         </div>
@@ -366,4 +363,4 @@ const ProductList = () => {
   );
 };
 
-export default ProductList;
+export default ServiceList;

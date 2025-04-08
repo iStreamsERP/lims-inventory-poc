@@ -110,14 +110,10 @@ export const createDmsDetailsPayload = ({
   FILE_PATH: filePath, // string
 });
 
-export const getDataModelPayload = ({
-  dataModelName,
-  whereCondition,
-  orderby,
-}) => ({
-  DataModelName: dataModelName, // string
-  WhereCondition: whereCondition, // string
-  Orderby: orderby, // string
+export const getDataModelPayload = (formData) => ({
+  DataModelName: formData.dataModelName,
+  WhereCondition: formData.whereCondition,
+  Orderby: formData.orderby,
 });
 
 export const getEmployeeNameAndIdPayload = (userfirstname) => ({
@@ -213,4 +209,10 @@ export const updateUserPayload = (formData) => ({
   USER_NAME_ONLY: formData.userNameOnly,
   COLUMN_NAME: formData.columnName,
   VALUE: formData.value,
+});
+
+
+export const saveDataServicePayload = (loginUserName, dataModelData) => ({
+  UserName: loginUserName,
+  DModelData: dataModelData,
 });

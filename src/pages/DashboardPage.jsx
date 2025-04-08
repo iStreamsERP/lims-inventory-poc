@@ -1,25 +1,14 @@
-import { useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Funnel,
-  FunnelChart,
-  Label,
-  LabelList,
-  Pie,
-  PieChart,
-  Tooltip as RechartsTooltip,
-  Sector,
-  XAxis,
-  YAxis
-} from "recharts";
 
+import SalesSummaryCard from "@/components/card/SalesSummaryCard";
 import AccountByTypeChart from "@/components/charts/AccountByTypeChart";
+import NewLeadsPieChart from "@/components/charts/NewLeadsPieChart";
+import OpportunitiesHorizontalBarChart from "@/components/charts/OpportunitiesHorizontalBarChart";
+import { Overview } from "@/components/charts/OverviewChart";
 import ProfitEarnedChart from "@/components/charts/ProfitEarnedChart";
 import { SalesActivityChart } from "@/components/charts/SalesActivityChart";
+import SalesFunnelChart from "@/components/charts/SalesFunnelChart";
 import SalesTargetRadialChart from "@/components/charts/SalesTargetRadialChart";
+import RecentSales from "@/components/RecentSales";
 import {
   Card,
   CardContent,
@@ -27,26 +16,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartStyle,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import OpportunitiesHorizontalBarChart from "@/components/charts/OpportunitiesHorizontalBarChart";
-import SalesFunnelChart from "@/components/charts/SalesFunnelChart";
-import NewLeadsPieChart from "@/components/charts/NewLeadsPieChart";
-import SalesSummaryCard from "@/components/card/SalesSummaryCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { Overview } from "@/components/charts/OverviewChart";
-import RecentSales from "@/components/RecentSales";
 
 // Define a multi-color palette
 const palette = ["#ef4444", "#f97316", "#f59e0b", "#10b981", "#6366f1", "#8b5cf6"];
@@ -66,9 +36,8 @@ const percentage = (totalSales / target) * 100;
 const remaining = 100 - percentage;
 
 
-
 const DashboardPage = () => {
-  const { userData, logout } = useAuth();
+  const { userData } = useAuth();
 
   return (
     <div className="flex flex-col gap-y-4">

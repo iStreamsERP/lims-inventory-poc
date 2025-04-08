@@ -20,19 +20,6 @@ const CategoryDetailsPage = () => {
     navigate("/cart");
   };
 
-  // const handleDeleteProduct = (index) => {
-  //   const updatedProducts = [...products];
-  //   updatedProducts.splice(index, 1);
-
-  //   const storedProducts = JSON.parse(localStorage.getItem("products")) || [];
-  //   const newStoredProducts = storedProducts.filter(
-  //     (product) => !(product.category === category && storedProducts.indexOf(product) === index)
-  //   );
-
-  //   localStorage.setItem("products", JSON.stringify(newStoredProducts));
-  //   setProducts(updatedProducts);
-  // };
-
   return (
     <div>
       <h2 className="text-2xl font-semibold text-blue-300 mb-4">

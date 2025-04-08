@@ -1,4 +1,4 @@
-import { BaggageClaim, ChartColumn, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users } from "lucide-react";
+import { BaggageClaim, ChartColumn, Grid2x2Plus, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users } from "lucide-react";
 
 export const navbarLinks = [
   {
@@ -15,9 +15,9 @@ export const navbarLinks = [
     title: "Customers",
     links: [
       {
-        label: "Customers",
+        label: "Customer Master",
         icon: UserPlus,
-        path: "/customers-table",
+        path: "/customer-master",
       },
     ],
   },
@@ -37,27 +37,22 @@ export const navbarLinks = [
       {
         label: "User Management",
         icon: Users,
-        path: "/user-register-list",
+        path: "/user-management",
       },
       {
-        label: "Products",
+        label: "Product List",
         icon: ShoppingBag,
         path: "/products-list",
       },
       {
-        label: "Product Category",
-        icon: ShoppingBag,
-        path: "/product-category",
-      },
-      {
-        label: "Order Creation",
-        icon: BaggageClaim,
-        path: "/order-creation",
-      },
-      {
         label: "Service List",
         icon: NotepadText,
-        path: "/service-list",
+        path: "/services-list",
+      },
+      {
+        label: "Service Price Card",
+        icon: NotepadText,
+        path: "/service-price-page",
       },
       {
         label: "Order List",

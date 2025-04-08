@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/tooltip";
 import { CircleHelp, Minus, Plus, ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const CartPage = () => {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -157,7 +159,7 @@ const CartPage = () => {
               <Button variant="outline">
                 Save my order
               </Button>
-              <Button>
+              <Button onClick={() => navigate("proceed-to-check")}>
                 Proceed to checkout
                 <ShoppingCart />
               </Button>

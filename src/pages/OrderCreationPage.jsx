@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Check, CheckIcon, ChevronsUpDown, EditIcon, Pencil, PencilIcon, PlusIcon, ShoppingCart, Trash2Icon, TrashIcon } from "lucide-react";
+import { Check,  ChevronsUpDown, EditIcon, Pencil, PlusIcon, ShoppingCart, TrashIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 const OrderCreationPage = () => {
   const CustomerList = [
@@ -107,19 +109,19 @@ const OrderCreationPage = () => {
       discount: 5,
     },
   ]);
-  
+
   const [isFocused, setIsFocused] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTermCustomer, setSearchTermCustomer] = useState("");
   const [tableData, setTableData] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editedRow, setEditedRow] = useState(null);
-
+  const [editingQtyIndex, setEditingQtyIndex] = useState(null);
+  const [editedRow, setEditedRow] = useState({});
   const [itemcode, SetItemcode] = useState("");
   const [item, setItem] = useState("");
   const [qty, setQty] = useState("");
   const [open, setOpen] = useState(false);
+  const [openItem, setOpenItem] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   let amount;
@@ -139,12 +141,21 @@ const OrderCreationPage = () => {
     setQty(item.qty);
     setSearchTerm(""); // Show selected item in input
     setIsFocused(false); // Hide dropdown after selection
+    if (!tableData.some((cart) => cart.itemcode === item.itemcode)) {
+      setTableData((prevTableData) => [...prevTableData, item]);
+    }
+    setOpenItem(false);
   };
 
   const handleAddMaterial = () => {
     if (selectedItem && qty) {
       if (!tableData.some((item) => item.itemcode === selectedItem.itemcode)) {
-        setTableData([...tableData, { ...selectedItem, qty: Number(qty) }]);
+        updatedTableData[editingIndex] = {
+          ...editedRow,
+          qty: Number(editedRow.qty) || 0,
+        };
+        setTableData(updatedTableData);
+        setEditingIndex(null);
       }
       setSelectedItem(null);
       setQty("");
@@ -152,28 +163,6 @@ const OrderCreationPage = () => {
       setItem("");
       setSearchTerm("");
     }
-  };
-
-  const handleEditRow = (index) => {
-    setEditingIndex(index);
-    setEditedRow({ ...tableData[index] });
-  };
-
-  const handleSaveRow = () => {
-    const updatedTableData = [...tableData];
-    updatedTableData[editingIndex] = {
-      ...editedRow,
-      qty: Number(editedRow.qty) || 0,
-      rate: Number(editedRow.rate) || 0,
-      tax: Number(editedRow.tax) || 0,
-      discount: Number(editedRow.discount) || 0,
-    };
-    setTableData(updatedTableData);
-    setEditingIndex(null);
-  };
-
-  const handleDeleteRow = (index) => {
-    setTableData(tableData.filter((_, i) => i !== index));
   };
 
   const filteredCustomers = CustomerList.filter(
@@ -190,16 +179,47 @@ const OrderCreationPage = () => {
     setOpen(false);
     setIsEditing(false); // Hide input after selection
   };
-  const calculateAmount = (cart) => {
-    let basePrice = cart.qty * cart.rate;
-    let discountAmount = (basePrice * cart.discount) / 100;
-    let priceAfterDiscount = basePrice - discountAmount;
-    let taxAmount = (priceAfterDiscount * cart.tax) / 100;
-    return (priceAfterDiscount + taxAmount).toFixed(2);
+
+  const handleDeleteItem = (index) => {
+    const updatedTableData = [...tableData];
+    updatedTableData.splice(index, 1);
+    setTableData(updatedTableData);
   };
+  const handleInputChange = (
+    e,
+    index
+  ) => {
+    const { name, value } = e.target;
+    const updated = [...tableData];
+    const parsedValue = value === "" ? "" : parseFloat(value);
+  
+    if (updated[index]) {
+      updated[index] = {
+        ...updated[index],
+        [name]: parsedValue,
+      };
+      setTableData(updated);
+    }
+  };
+  
+  const handleQtyChange = (e, index) => {
+    const value = e.target.value;
+    const updated = [...tableData];
+  
+    if (updated[index]) {
+      updated[index] = {
+        ...updated[index],
+        qty: value === "" ? "" : parseFloat(value),
+      };
+      setTableData(updated);
+    }
+  };
+  
+  
+
   return (
     <div className="flex flex-col gap-2 lg:flex-row">
-      <Card className="w-full  lg:w-[74%] 2xl:w-[100%]">
+      <Card className="w-full lg:w-[74%] 2xl:w-[100%]">
         <CardHeader>
           <CardTitle>
             <div className="flex h-full w-full flex-col justify-between lg:flex-row">
@@ -213,45 +233,50 @@ const OrderCreationPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2 lg:flex-row">
-            <dl className="w-full relative">
-              <dd>
-              <Input
-              type="text"
-              placeholder="Search ItemCode"
-              value={searchTerm || itemcode} // Ensure it reflects the selected item
-              onFocus={() => setIsFocused(true)}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-           </dd>
-           <dt className="w-[200px] absolute  rounded-lg bg-white  text-sm shadow-lg">
-            {filteredItems.length > 0 ? (
-              <div >
-                {filteredItems.map((item) => (
-                  <div
-                    key={item.itemcode}
-                    className="cursor-pointer p-2"
-                    onClick={() => handleSelectItem(item)}
-                  >
-                    {item.itemcode} - {item.item} - {item.uom}
-                  </div>
-                ))}
-              </div>
-            ) : isFocused ? (
-              <div className="absolute top-1/3 z-10 mt-1 rounded-lg bg-white p-2 text-sm shadow-lg">
-                {(filteredItems.length > 0 ? filteredItems : carts).map((item) => (
-                  <div
-                    key={item.itemcode}
-                    className="cursor-pointer p-2"
-                    onClick={() => handleSelectItem(item)}
-                  >
-                    {item.itemcode} - {item.item} - {item.uom}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            </dt>
-          </dl>
+          <div className="flex w-full flex-col gap-2 lg:flex-row">
+            <Popover
+              open={openItem}
+              onOpenChange={setOpenItem}
+              className="w-full"
+            >
+              <PopoverTrigger
+                asChild
+                className="w-full"
+              >
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openItem}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedItem ? selectedItem.itemcode : "Search ItemCode"}
+                  <ChevronsUpDown className="opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-2">
+                <Input
+                  placeholder="Search ItemCode..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mb-2"
+                />
+                <div className="max-h-48 w-full overflow-y-scroll rounded border p-2 shadow">
+                  {(filteredItems.length > 0 ? filteredItems : carts).map((item) => (
+                    <div
+                      key={item.itemcode}
+                      className="cursor-pointer p-2 hover:bg-gray-100"
+                      onClick={() => handleSelectItem(item)}
+                    >
+                      <div className="font-semibold">{item.itemcode}</div>
+                      <div className="text-xs text-gray-500">
+                        {item.item} - {item.uom}
+                      </div>
+                    </div>
+                  ))}
+                  {filteredItems.length === 0 && <div className="text-sm text-gray-500">No items found.</div>}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Input
               type="text"
               placeholder="Available Items"
@@ -269,7 +294,7 @@ const OrderCreationPage = () => {
             </Button>
           </div>
 
-          <Table className="mt-4 w-full ">
+          <Table className="mt-4 w-full">
             <ScrollArea className="max-h-[380px] w-full overflow-x-scroll overflow-y-scroll rounded-md border ps-3 xl:h-[399px]">
               <TableHeader>
                 <TableRow>
@@ -291,8 +316,7 @@ const OrderCreationPage = () => {
                   <TableRow>
                     <TableCell
                       colSpan={12}
-                      
-                      className=" h-[260px] text-center text-gray-500"
+                      className="h-[260px] text-center text-gray-500"
                     >
                       -- No Material Added Yet. Search to Add Material --
                     </TableCell>
@@ -320,86 +344,112 @@ const OrderCreationPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{cart.uom}</TableCell>
-                      {editingIndex === index ? (
-                        <>
-                          <TableCell>
+                      <TableCell className="text-right">
+                        <TableCell
+                          className="text-right"
+                          onClick={() => setEditingQtyIndex(index)}
+                        >
+                          {editingQtyIndex === index ? (
                             <Input
                               type="number"
-                              className="w-full xl:w-[100px]"
-                              value={editedRow.qty}
-                              onChange={(e) => setEditedRow({ ...editedRow, qty: e.target.value })}
+                              value={tableData[index]?.qty ?? ""}
+                              onChange={(e) => handleQtyChange(e, index)}
+                              onBlur={() => setEditingQtyIndex(null)}
+                              autoFocus
+                              className="w-20"
                             />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              className="w-full xl:w-[100px]"
-                              value={editedRow.rate}
-                              onChange={(e) => setEditedRow({ ...editedRow, rate: e.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={editedRow.tax}
-                              className="w-full xl:w-[100px]"
-                              onChange={(e) => setEditedRow({ ...editedRow, tax: e.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={editedRow.discount}
-                              className="w-full xl:w-[100px]"
-                              onChange={(e) => setEditedRow({ ...editedRow, discount: e.target.value })}
-                            />
-                          </TableCell>
-                          <TableCell>
-                          {calculateAmount(cart)}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              className="me-2 bg-transparent p-0 text-blue-500"
-                              onClick={handleSaveRow}
-                            >
-                              <CheckIcon size={16} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="bg-transparent p-0 text-red-500"
-                              onClick={() => handleDeleteRow(index)}
-                            >
-                              <Trash2Icon size={10} />
-                            </Button>
-                          </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell className="text-right">{cart.qty}</TableCell>
-                          <TableCell className="text-right">{cart.rate}</TableCell>
-                          <TableCell className="text-right">{cart.tax}%</TableCell>
-                          <TableCell className="text-right">{cart.discount}%</TableCell>
-                          <TableCell className="text-right"> {calculateAmount(cart)}
-                          </TableCell>
-                          <TableCell className="gap-1">
-                            <Button
-                              variant="ghost"
-                              className="me-2 bg-transparent p-0 text-blue-500"
-                              onClick={() => handleEditRow(index)}
-                            >
-                              <PencilIcon size={10} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="bg-transparent p-0 text-red-500"
-                              onClick={() => handleDeleteRow(index)}
-                            >
-                              <Trash2Icon size={10} />
-                            </Button>
-                          </TableCell>
-                        </>
-                      )}
+                          ) : (
+                            cart.qty
+                          )}
+                        </TableCell>
+                      </TableCell>
+                      <TableCell className="text-right">{cart.rate}</TableCell>
+                      <TableCell className="text-right">{cart.tax}</TableCell>
+                      <TableCell className="text-right">{cart.discount}</TableCell>
+                      <TableCell className="text-right">{(tableData[index].qty * tableData[index].rate) - ((tableData[index].qty * tableData[index].rate) * (tableData[index].discount / 100)) + ((tableData[index].qty * tableData[index].rate) * (tableData[index].tax / 100))}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="h-4 w-4"
+                              >
+                                <Pencil size={16} />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                              <DialogHeader>
+                                <DialogTitle>Edit</DialogTitle>
+                                <DialogDescription>Make changes to your Material here. Values auto-save.</DialogDescription>
+                              </DialogHeader>
+                              <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label
+                                    htmlFor="rate"
+                                    className="text-right"
+                                  >
+                                    Rate
+                                  </Label>
+                                  <Input
+                                    id="rate"
+                                    type="number"
+                                    name="rate"
+                                    value={cart.rate || ""}
+                                    onChange={(e) => handleInputChange(e, index)}
+                                    className="col-span-3"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label
+                                    htmlFor="tax"
+                                    className="text-right"
+                                  >
+                                    Tax
+                                  </Label>
+                                  <Input
+                                    id="tax"
+                                    type="number"
+                                    name="tax"
+                                    value={cart.tax || ""}
+                                    onChange={(e) => handleInputChange(e, index)}
+                                    className="col-span-3"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label
+                                    htmlFor="discount"
+                                    className="text-right"
+                                  >
+                                    Discount
+                                  </Label>
+                                  <Input
+                                    id="discount"
+                                    type="number"
+                                    value={cart.discount || ""}
+                                    name="discount"
+                                    onChange={(e) => handleInputChange(e, index)}
+                                    className="col-span-3"
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                <Button >Save</Button>
+                                </DialogClose>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 text-red-400"
+                            onClick={() => handleDeleteItem(index)}
+                          >
+                            <TrashIcon size={16} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -424,7 +474,7 @@ const OrderCreationPage = () => {
                     className="text-right text-gray-600"
                     colSpan={1}
                   >
-                   {tableData.reduce((total, cart) => total + parseFloat(calculateAmount(cart)), 0).toFixed(2)}
+                   {tableData.reduce((total, item) => total + (item.qty * item.rate) - ((item.qty * item.rate) * (item.discount / 100)) + ((item.qty * item.rate) * (item.tax / 100)), 0)}
                   </TableCell>
                   <TableCell colSpan={1}></TableCell>
                 </TableRow>
@@ -530,28 +580,28 @@ const OrderCreationPage = () => {
 
               <div className="flex items-start justify-between">
                 <p className="mt-2 text-xs font-medium leading-none text-gray-600">Total Before Tax :</p>
-                <p className="text-muted-foreground text-sm font-semibold"> {tableData.reduce((total, item) => total + item.qty * item.rate, 0)}</p>
+                <p className="text-muted-foreground text-sm font-semibold"> {tableData.reduce((total, item) => total + item.qty * item.rate,0)}</p>
               </div>
 
               <div className="flex items-start justify-between">
                 <p className="mt-2 text-xs font-medium leading-none text-gray-600">Estimated Tax :</p>
                 <p className="text-muted-foreground text-sm font-semibold">
                   {" "}
-                  {tableData.reduce((total, cart) => total + parseFloat(calculateAmount(cart)), 0).toFixed(2)}
+                 {tableData.reduce((total,item)=>total+(item.qty*item.rate) +((item.qty*item.rate)*((item.tax)/100)),0)}
                 </p>
               </div>
 
               <div className="flex items-start justify-between border-b border-slate-200/60 pb-4">
                 <p className="mt-2 text-xs font-medium leading-none text-green-600">Overall Discount:</p>
                 <p className="text-muted-foreground text-sm font-semibold text-green-600">
-                {tableData.reduce((total, cart) => total + parseFloat(calculateAmount(cart)), 0).toFixed(2)}
+                {tableData.reduce((total,item)=>total+(item.qty*item.rate) -((item.qty*item.rate)*((item.discount)/100)),0)}
                 </p>
               </div>
 
               <div className="flex items-start justify-between">
                 <p className="mt-2 text-xs font-bold leading-none text-red-600">Order Total:</p>
                 <p className="text-muted-foreground text-sm font-semibold text-red-600">
-                {tableData.reduce((total, cart) => total + parseFloat(calculateAmount(cart)), 0).toFixed(2)}
+             {tableData.reduce((total,item)=>total+(item.qty*item.rate) -((item.qty*item.rate)*((item.discount)/100)) +((item.qty*item.rate)*((item.tax)/100)),0)}
                 </p>
               </div>
             </div>
