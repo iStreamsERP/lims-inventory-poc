@@ -8,88 +8,68 @@ const EnquiryForm = () => {
   return (
     <div className="flex flex-col gap-y-4">
       <h1 className="title">Enquiry Form</h1>
-      <form className="w-full grid grid-cols-2 gap-4">
-        <div className="grid grid-cols-1 gap-2">
-          <Label htmlFor="newUserName" className="text-left">
-            Name
-          </Label>
-          <div className="flex items-center gap-1">
-            <Input
-              name="newUserName"
-              id="newUserName"
-              type="text"
-              placeholder="Type Email Id"
-              className="w-full"
-            />
-          </div>
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="userName" className="text-left">Name</Label>
+          <Input
+            name="userName"
+            id="userName"
+            type="text"
+            placeholder="Enter your name"
+            className="w-full"
+          />
         </div>
 
-        <div className="grid grid-cols-1 gap-2">
-          <Label htmlFor="newUserName" className="text-left">
-            Email Id
-          </Label>
-          <div className="flex items-center gap-1">
-            <Input
-              name="newUserName"
-              id="newUserName"
-              type="text"
-              placeholder="Type Email Id"
-              className="w-full"
-            />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="email" className="text-left">Email ID</Label>
+          <Input
+            name="email"
+            id="email"
+            type="email"
+            placeholder="Enter your email"
+            className="w-full"
+          />
         </div>
 
-        <div className="grid grid-cols-1 gap-2">
-          <Label htmlFor="newUserName" className="text-left">
-            Phone Number
-          </Label>
-          <div className="flex items-center gap-1">
-            <Input
-              name="newUserName"
-              id="newUserName"
-              type="text"
-              placeholder="Type Phone Number"
-              className="w-full"
-            />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="phone" className="text-left">Phone Number</Label>
+          <Input
+            name="phone"
+            id="phone"
+            type="tel"
+            placeholder="Enter phone number"
+            className="w-full"
+          />
         </div>
 
-        <div className="grid grid-cols-1 gap-2">
-          <Label htmlFor="newUserName" className="text-left">
-            Company Name
-          </Label>
-          <div className="flex items-center gap-1">
-            <Input
-              name="newUserName"
-              id="newUserName"
-              type="text"
-              placeholder="Type Company Name"
-              className="w-full"
-            />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="company" className="text-left">Company Name</Label>
+          <Input
+            name="company"
+            id="company"
+            type="text"
+            placeholder="Enter company name"
+            className="w-full"
+          />
         </div>
 
-        <div className="grid grid-cols-1 col-span-2 gap-2">
-          <Label htmlFor="newUserName" className="text-left">
-            Subject
-          </Label>
-          <div className="flex items-center gap-1">
-            <Textarea
-              name="newUserName"
-              id="newUserName"
-              type="text"
-              placeholder="Type Subject"
-              className="w-full"
-            />
-          </div>
+        <div className="grid gap-2 col-span-1 md:col-span-2">
+          <Label htmlFor="subject" className="text-left">Subject</Label>
+          <Textarea
+            name="subject"
+            id="subject"
+            placeholder="Enter subject"
+            className="w-full min-h-[100px]"
+          />
         </div>
 
-        <div className='w-full flex justify-center col-span-2'>
-          <Button variant="default">
+        <div className="w-full flex justify-center col-span-1 md:col-span-2">
+          <Button type="submit" variant="default">
             Submit
           </Button>
         </div>
       </form>
+
     </div>
   )
 }

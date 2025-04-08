@@ -43,6 +43,7 @@ const Layout = () => {
           <Outlet />
           <Toaster />
         </div>
+        <Footer />
       </div>
     </div>
   );
