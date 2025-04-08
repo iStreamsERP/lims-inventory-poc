@@ -6,6 +6,7 @@ import CartPage from "./pages/CartPage";
 import CategoryDetailsPage from "./pages/CategoryDetailsPage";
 import CategoryPage from "./pages/CategoryPage";
 import CreateProduct from "./pages/CreateProduct";
+import CreateService from "./pages/CreateService";
 import CustomerCreation from "./pages/CustomerCreation";
 import CustomerMaster from "./pages/CustomerMaster";
 import DashboardPage from "./pages/DashboardPage";
@@ -15,15 +16,13 @@ import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
 import OrderList from "./pages/OrderList";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
-import ProductCategory from "./pages/ProductCategory";
 import ProductList from "./pages/ProductList";
+import ServiceList from "./pages/ServiceList";
 import ServicePricingPage from "./pages/ServicePricingpage";
 import SignUpPage from "./pages/SignUpPage";
 import UserManagement from "./pages/UserManagement";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import ServiceList from "./pages/ServiceList";
-import CreateService from "./pages/CreateService";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -60,7 +59,6 @@ const App = () => {
             { path: "/services-list/create-service", element: <CreateService /> },
             { path: "service-price-page", element: <ServicePricingPage /> },
             { path: "/products-list/create-product", element: <CreateProduct /> },
-            { path: "product-category", element: <ProductCategory /> },
             { path: "enquiry-form", element: <EnquiryForm /> },
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },

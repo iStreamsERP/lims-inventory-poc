@@ -31,11 +31,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { deleteUser, getAllUsersList } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 import { toast } from "sonner"
-import { Dialog, DialogTrigger } from "@/components/ui/dialog"
-import UserDialog from "@/components/dialog/UserDialog"
-import { useNavigate } from "react-router-dom"
 
 const OrderList = () => {
     const [userTableData, setUserTableData] = useState([]);
