@@ -6,7 +6,8 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/use-click-outside";
 import Footer from "@/layouts/Footer";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster"
+
 
 const Layout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");

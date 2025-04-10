@@ -4,32 +4,66 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { deleteDataModelService, getDataModelService, saveDataService } from "@/services/dataModelService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const AddContact = () => {
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [error, SetError] = useState({});
-
-    const [customer, setCustomer] = useState({
-        contacts: [],
-    });
-
-    const [contactFormData, setContactFormData] = useState({
-        CLIENT_ID: null,
-        SERIAL_NO: "",
+const AddContact = ({ clientId }) => {
+    const initialFormData = {
+        CLIENT_ID: clientId,
+        SERIAL_NO: -1,
         NAME: "",
         DESIGNATION: "",
         TELEPHONE_NO: "",
-        FAX_NO: "",
         EMAIL_ADDRESS: "",
-        ADDRESS: "",
         CONTACT_FOR: "",
-        MOBILE_NO: "",
         ALTERNATIVE_CONTACT: "",
-    });
+    };
 
-    const handleContactChange = (e) => {
+    const { userData } = useAuth();
+    const { toast } = useToast();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, SetError] = useState({});
+    const [isEnabled, setIsEnabled] = useState(false);
+
+    const [clientContacts, setClientContacts] = useState([]);
+
+    const [contactFormData, setContactFormData] = useState(initialFormData);
+
+    useEffect(() => {
+        if (clientId !== -1) {
+            setIsEnabled(true);
+            setContactFormData((prev) => ({
+                ...prev,
+                CLIENT_ID: clientId,
+            }));
+            fetchClientContacts();
+        }
+    }, [clientId]);
+
+    const fetchClientContacts = async () => {
+        try {
+            const clientContactsPayload = {
+                dataModelName: "CLIENT_CONTACTS",
+                whereCondition: `CLIENT_ID = ${clientId}`,
+                orderby: "",
+            }
+            const getClientContactsResponse = await getDataModelService(clientContactsPayload, userData.currentUserLogin, userData.clientURL);
+
+            setClientContacts(getClientContactsResponse);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: `"Error fetching client contacts." ${error}`,
+            });
+        }
+    };
+
+    const handleInputChange = (e) => {
         const { name, value } = e.target;
         setContactFormData((prev) => ({
             ...prev,
@@ -37,49 +71,96 @@ const AddContact = () => {
         }));
     };
 
-    const addContact = () => {
-        setCustomer((prev) => {
-            const nextContactId = editingContactId ? editingContactId : prev.contacts.length + 1; // Assign ID as index+1
+    const handleDelete = async (contact) => {
+        setLoading(true);
+        alert("Are you sure you want to delete this contact? This action cannot be undone.")
 
-            const updatedContacts = editingContactId
-                ? prev.contacts.map((c) => (c.id === editingContactId ? { ...contact, id: editingContactId } : c))
-                : [...prev.contacts, { ...contact, id: nextContactId }];
+        try {
+            const deleteDataModelServicePayload = {
+                userName: userData.currentUserLogin,
+                dataModelName: "CLIENT_CONTACTS",
+                whereCondition: `CLIENT_ID = ${clientId} AND SERIAL_NO = ${contact.SERIAL_NO}`,
+            }
+            const deleteDataModelServiceResponse = await deleteDataModelService(deleteDataModelServicePayload, userData.currentUserLogin, userData.clientURL);
 
-            return {
-                ...prev,
-                contacts: updatedContacts,
-            };
-        });
+            toast({
+                variant: "destructive",
+                title: deleteDataModelServiceResponse,
+            })
 
+            await fetchClientContacts();
+        } catch (error) {
+            setError({ fetch: error.message });
+            toast({
+                variant: "destructive",
+                title: `Error fetching client: ${error.message}`,
+            });
+        } finally {
+            setLoading(false);
+        }
+
+
+
+    }
+
+    const handleUserDialogClose = () => {
+        setContactFormData(initialFormData);
         setIsDialogOpen(false);
-        setEditingContactId(null);
+        fetchClientContacts();
+    };
+
+    const handleEdit = async (contact) => {
+        setIsDialogOpen(true)
         setContactFormData({
-            CLIENT_ID: null,
-            SERIAL_NO: "",
-            NAME: "",
-            DESIGNATION: "",
-            TELEPHONE_NO: "",
-            FAX_NO: "",
-            EMAIL_ADDRESS: "",
-            ADDRESS: "",
-            CONTACT_FOR: "",
-            MOBILE_NO: "",
-            ALTERNATIVE_CONTACT: "",
-        });
-    };
+            CLIENT_ID: clientId,
+            SERIAL_NO: contact.SERIAL_NO,
+            NAME: contact.NAME,
+            DESIGNATION: contact.DESIGNATION,
+            TELEPHONE_NO: contact.TELEPHONE_NO,
+            EMAIL_ADDRESS: contact.EMAIL_ADDRESS,
+            CONTACT_FOR: contact.CONTACT_FOR,
+            ALTERNATIVE_CONTACT: contact.ALTERNATIVE_CONTACT,
+        })
+    }
 
-    const removeContact = (id) => {
-        setCustomer((prev) => ({
-            ...prev,
-            contacts: prev.contacts.filter((c) => c.id !== id),
-        }));
-    };
+    const handleSumbit = async () => {
+        try {
+            setLoading(true);
+            const convertedDataModel = convertDataModelToStringData("CLIENT_CONTACTS", contactFormData);
 
-    const editContact = (id) => {
-        const selectedContact = customer.contacts.find((c) => c.id === id);
-        setContact(selectedContact);
-        setEditingContactId(id);
-        setIsDialogOpen(true);
+            const clientContactsPayload = {
+                userName: userData.currentUserLogin,
+                dModelData: convertedDataModel,
+            }
+
+            const clientContactsSaveResponse = await saveDataService(clientContactsPayload, userData.currentUserLogin, userData.clientURL);
+
+            toast({
+                title: clientContactsSaveResponse,
+            })
+
+            await fetchClientContacts();
+
+            setContactFormData({
+                CLIENT_ID: clientId,
+                SERIAL_NO: -1,
+                NAME: "",
+                DESIGNATION: "",
+                TELEPHONE_NO: "",
+                EMAIL_ADDRESS: "",
+                CONTACT_FOR: "",
+                ALTERNATIVE_CONTACT: "",
+            });
+
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error saving data. Please try again.", error,
+            })
+        } finally {
+            setIsDialogOpen(false);
+            setLoading(false);
+        }
     };
 
     return (
@@ -87,30 +168,30 @@ const AddContact = () => {
             <CardHeader>
                 <CardTitle>Add Contacts</CardTitle>
             </CardHeader>
-            <CardContent className="h-[530px] overflow-y-scroll z-[999]">
+            <CardContent className="h-[450px] overflow-y-scroll z-[999]">
                 <div className="flex flex-col flex-wrap gap-4">
-                    {customer.contacts.map((item) => (
+                    {clientContacts.map((contact) => (
                         <Card
                             className="flex h-[100px] w-full flex-col justify-center gap-2 p-3"
-                            key={item.contactemail}
+                            key={contact.SERIAL_NO}
                         >
                             <div className="flex justify-between">
                                 <div>
-                                    <p className="text-sm font-bold leading-none text-gray-700">{item.NAME}</p>
-                                    <p className="mb-1 text-xs font-semibold text-gray-500">{item.DESIGNATION}</p>
-                                    <p className="text-xs text-gray-600">{item.EMAIL_ADDRESS}</p>
-                                    <p className="text-xs text-blue-600">+91 {item.TELEPHONE_NO}</p>
+                                    <p className="text-xl font-semibold leading-none">{contact.NAME}</p>
+                                    <p className="mb-2 text-xs font-semibold text-gray-500">{contact.DESIGNATION}</p>
+                                    <p className="text-sm text-gray-600">{contact.EMAIL_ADDRESS}</p>
+                                    <p className="text-sm text-blue-600">+91 {contact.TELEPHONE_NO}</p>
                                 </div>
                                 <div className="flex flex-row gap-2">
                                     <SquarePen
-                                        size={14}
+                                        size={18}
                                         className="cursor-pointer text-blue-700"
-                                        onClick={() => editContact(item.id)}
+                                        onClick={() => handleEdit(contact)}
                                     />
                                     <Trash2
-                                        size={14}
+                                        size={18}
                                         className="cursor-pointer text-red-700"
-                                        onClick={() => removeContact(item.id)}
+                                        onClick={() => handleDelete(contact)}
                                     />
                                 </div>
                             </div>
@@ -125,14 +206,17 @@ const AddContact = () => {
             >
                 <Dialog
                     open={isDialogOpen}
-                    onOpenChange={setIsDialogOpen}
+                    onOpenChange={(open) => {
+                        if (!open) handleUserDialogClose();
+                        setIsDialogOpen(open);
+                    }}
                 >
                     <DialogTrigger asChild>
                         <Button
-                            className="w-1/2"
                             onClick={() => setIsDialogOpen(true)}
+                            disabled={!isEnabled}
                         >
-                            Add Contact
+                            {isEnabled ? "Add Contact" : "Create Customer First"}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
@@ -149,7 +233,7 @@ const AddContact = () => {
                                         name="NAME"
                                         placeholder="Contact Name"
                                         value={contactFormData.NAME}
-                                        onChange={handleContactChange}
+                                        onChange={handleInputChange}
                                     />
                                     {error.NAME && <p className="text-sm text-red-500">{error.NAME}</p>}
                                 </div>
@@ -161,7 +245,7 @@ const AddContact = () => {
                                         placeholder="Designation"
                                         name="DESIGNATION"
                                         value={contactFormData.DESIGNATION}
-                                        onChange={handleContactChange}
+                                        onChange={handleInputChange}
                                     />
                                     {error.DESIGNATION && <p className="text-sm text-red-500">{error.DESIGNATION}</p>}
                                 </div>
@@ -192,7 +276,7 @@ const AddContact = () => {
                                         name="EMAIL_ADDRESS"
                                         placeholder="Contact Email"
                                         value={contactFormData.EMAIL_ADDRESS}
-                                        onChange={handleContactChange}
+                                        onChange={handleInputChange}
                                     />
                                     {error.EMAIL_ADDRESS && <p className="text-sm text-red-500">{error.EMAIL_ADDRESS}</p>}
                                 </div>
@@ -206,7 +290,7 @@ const AddContact = () => {
                                         name="TELEPHONE_NO"
                                         placeholder="e.g. +91XXXXXXXXXX"
                                         value={contactFormData.TELEPHONE_NO}
-                                        onChange={handleContactChange}
+                                        onChange={handleInputChange}
                                     />
                                     {error.TELEPHONE_NO && <p className="text-sm text-red-500">{error.TELEPHONE_NO}</p>}
                                 </div>
@@ -218,7 +302,7 @@ const AddContact = () => {
                                         name="ALTERNATIVE_CONTACT"
                                         placeholder="e.g. +91XXXXXXXXXX"
                                         value={contactFormData.ALTERNATIVE_CONTACT}
-                                        onChange={handleContactChange}
+                                        onChange={handleInputChange}
                                     />
                                 </div>
                             </div>
@@ -232,7 +316,7 @@ const AddContact = () => {
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={addContact}
+                                    onClick={handleSumbit}
                                 >
                                     Save
                                 </Button>

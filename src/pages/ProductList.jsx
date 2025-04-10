@@ -32,7 +32,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { deleteUser, getAllUsersList } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { PacmanLoader } from "react-spinners"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
 
 const ProductList = () => {
@@ -44,6 +44,7 @@ const ProductList = () => {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
+  const { toast } = useToast()
   const navigate = useNavigate();
 
   const [selectedUser, setSelectedUser] = useState(null);
@@ -68,7 +69,7 @@ const ProductList = () => {
 
   const handleDeleteUser = async (user) => {
     alert("Are you sure you want to delete this user? This action cannot be undone.")
-    throw new Error("User deletion is not implemented yet.");
+    // throw new Error("User deletion is not implemented yet.");
 
     try {
       const deleteUserPayload = {
@@ -78,15 +79,15 @@ const ProductList = () => {
       const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
 
       fetchAllUsersData();
-
-      toast(deleteUserResponse);
+      toast({
+        title: deleteUserResponse,
+      })
     } catch (error) {
       console.error("Error deleting user:", error);
 
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error?.message || "Unknown error occurred.",
+        title: error?.message || "Unknown error occurred.",
       })
     }
   }
@@ -304,7 +305,7 @@ const ProductList = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {true ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <PacmanLoader color="#6366f1" />

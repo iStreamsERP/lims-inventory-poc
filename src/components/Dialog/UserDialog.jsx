@@ -14,7 +14,8 @@ import { getDomainFromEmail } from "@/utils/emailHelpers";
 import { Check, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
+
 
 // Validate the entire form on submission.
 const validateForm = (data) => {
@@ -196,7 +197,10 @@ const UserDialog = ({ user, open, onClose }) => {
                 value: value,
             }
             const updateUserResponse = await updateUser(updateUserPayload, userData.currentUserLogin, userData.clientURL)
-            toast(updateUserResponse)
+            toast({
+                title: "Scheduled: Catch up",
+                description: updateUserResponse,
+            })
         } catch (error) {
             console.log("Error updating user:", error);
             toast(error.message)

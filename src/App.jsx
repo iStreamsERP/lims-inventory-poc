@@ -7,22 +7,23 @@ import CategoryDetailsPage from "./pages/CategoryDetailsPage";
 import CategoryPage from "./pages/CategoryPage";
 import CreateProduct from "./pages/CreateProduct";
 import CreateService from "./pages/CreateService";
-import CustomerCreation from "./pages/CustomerCreation";
-import CustomerMaster from "./pages/CustomerMaster";
+import CustomerDetailPage from "./pages/CustomerDetailPage";
 import DashboardPage from "./pages/DashboardPage";
 import ForgetPassword from "./pages/ForgetPassword";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
-import OrderList from "./pages/OrderList";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
-import ProductList from "./pages/ProductList";
-import ServiceList from "./pages/ServiceList";
 import ServicePricingPage from "./pages/ServicePricingpage";
 import SignUpPage from "./pages/SignUpPage";
 import UserManagement from "./pages/UserManagement";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import CustomerCreation from "./pages/CustomerCreation";
+import CustomerMaster from "./pages/CustomerMaster";
+import ProductList from "./pages/ProductList";
+import OrderList from "./pages/OrderList";
+import ServiceList from "./pages/ServiceList";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -48,7 +49,8 @@ const App = () => {
             { index: true, element: <DashboardPage /> },
             { path: "account-settings", element: <AccountSettings /> },
             { path: "customer-master", element: <CustomerMaster /> },
-            { path: "/customer-master/customer-creation", element: <CustomerCreation /> },
+            { path: "/customer-master/customer-creation/:id?", element: <CustomerCreation /> },
+            { path: "/customer-master/:id", element: <CustomerDetailPage /> },
             { path: "category", element: <CategoryPage /> },
             { path: "category/:category", element: <CategoryDetailsPage /> },
             { path: "user-management", element: <UserManagement /> },

@@ -1,6 +1,6 @@
 import AddContact from "@/components/AddContact";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Command,
   CommandEmpty,
@@ -14,17 +14,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { countryConstants, natureOfBusinessConstants, otherNatureOfBusinessConstants } from "@/constants/contactConstant";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { saveDataService } from "@/services/dataModelService";
+import { getDataModelService, saveDataService } from "@/services/dataModelService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { BeatLoader } from "react-spinners";
 
 
 const CustomerCreation = () => {
+  const { id: clientIDParams } = useParams();
   const { userData } = useAuth();
-  const [error, SetError] = useState({});
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState({});
 
   const [openNatureOfBusiness, setOpenNatureOfBusiness] = useState(false)
   const [openCountry, setOpenCountry] = useState(false)
@@ -33,20 +39,53 @@ const CustomerCreation = () => {
   const [customerFormData, setCustomerFormData] = useState({
     CLIENT_ID: -1,
     CLIENT_NAME: "",
-    emailAddress: "",
-    natureOfBusiness: "",
-    otherNatureOfBusiness: "",
-    trnVatNo: "",
-    groupOfCompany: "",
-    telephoneNo: "",
-    webAddress: "",
-    country: "",
-    state: "",
-    cityName: "",
-    communicationAddress: "",
-    invoiceAddress: "",
-    deliveryAddress: "",
+    EMAIL_ADDRESS: "",
+    NATURE_OF_BUSINESS: "",
+    OTHER_NATURE_OF_BUSINESS: "",
+    TRN_VAT_NO: "",
+    GROUP_NAME: "",
+    TELEPHONE_NO: "",
+    WEB_ADDRESS: "",
+    COUNTRY: "",
+    STATE: "",
+    CITY_NAME: "",
+    COMMUNICATION_ADDRESS: "",
+    INVOICE_ADDRESS: "",
+    DELIVERY_ADDRESS: ""
   });
+
+  useEffect(() => {
+    if (clientIDParams) {
+      fetchCustomerData();
+    }
+  }, [clientIDParams]);
+
+  const fetchCustomerData = async () => {
+    setLoading(true);
+    setError({});
+    try {
+      const getDataModelPayload = {
+        dataModelName: "CLIENT_MASTER",
+        whereCondition: `CLIENT_ID = ${clientIDParams}`,
+        orderby: "",
+      };
+
+      const data = await getDataModelService(
+        getDataModelPayload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+      setCustomerFormData(data?.[0] || customerFormData);
+    } catch (error) {
+      setError({ fetch: error.message });
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateInput = () => {
     const newErrors = {};
@@ -55,10 +94,10 @@ const CustomerCreation = () => {
       newErrors.CLIENT_NAME = "Customer name is required.";
     }
 
-    if (!customerFormData.telephoneNo.trim()) {
-      newErrors.telephoneNo = "Phone number is required.";
-    } else if (!/^\+\d{1,4}\d{7,12}$/.test(customerFormData.telephoneNo)) {
-      newErrors.telephoneNo = "Phone number must include country code and be valid.";
+    if (!customerFormData.TELEPHONE_NO.trim()) {
+      newErrors.TELEPHONE_NO = "Phone number is required.";
+    } else if (!/^\+\d{1,4}\d{7,12}$/.test(customerFormData.TELEPHONE_NO)) {
+      newErrors.TELEPHONE_NO = "Phone number must include country code and be valid.";
     }
 
     return newErrors;
@@ -72,384 +111,402 @@ const CustomerCreation = () => {
       [name]: value,
     }));
 
-    SetError((prev) => ({
+    setError((prev) => ({
       ...prev,
       [name]: "",
     }));
   };
 
-  const handleCustomerSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validateInput();
     if (Object.keys(validationErrors).length > 0) {
-      SetError(validationErrors);
+      setError(validationErrors);
       console.log("Validation failed", validationErrors);
       return;
     }
-    console.table(customerFormData);
-
 
     try {
-      const saveDataServiceResponse = await saveDataService(customerFormData, userData.currentUserLogin, userData.clientURL);
-      console.log(saveDataServiceResponse);
+      setLoading(true);
+      const convertedDataModel = convertDataModelToStringData("CLIENT_MASTER", customerFormData);
+      const clientMasterPayload = {
+        userName: userData.currentUserLogin,
+        dModelData: convertedDataModel,
+      }
+      const saveDataServiceResponse = await saveDataService(clientMasterPayload, userData.currentUserLogin, userData.clientURL);
 
+      const match = saveDataServiceResponse.match(/Client ID\s*'(\d+)'/);
+      const newClientId = match ? parseInt(match[1], 10) : -1;
+
+      if (newClientId !== -1) {
+        setCustomerFormData((prev) => ({
+          ...prev,
+          CLIENT_ID: newClientId,
+        }));
+        toast({
+          title: saveDataServiceResponse,
+        })
+      }
     } catch (error) {
-      console.log("Error saving data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error saving data. Please try again.", error,
+      })
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex flex-col gap-y-4">
+      <h1 className="title">{customerFormData.CLIENT_ID === -1 ? "Create Customer" : "Edit Customer"}</h1>
       <div className="flex w-full flex-col gap-4 lg:flex-row">
-        <Card className="w-full lg:w-[70%]">
-          <CardHeader>
-            <CardTitle>Add Customer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="flex flex-wrap gap-2" onSubmit={handleCustomerSubmit}>
-              <div className="flex w-full flex-col gap-2 md:flex-row">
+        <Card className="w-full lg:w-[70%] p-4 h-fit">
+          <form className="flex flex-wrap gap-2" onSubmit={handleSubmit}>
+            <div className="flex w-full flex-col gap-2 md:flex-row">
 
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="CLIENT_NAME">Customer / Company Name</Label>
-                  <Input
-                    id="CLIENT_NAME"
-                    name="CLIENT_NAME"
-                    type="text"
-                    placeholder="Name of your customer / company"
-                    value={customerFormData.CLIENT_NAME}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  {error.CLIENT_NAME && <p className="text-sm text-red-500">{error.CLIENT_NAME}</p>}
-                </div>
-
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="emailAddress">Email ID</Label>
-                  <Input
-                    id="emailAddress"
-                    name="emailAddress"
-                    type="email"
-                    placeholder="Enter your email ID"
-                    value={customerFormData.emailAddress}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  {error.emailAddress && <p className="text-sm text-red-500">{error.emailAddress}</p>}
-                </div>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="CLIENT_NAME">Customer / Company Name</Label>
+                <Input
+                  id="CLIENT_NAME"
+                  name="CLIENT_NAME"
+                  type="text"
+                  placeholder="Name of your customer / company"
+                  value={customerFormData.CLIENT_NAME}
+                  onChange={handleInputChange}
+                  required
+                />
+                {error.CLIENT_NAME && <p className="text-sm text-red-500">{error.CLIENT_NAME}</p>}
               </div>
 
-              <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="mt-3 w-full md:w-1/2">
-                  <Label className="block text-sm font-medium">Select Nature Of Business</Label>
-                  <Popover open={openNatureOfBusiness} onOpenChange={setOpenNatureOfBusiness}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openNatureOfBusiness}
-                        className="w-full justify-between text-left gap-2 min-h-10"
-                      >
-                        {customerFormData.natureOfBusiness
-                          ? natureOfBusinessConstants.find(
-                            (item) => item.value === customerFormData.natureOfBusiness
-                          )?.label
-                          : "Select nature of business..."}
-                        <ChevronsUpDown className="opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command className="w-full justify-start">
-                        <CommandInput
-                          placeholder="Search nature of business..."
-                          className="h-9"
-                        />
-                        <CommandList>
-                          <CommandEmpty>No nature of business found.</CommandEmpty>
-                          <CommandGroup>
-                            {natureOfBusinessConstants.map((item) => (
-                              <CommandItem
-                                key={item.value}
-                                value={item.value}
-                                onSelect={(currentValue) => {
-                                  setCustomerFormData((prev) => ({
-                                    ...prev,
-                                    natureOfBusiness:
-                                      currentValue === prev.natureOfBusiness
-                                        ? ""
-                                        : currentValue,
-                                  }));
-                                  setOpenNatureOfBusiness(false);
-                                  SetError((prev) => ({
-                                    ...prev,
-                                    natureOfBusiness: "",
-                                  }));
-                                }}
-                              >
-                                {item.label}
-                                <Check
-                                  className={cn(
-                                    "ml-auto",
-                                    customerFormData.natureOfBusiness === item.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="EMAIL_ADDRESS">Email ID</Label>
+                <Input
+                  id="EMAIL_ADDRESS"
+                  name="EMAIL_ADDRESS"
+                  type="email"
+                  placeholder="Enter your email ID"
+                  value={customerFormData.EMAIL_ADDRESS}
+                  onChange={handleInputChange}
+                  required
+                />
+                {error.EMAIL_ADDRESS && <p className="text-sm text-red-500">{error.EMAIL_ADDRESS}</p>}
+              </div>
+            </div>
 
-                <div className="mt-3 w-full md:w-1/2">
-                  <Label className="block text-sm font-medium">Select Other Nature Of Business</Label>
-
-                  <Popover open={openOtherNatureOfBusiness} onOpenChange={setOpenOtherNatureOfBusiness}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openOtherNatureOfBusiness}
-                        className="w-full justify-between text-left gap-2 min-h-10"
-                      >
-                        {customerFormData.otherNatureOfBusiness
-                          ? otherNatureOfBusinessConstants.find(
-                            (item) => item.value === customerFormData.otherNatureOfBusiness
-                          )?.label
-                          : "Select other nature of business..."}
-                        <ChevronsUpDown className="opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command className="w-full justify-start">
-                        <CommandInput placeholder="Search other nature of business..." className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>No other nature of business found.</CommandEmpty>
-                          <CommandGroup>
-                            {otherNatureOfBusinessConstants.map((item) => (
-                              <CommandItem
-                                key={item.value}
-                                value={item.value}
-                                onSelect={(currentValue) => {
-                                  setCustomerFormData((prev) => ({
-                                    ...prev,
-                                    otherNatureOfBusiness:
-                                      currentValue === prev.otherNatureOfBusiness
-                                        ? ""
-                                        : currentValue,
-                                  }));
-                                  setOpenOtherNatureOfBusiness(false);
-                                  SetError((prev) => ({
-                                    ...prev,
-                                    otherNatureOfBusiness: "",
-                                  }));
-                                }}
-                              >
-                                {item.label}
-                                <Check
-                                  className={cn(
-                                    "ml-auto",
-                                    customerFormData.otherNatureOfBusiness === item.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            <div className="flex w-full flex-col gap-2 md:flex-row">
+              <div className="mt-3 w-full md:w-1/2">
+                <Label className="block text-sm font-medium">Select Nature Of Business</Label>
+                <Popover open={openNatureOfBusiness} onOpenChange={setOpenNatureOfBusiness}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openNatureOfBusiness}
+                      className="w-full justify-between text-left gap-2 min-h-10"
+                    >
+                      {customerFormData.NATURE_OF_BUSINESS
+                        ? natureOfBusinessConstants.find(
+                          (item) => item.value === customerFormData.NATURE_OF_BUSINESS
+                        )?.label
+                        : "Select nature of business..."}
+                      <ChevronsUpDown className="opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command className="w-full justify-start">
+                      <CommandInput
+                        placeholder="Search nature of business..."
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>No nature of business found.</CommandEmpty>
+                        <CommandGroup>
+                          {natureOfBusinessConstants.map((item) => (
+                            <CommandItem
+                              key={item.value}
+                              value={item.value}
+                              onSelect={(currentValue) => {
+                                setCustomerFormData((prev) => ({
+                                  ...prev,
+                                  NATURE_OF_BUSINESS:
+                                    currentValue === prev.NATURE_OF_BUSINESS
+                                      ? ""
+                                      : currentValue,
+                                }));
+                                setOpenNatureOfBusiness(false);
+                                setError((prev) => ({
+                                  ...prev,
+                                  NATURE_OF_BUSINESS: "",
+                                }));
+                              }}
+                            >
+                              {item.label}
+                              <Check
+                                className={cn(
+                                  "ml-auto",
+                                  customerFormData.NATURE_OF_BUSINESS === item.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="trnVatNo">VAT/GST/TAX No</Label>
-                  <Input
-                    id="trnVatNo"
-                    name="trnVatNo"
-                    type="text"
-                    placeholder="Enter VAT/GST/TAX No"
-                    value={customerFormData.trnVatNo}
-                    onChange={handleInputChange}
-                  />
-                  {error.trnVatNo && <p className="text-sm text-red-500">{error.trnVatNo}</p>}
-                </div>
+              <div className="mt-3 w-full md:w-1/2">
+                <Label className="block text-sm font-medium">Select Other Nature Of Business</Label>
 
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="groupOfCompany">Group of Company</Label>
-                  <Input
-                    id="groupOfCompany"
-                    name="groupOfCompany"
-                    placeholder="Enter Group Name"
-                    value={customerFormData.groupOfCompany}
-                    onChange={handleInputChange}
-                  />
-                </div>
+                <Popover open={openOtherNatureOfBusiness} onOpenChange={setOpenOtherNatureOfBusiness}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openOtherNatureOfBusiness}
+                      className="w-full justify-between text-left gap-2 min-h-10"
+                    >
+                      {customerFormData.OTHER_NATURE_OF_BUSINESS
+                        ? otherNatureOfBusinessConstants.find(
+                          (item) => item.value === customerFormData.OTHER_NATURE_OF_BUSINESS
+                        )?.label
+                        : "Select other nature of business..."}
+                      <ChevronsUpDown className="opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command className="w-full justify-start">
+                      <CommandInput placeholder="Search other nature of business..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No other nature of business found.</CommandEmpty>
+                        <CommandGroup>
+                          {otherNatureOfBusinessConstants.map((item) => (
+                            <CommandItem
+                              key={item.value}
+                              value={item.value}
+                              onSelect={(currentValue) => {
+                                setCustomerFormData((prev) => ({
+                                  ...prev,
+                                  OTHER_NATURE_OF_BUSINESS:
+                                    currentValue === prev.OTHER_NATURE_OF_BUSINESS
+                                      ? ""
+                                      : currentValue,
+                                }));
+                                setOpenOtherNatureOfBusiness(false);
+                                setError((prev) => ({
+                                  ...prev,
+                                  OTHER_NATURE_OF_BUSINESS: "",
+                                }));
+                              }}
+                            >
+                              {item.label}
+                              <Check
+                                className={cn(
+                                  "ml-auto",
+                                  customerFormData.OTHER_NATURE_OF_BUSINESS === item.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col gap-2 md:flex-row">
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="TRN_VAT_NO">VAT/GST/TAX No</Label>
+                <Input
+                  id="TRN_VAT_NO"
+                  name="TRN_VAT_NO"
+                  type="text"
+                  placeholder="Enter VAT/GST/TAX No"
+                  value={customerFormData.TRN_VAT_NO}
+                  onChange={handleInputChange}
+                />
+                {error.TRN_VAT_NO && <p className="text-sm text-red-500">{error.TRN_VAT_NO}</p>}
               </div>
 
-              <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="telephoneNo">Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span></Label>
-                  <Input
-                    id="telephoneNo"
-                    name="telephoneNo"
-                    type="text"
-                    placeholder="e.g. +91XXXXXXXXXX"
-                    value={customerFormData.telephoneNo}
-                    onChange={handleInputChange}
-                  />
-                  {error.telephoneNo && <p className="text-sm text-red-500">{error.telephoneNo}</p>}
-                </div>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="GROUP_NAME">Group of Company</Label>
+                <Input
+                  id="GROUP_NAME"
+                  name="GROUP_NAME"
+                  placeholder="Enter Group Name"
+                  value={customerFormData.GROUP_NAME}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
 
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="webAddress">Website</Label>
-                  <Input
-                    id="webAddress"
-                    name="webAddress"
-                    type="url"
-                    placeholder="Enter your website"
-                    value={customerFormData.webAddress}
-                    onChange={handleInputChange}
-                  />
-                </div>
+            <div className="flex w-full flex-col gap-2 md:flex-row">
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="TELEPHONE_NO">Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span></Label>
+                <Input
+                  id="TELEPHONE_NO"
+                  name="TELEPHONE_NO"
+                  type="text"
+                  placeholder="e.g. +91XXXXXXXXXX"
+                  value={customerFormData.TELEPHONE_NO}
+                  onChange={handleInputChange}
+                />
+                {error.TELEPHONE_NO && <p className="text-sm text-red-500">{error.TELEPHONE_NO}</p>}
               </div>
 
-              <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="mt-3 w-full md:w-1/2">
-                  <Label className="block text-sm font-medium">Select Contry</Label>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="WEB_ADDRESS">Website</Label>
+                <Input
+                  id="WEB_ADDRESS"
+                  name="WEB_ADDRESS"
+                  type="url"
+                  placeholder="Enter your website"
+                  value={customerFormData.WEB_ADDRESS}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
 
-                  <Popover open={openCountry} onOpenChange={setOpenCountry}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCountry}
-                        className="w-full justify-between text-left gap-2 min-h-10"
-                      >
-                        {customerFormData.country
-                          ? countryConstants.find((item) => item.value === customerFormData.country)?.label
-                          : "Select country..."}
-                        <ChevronsUpDown className="opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command className="w-full justify-start">
-                        <CommandInput placeholder="Search country..." className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>No country found.</CommandEmpty>
-                          <CommandGroup>
-                            {countryConstants.map((country) => (
-                              <CommandItem
-                                key={country.value}
-                                value={country.value}
-                                onSelect={(currentValue) => {
-                                  setCustomerFormData((prev) => ({
-                                    ...prev,
-                                    country: currentValue === prev.country ? "" : currentValue,
-                                  }));
-                                  setOpenCountry(false);
-                                  SetError((prev) => ({
-                                    ...prev,
-                                    country: "",
-                                  }));
-                                }}
-                              >
-                                {country.label}
-                                <Check
-                                  className={cn(
-                                    "ml-auto",
-                                    customerFormData.country === country.value
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            <div className="flex w-full flex-col gap-2 md:flex-row">
+              <div className="mt-3 w-full md:w-1/2">
+                <Label className="block text-sm font-medium">Select Contry</Label>
 
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    name="state"
-                    type="text"
-                    placeholder="Enter City Name"
-                    value={customerFormData.state}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="cityName">City</Label>
-                  <Input
-                    id="cityName"
-                    name="cityName"
-                    type="text"
-                    placeholder="Enter City Name"
-                    value={customerFormData.cityName}
-                    onChange={handleInputChange}
-                  />
-                </div>
+                <Popover open={openCountry} onOpenChange={setOpenCountry}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCountry}
+                      className="w-full justify-between text-left gap-2 min-h-10"
+                    >
+                      {customerFormData.COUNTRY
+                        ? countryConstants.find((item) => item.value === customerFormData.COUNTRY)?.label
+                        : "Select country..."}
+                      <ChevronsUpDown className="opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command className="w-full justify-start">
+                      <CommandInput placeholder="Search country..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No country found.</CommandEmpty>
+                        <CommandGroup>
+                          {countryConstants.map((country) => (
+                            <CommandItem
+                              key={country.value}
+                              value={country.value}
+                              onSelect={(currentValue) => {
+                                setCustomerFormData((prev) => ({
+                                  ...prev,
+                                  COUNTRY: currentValue === prev.COUNTRY ? "" : currentValue,
+                                }));
+                                setOpenCountry(false);
+                                setError((prev) => ({
+                                  ...prev,
+                                  COUNTRY: "",
+                                }));
+                              }}
+                            >
+                              {country.label}
+                              <Check
+                                className={cn(
+                                  "ml-auto",
+                                  customerFormData.COUNTRY === country.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="flex w-full flex-col gap-2 md:flex-row">
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="communicationAddress">Communication Address</Label>
-                  <Textarea
-                    id="communicationAddress"
-                    name="communicationAddress"
-                    type="text"
-                    placeholder="Communication Address"
-                    value={customerFormData.communicationAddress}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="invoiceAddress">Invoice Address</Label>
-                  <Textarea
-                    id="invoiceAddress"
-                    name="invoiceAddress"
-                    type="text"
-                    placeholder="Invoice Address"
-                    value={customerFormData.invoiceAddress}
-                    onChange={handleInputChange}
-                  />
-                  {error.invoiceAddress && <p className="text-sm text-red-500">{error.invoiceAddress}</p>}
-                </div>
-
-                <div className="w-full md:w-1/2">
-                  <Label htmlFor="deliveryAddress">Delivery Address</Label>
-                  <Textarea
-                    id="deliveryAddress"
-                    placeholder="Delivery Address"
-                    name="deliveryAddress"
-                    type="text"
-                    value={customerFormData.deliveryAddress}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="STATE">State</Label>
+                <Input
+                  id="STATE"
+                  name="STATE"
+                  type="text"
+                  placeholder="Enter City Name"
+                  value={customerFormData.STATE}
+                  onChange={handleInputChange}
+                />
               </div>
 
-              <div className="mt-4 w-full flex justify-center items-center" type="submit">
-                <Button >Save Customer</Button>
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="CITY_NAME">City</Label>
+                <Input
+                  id="CITY_NAME"
+                  name="CITY_NAME"
+                  type="text"
+                  placeholder="Enter City Name"
+                  value={customerFormData.CITY_NAME}
+                  onChange={handleInputChange}
+                />
               </div>
-            </form>
-          </CardContent>
+            </div>
+
+            <div className="flex w-full flex-col gap-2 md:flex-row">
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="COMMUNICATION_ADDRESS">Communication Address</Label>
+                <Textarea
+                  id="COMMUNICATION_ADDRESS"
+                  name="COMMUNICATION_ADDRESS"
+                  type="text"
+                  placeholder="Communication Address"
+                  value={customerFormData.COMMUNICATION_ADDRESS}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="INVOICE_ADDRESS">Invoice Address</Label>
+                <Textarea
+                  id="INVOICE_ADDRESS"
+                  name="INVOICE_ADDRESS"
+                  type="text"
+                  placeholder="Invoice Address"
+                  value={customerFormData.INVOICE_ADDRESS}
+                  onChange={handleInputChange}
+                />
+                {error.INVOICE_ADDRESS && <p className="text-sm text-red-500">{error.INVOICE_ADDRESS}</p>}
+              </div>
+
+              <div className="w-full md:w-1/2">
+                <Label htmlFor="DELIVERY_ADDRESS">Delivery Address</Label>
+                <Textarea
+                  id="DELIVERY_ADDRESS"
+                  placeholder="Delivery Address"
+                  name="DELIVERY_ADDRESS"
+                  type="text"
+                  value={customerFormData.DELIVERY_ADDRESS}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 w-full flex justify-center items-center" type="submit">
+              <Button disabled={loading}>  {loading ?
+                <BeatLoader color="#000" size={8} />
+                : (customerFormData.CLIENT_ID === -1 ? "Save Customer" : "Update Customer")}</Button>
+            </div>
+          </form>
         </Card>
 
-        <AddContact />
+        <AddContact clientId={customerFormData.CLIENT_ID} />
       </div>
     </div>
   );

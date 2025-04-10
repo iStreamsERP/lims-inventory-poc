@@ -211,8 +211,14 @@ export const updateUserPayload = (formData) => ({
   VALUE: formData.value,
 });
 
+export const saveDataServicePayload = (formData) => ({
+  UserName: formData.userName,
+  DModelData: formData.dModelData,
+});
 
-export const saveDataServicePayload = (loginUserName, dataModelData) => ({
-  UserName: loginUserName,
-  DModelData: dataModelData,
+
+export const deleteDataModelServicePayload = (formData) => ({
+  UserName: formData.userName,
+  DataModelName: formData.dataModelName,
+  WhereCondition: formData.whereCondition,
 });

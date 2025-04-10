@@ -33,7 +33,8 @@ import { deleteUser, getAllUsersList } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
+
 
 const OrderList = () => {
     const [userTableData, setUserTableData] = useState([]);
@@ -44,6 +45,7 @@ const OrderList = () => {
     const [columnVisibility, setColumnVisibility] = useState({})
     const [rowSelection, setRowSelection] = useState({})
     const { userData } = useAuth();
+    const { toast } = useToast()
     const navigate = useNavigate();
 
     const [selectedUser, setSelectedUser] = useState(null);
@@ -79,14 +81,14 @@ const OrderList = () => {
 
             fetchAllUsersData();
 
-            toast(deleteUserResponse);
-        } catch (error) {
-            console.error("Error deleting user:", error);
+            toast({
+                title: deleteUserResponse,
+            })
 
+        } catch (error) {
             toast({
                 variant: "destructive",
-                title: "Uh oh! Something went wrong.",
-                description: error?.message || "Unknown error occurred.",
+                title: error?.message || "Unknown error occurred.",
             })
         }
     }
@@ -309,7 +311,7 @@ const OrderList = () => {
                             ))}
                         </TableHeader>
                         <TableBody>
-                            {loading ? (
+                            {true ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
                                         <PacmanLoader color="#6366f1" />

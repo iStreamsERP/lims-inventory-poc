@@ -32,7 +32,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { deleteUser, getAllUsersList } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { PacmanLoader } from "react-spinners"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import UserDialog from "@/components/dialog/UserDialog"
 
@@ -45,6 +45,7 @@ const UserManagement = () => {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
+  const { toast } = useToast()
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,15 +79,16 @@ const UserManagement = () => {
       const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
 
       fetchAllUsersData();
-
-      toast(deleteUserResponse);
+      toast({
+        variant: "destructive",
+        title: deleteUserResponse,
+      })
     } catch (error) {
       console.error("Error deleting user:", error);
 
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error?.message || "Unknown error occurred.",
+        title: error?.message || "Unknown error occurred.",
       })
     }
   }

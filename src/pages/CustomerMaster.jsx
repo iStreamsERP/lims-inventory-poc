@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,12 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { getDataModelService } from "@/services/dataModelService"
+import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
 import { deleteUser } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 
 const CustomerMaster = () => {
   const [customersData, setCustomersData] = useState([]);
@@ -45,7 +45,7 @@ const CustomerMaster = () => {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
-
+  const { toast } = useToast()
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -62,7 +62,7 @@ const CustomerMaster = () => {
       const getDataModelPayload = {
         dataModelName: "CLIENT_MASTER",
         whereCondition: "",
-        orderby: ""
+        orderby: "CLIENT_ID DESC",
       }
       const data = await getDataModelService(getDataModelPayload, userData.currentUserLogin, userData.clientURL)
       setCustomersData(data);
@@ -73,36 +73,31 @@ const CustomerMaster = () => {
     }
   }
 
-  const handleDeleteUser = async (user) => {
-    alert("Are you sure you want to delete this user? This action cannot be undone.")
+  const handleDeleteCustomer = async (customer) => {
+    alert("Are you sure you want to delete this customer? This action cannot be undone.")
     // throw new Error("User deletion is not implemented yet.");
 
     try {
-      const deleteUserPayload = {
-        fqUserName: user.EMAIL_ADDRESS,
-        userNameOnly: user.USER_NAME,
+      const deleteCustomerPayload = {
+        userName: userData.currentUserLogin,
+        dataModelName: "CLIENT_MASTER",
+        whereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
       }
-      const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
-
-      fetchAllUsersData();
-
-      toast(deleteUserResponse);
-    } catch (error) {
-      console.error("Error deleting user:", error);
+      const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
 
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: error?.message || "Unknown error occurred.",
+        title: deleteCustomerResponse,
+      })
+
+      fetchAllCustomersData();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: error?.message || "Unknown error occurred.",
       })
     }
   }
-
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setIsDialogOpen(true);
-  }
-
 
   const columns = [
     {
@@ -198,7 +193,7 @@ const CustomerMaster = () => {
       id: "actions",
       // enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original
+        const customer = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -210,8 +205,9 @@ const CustomerMaster = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEditUser(user)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/customer-master/:1")} className="flex items-center gap-1"><Eye /> View</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/customer-master/customer-creation/${customer.CLIENT_ID}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteCustomer(customer)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -283,7 +279,7 @@ const CustomerMaster = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => navigate("/customer-master/customer-creation")}>Add Customers</Button>
+            <Button onClick={() => navigate("/customer-master/customer-creation")}>Create Customers</Button>
           </div>
         </div>
         <div className="rounded-md border">
