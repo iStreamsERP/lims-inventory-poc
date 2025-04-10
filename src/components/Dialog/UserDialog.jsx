@@ -88,8 +88,8 @@ const validateInput = (name, value) => {
 
 const UserDialog = ({ user, open, onClose }) => {
     const { userData } = useAuth();
+    const { toast } = useToast()
     const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
-
     const [loading, setLoading] = useState({});
     const [errors, setErrors] = useState({});
     const [image, setImage] = useState(null);
@@ -198,12 +198,13 @@ const UserDialog = ({ user, open, onClose }) => {
             }
             const updateUserResponse = await updateUser(updateUserPayload, userData.currentUserLogin, userData.clientURL)
             toast({
-                title: "Scheduled: Catch up",
-                description: updateUserResponse,
+                title: updateUserResponse
             })
         } catch (error) {
-            console.log("Error updating user:", error);
-            toast(error.message)
+            toast({
+                variant: "destructive",
+                title: "Error updating user:", error,
+            })
         } finally {
             setIsFocused((prev) => ({ ...prev, [key]: false }));
             setLoading((prev) => ({ ...prev, [key]: false }));

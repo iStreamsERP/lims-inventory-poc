@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -124,7 +124,7 @@ const CustomerMaster = () => {
     },
     {
       accessorKey: "CLIENT_ID",
-      header: "Client Id",
+      header: "Client ID",
       cell: ({ row }) => (
         <div className="capitalize">{row.getValue("CLIENT_ID")}</div>
       ),
@@ -184,7 +184,7 @@ const CustomerMaster = () => {
     },
     {
       accessorKey: "NATURE_OF_BUSINESS",
-      header: () => <div>Employee No</div>,
+      header: () => <div>Nature of Business</div>,
       cell: ({ row }) => <div>{row.getValue("NATURE_OF_BUSINESS") || "-"}</div>,
     },
     {
@@ -279,7 +279,7 @@ const CustomerMaster = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => navigate("/customer-master/customer-creation")}>Create Customers</Button>
+            <Button onClick={() => navigate("/customer-master/customer-creation")}>Create Customer<Plus /></Button>
           </div>
         </div>
         <div className="rounded-md border">

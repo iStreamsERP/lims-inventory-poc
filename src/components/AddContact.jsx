@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { deleteDataModelService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { SquarePen, Trash2 } from "lucide-react";
+import { SquarePen, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const AddContact = ({ clientId }) => {
@@ -126,7 +126,10 @@ const AddContact = ({ clientId }) => {
     const handleSumbit = async () => {
         try {
             setLoading(true);
+            console.log(contactFormData);
+
             const convertedDataModel = convertDataModelToStringData("CLIENT_CONTACTS", contactFormData);
+            console.log(convertedDataModel);
 
             const clientContactsPayload = {
                 userName: userData.currentUserLogin,
@@ -166,7 +169,7 @@ const AddContact = ({ clientId }) => {
     return (
         <Card className="w-full lg:w-[30%]">
             <CardHeader>
-                <CardTitle>Add Contacts</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Users className="text-gray-400" />Contacts</CardTitle>
             </CardHeader>
             <CardContent className="h-[450px] overflow-y-scroll z-[999]">
                 <div className="flex flex-col flex-wrap gap-4">
@@ -180,7 +183,7 @@ const AddContact = ({ clientId }) => {
                                     <p className="text-xl font-semibold leading-none">{contact.NAME}</p>
                                     <p className="mb-2 text-xs font-semibold text-gray-500">{contact.DESIGNATION}</p>
                                     <p className="text-sm text-gray-600">{contact.EMAIL_ADDRESS}</p>
-                                    <p className="text-sm text-blue-600">+91 {contact.TELEPHONE_NO}</p>
+                                    <p className="text-sm text-blue-600">{contact.TELEPHONE_NO}</p>
                                 </div>
                                 <div className="flex flex-row gap-2">
                                     <SquarePen
@@ -216,13 +219,13 @@ const AddContact = ({ clientId }) => {
                             onClick={() => setIsDialogOpen(true)}
                             disabled={!isEnabled}
                         >
-                            {isEnabled ? "Add Contact" : "Create Customer First"}
+                            Add Contact
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <form>
                             <DialogHeader>
-                                <DialogTitle>{contactFormData.NAME ? "Edit Contact" : "Add Contact"}</DialogTitle>
+                                <DialogTitle>Contact</DialogTitle>
                                 <DialogDescription>Enter the contact details and click save.</DialogDescription>
                             </DialogHeader>
                             <div className="flex flex-col gap-4 py-4">

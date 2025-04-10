@@ -51,7 +51,9 @@ const CustomerCreation = () => {
     CITY_NAME: "",
     COMMUNICATION_ADDRESS: "",
     INVOICE_ADDRESS: "",
-    DELIVERY_ADDRESS: ""
+    DELIVERY_ADDRESS: "",
+    ENT_DATE: "",
+    USER_NAME: userData.currentUserName,
   });
 
   useEffect(() => {
@@ -134,6 +136,7 @@ const CustomerCreation = () => {
         userName: userData.currentUserLogin,
         dModelData: convertedDataModel,
       }
+
       const saveDataServiceResponse = await saveDataService(clientMasterPayload, userData.currentUserLogin, userData.clientURL);
 
       const match = saveDataServiceResponse.match(/Client ID\s*'(\d+)'/);
@@ -167,12 +170,12 @@ const CustomerCreation = () => {
             <div className="flex w-full flex-col gap-2 md:flex-row">
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="CLIENT_NAME">Customer / Company Name</Label>
+                <Label htmlFor="CLIENT_NAME">Company / Customer Name</Label>
                 <Input
                   id="CLIENT_NAME"
                   name="CLIENT_NAME"
                   type="text"
-                  placeholder="Name of your customer / company"
+                  placeholder="Company name / Your name (If you are individual)"
                   value={customerFormData.CLIENT_NAME}
                   onChange={handleInputChange}
                   required
@@ -197,7 +200,7 @@ const CustomerCreation = () => {
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="mt-3 w-full md:w-1/2">
-                <Label className="block text-sm font-medium">Select Nature Of Business</Label>
+                <Label className="block text-sm font-medium">Select Nature Of Business <span className="text-gray-500">(Primary)</span> </Label>
                 <Popover open={openNatureOfBusiness} onOpenChange={setOpenNatureOfBusiness}>
                   <PopoverTrigger asChild>
                     <Button

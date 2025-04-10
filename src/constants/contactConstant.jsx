@@ -24,30 +24,38 @@ export const countryConstants = [
 
 export const natureOfBusinessConstants = [
     {
-        value: "Whole Sale",
-        label: "Whole Sale",
+        value: "Construction",
+        label: "Construction",
     },
     {
-        value: "IT",
-        label: "IT",
+        value: "Interior Contractors",
+        label: "Interior Contractors",
     },
     {
         value: "Finance",
         label: "Finance",
     },
+    {
+        value: "IT Support",
+        label: "IT Support",
+    },
 ]
 
 export const otherNatureOfBusinessConstants = [
     {
-        value: "Other Whole Sale",
-        label: "Other Whole Sale",
+        value: "Other Construction",
+        label: "Other Construction",
     },
     {
-        value: "Other IT",
-        label: "Other IT",
+        value: "Other Interior Contractors",
+        label: "Other Interior Contractors",
     },
     {
         value: "Other Finance",
         label: "Other Finance",
+    },
+    {
+        value: "Other IT Support",
+        label: "Other IT Support",
     },
 ]
