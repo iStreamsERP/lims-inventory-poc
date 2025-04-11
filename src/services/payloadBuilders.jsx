@@ -116,6 +116,10 @@ export const getDataModelPayload = (formData) => ({
   Orderby: formData.orderby,
 });
 
+export const getDataModelFromQueryServicePayload = (query) => ({
+  SQLQuery: query.sQLQuery,
+});
+
 export const getEmployeeNameAndIdPayload = (userfirstname) => ({
   userfirstname: userfirstname,
 });

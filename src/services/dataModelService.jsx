@@ -1,6 +1,6 @@
 import { createSoapEnvelope, parseDataModelResponse } from "../utils/soapUtils";
 import { doConnection } from "./connectionService";
-import { deleteDataModelServicePayload, getDataModelPayload, saveDataServicePayload } from "./payloadBuilders";
+import { deleteDataModelServicePayload, getDataModelFromQueryServicePayload, getDataModelPayload, saveDataServicePayload } from "./payloadBuilders";
 import soapClient from "./soapClient";
 
 export const getDataModelService = async (formData, loginUserName, dynamicClientUrl) => {
@@ -28,6 +28,36 @@ export const getDataModelService = async (formData, loginUserName, dynamicClient
   const parsedResponse = parseDataModelResponse(
     soapResponse,
     "DataModel_GetData"
+  );
+
+  return parsedResponse;
+};
+
+export const getDataModelFromQueryService = async (query, loginUserName, dynamicClientUrl) => {
+
+  const payload = getDataModelFromQueryServicePayload(query);
+
+  const doConnectionResponse = await doConnection(
+    loginUserName,
+    dynamicClientUrl
+  );
+
+  if (doConnectionResponse === "ERROR") {
+    throw new Error("Connection failed: Unable to authenticate.");
+  }
+
+  const SOAP_ACTION = "http://tempuri.org/DataModel_GetDataFrom_Query";
+  const soapBody = createSoapEnvelope("DataModel_GetDataFrom_Query", "payload");
+
+  const soapResponse = await soapClient(
+    dynamicClientUrl,
+    SOAP_ACTION,
+    soapBody
+  );
+
+  const parsedResponse = parseDataModelResponse(
+    soapResponse,
+    "DataModel_GetDataFrom_Query"
   );
 
   return parsedResponse;

@@ -16,7 +16,7 @@ import { countryConstants, natureOfBusinessConstants, otherNatureOfBusinessConst
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { getDataModelService, saveDataService } from "@/services/dataModelService";
+import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -56,11 +56,45 @@ const CustomerCreation = () => {
     USER_NAME: userData.currentUserName,
   });
 
+  const [natureOfBusiness, setNatureOfBusiness] = useState([]);
+  const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState(otherNatureOfBusinessConstants);
+  const [country, setCountry] = useState([]);
+
   useEffect(() => {
     if (clientIDParams) {
       fetchCustomerData();
+      fetchCountryAndCities();
     }
   }, [clientIDParams]);
+
+  const fetchCountryAndCities = async () => {
+    setLoading(true);
+    setError({});
+    try {
+      const getDataModelPayload = {
+        dataModelName: "COUNTRY_CITIES",
+        whereCondition: "",
+        orderby: "",
+      };
+
+      const data = await getDataModelService(
+        getDataModelPayload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      setCountry(data);
+
+    } catch (error) {
+      setError({ fetch: error.message });
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCustomerData = async () => {
     setLoading(true);
@@ -77,7 +111,10 @@ const CustomerCreation = () => {
         userData.currentUserLogin,
         userData.clientURL
       );
-      setCustomerFormData(data?.[0] || customerFormData);
+      setCustomerFormData((prev) => ({
+        ...prev,
+        ...(data?.[0] || {})
+      }));
     } catch (error) {
       setError({ fetch: error.message });
       toast({
