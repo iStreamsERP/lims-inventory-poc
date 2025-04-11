@@ -14,7 +14,7 @@ import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
-import ServicePricingPage from "./pages/ServicePricingpage";
+import ServicePricingPage from "./pages/ServicePricingPage";
 import SignUpPage from "./pages/SignUpPage";
 import UserManagement from "./pages/UserManagement";
 import Layout from "./routes/Layout";
