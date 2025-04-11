@@ -297,6 +297,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.newUserName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    tabIndex={-1}
                                 />
                                 {
                                     (loading["USER_NAME"] || (isFocused.newUserName && user)) ?
@@ -324,6 +325,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.password}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    tabIndex={-1}
                                 />
                                 {
                                     (loading["password"] || (isFocused.password && user)) ?
@@ -380,6 +382,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.emailAddress}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    tabIndex={-1}
                                 />
                                 {
                                     (loading["EMAIL_ADDRESS"] || (isFocused.emailAddress && user)) ?
@@ -408,6 +411,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                         value={userFormData.mobileNumber}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
+                                        tabIndex={-1}
                                     />
                                     {
                                         (loading["MOBILE_NO"] || (isFocused.mobileNumber && user)) ?
@@ -436,6 +440,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.fullName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    tabIndex={-1}
                                 />
                                 {
                                     (loading["FULL_NAME"] || (isFocused.fullName && user)) ?
@@ -463,6 +468,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     value={userFormData.empNo}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
+                                    tabIndex={-1}
                                 />
                                 {
                                     (loading["EMP_NO"] || (isFocused.empNo && user)) ?
@@ -493,6 +499,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                 onChange={handleChange}
                                 onBlur={handleBlur}
                                 readOnly={true}
+                                tabIndex={-1}
                             />
                             {errors.domainName && (
                                 <span className="text-xs text-red-500">{errors.domainName}</span>

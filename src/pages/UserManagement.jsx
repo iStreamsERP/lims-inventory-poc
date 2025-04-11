@@ -129,11 +129,9 @@ const UserManagement = () => {
       enableHiding: false,
     },
     {
-      accessorKey: "id",
-      header: "S.No",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("id")}</div>
-      ),
+      accessorKey: "EMP_NO",
+      header: () => <div>Employee No</div>,
+      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
     },
     {
       accessorKey: "USER_NAME",
@@ -187,11 +185,6 @@ const UserManagement = () => {
       accessorKey: "MOBILE_NO",
       header: () => <div>Mobile No</div>,
       cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
-    },
-    {
-      accessorKey: "EMP_NO",
-      header: () => <div>Employee No</div>,
-      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
     },
     {
       accessorKey: "action",

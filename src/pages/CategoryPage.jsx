@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 
 const categories = [
-	{ href: "/jeans", name: "jeans", imageUrl: "https://m.media-amazon.com/images/I/91E69wClQ4L._AC_UY1100_.jpg" },
-	{ href: "/t-shirts", name: "t-shirts", imageUrl: "https://www.thewalkdeal.com/cdn/shop/products/Never-Give-Up-TheFight.jpg?v=1640673347" },
-	{ href: "/shoes", name: "shoes", imageUrl: "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcRTimMYXpPfx9rVSDEY328MRp5WVKxQZ7GXFCdhLNpmFLzOD2btZLTCetsYoCArX4vWi7K4JOcd9VwjgWvDRdG3siXokSF3CYG7eKkGtQBsCJGxwcBCEenV" },
-	{ href: "/glasses", name: "glasses", imageUrl: "https://www.kraywoods.com/cdn/shop/articles/unnamed_4d6159a6-ced6-4169-a9ec-8004ef9873e0.jpg?v=1736879806&width=1100" },
-	{ href: "/jackets", name: "jackets", imageUrl: "https://celio.in/cdn/shop/files/14879883-1055071180377708_1fef0d63-7490-43fc-a1a9-8c1e49187f2e.webp?v=1741757198" },
-	{ href: "/suits", name: "suits", imageUrl: "https://content.moss.co.uk/images/extraextralarge/966945209_02.jpg" },
-	{ href: "/bags", name: "bags", imageUrl: "https://accessorizelondon.in/cdn/shop/files/MN-19009003001_1.webp?v=1697531247" },
+	{ href: "/jeans", name: "Jeans", imageUrl: "https://m.media-amazon.com/images/I/91E69wClQ4L._AC_UY1100_.jpg" },
+	{ href: "/t-shirts", name: "T-Shirts", imageUrl: "https://www.thewalkdeal.com/cdn/shop/products/Never-Give-Up-TheFight.jpg?v=1640673347" },
+	{ href: "/shoes", name: "Shoes", imageUrl: "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcRTimMYXpPfx9rVSDEY328MRp5WVKxQZ7GXFCdhLNpmFLzOD2btZLTCetsYoCArX4vWi7K4JOcd9VwjgWvDRdG3siXokSF3CYG7eKkGtQBsCJGxwcBCEenV" },
+	{ href: "/glasses", name: "Glasses", imageUrl: "https://www.kraywoods.com/cdn/shop/articles/unnamed_4d6159a6-ced6-4169-a9ec-8004ef9873e0.jpg?v=1736879806&width=1100" },
+	{ href: "/jackets", name: "Jackets", imageUrl: "https://celio.in/cdn/shop/files/14879883-1055071180377708_1fef0d63-7490-43fc-a1a9-8c1e49187f2e.webp?v=1741757198" },
+	{ href: "/suits", name: "Suits", imageUrl: "https://content.moss.co.uk/images/extraextralarge/966945209_02.jpg" },
+	{ href: "/bags", name: "Bags", imageUrl: "https://accessorizelondon.in/cdn/shop/files/MN-19009003001_1.webp?v=1697531247" },
 ];
 
 const CategoryPage = () => {

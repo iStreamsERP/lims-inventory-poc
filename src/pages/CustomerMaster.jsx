@@ -52,19 +52,19 @@ const CustomerMaster = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAllCustomersData();
+    fetchAllClientData();
   }, [])
 
-  const fetchAllCustomersData = async () => {
+  const fetchAllClientData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const getDataModelPayload = {
-        dataModelName: "CLIENT_MASTER",
-        whereCondition: "",
-        orderby: "CLIENT_ID DESC",
+      const clientDataPayload = {
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: "",
+        Orderby: "CLIENT_ID DESC",
       }
-      const data = await getDataModelService(getDataModelPayload, userData.currentUserLogin, userData.clientURL)
+      const data = await getDataModelService(clientDataPayload, userData.currentUserLogin, userData.clientURL)
       setCustomersData(data);
     } catch (error) {
       setError(error.message);
@@ -90,7 +90,7 @@ const CustomerMaster = () => {
         title: deleteCustomerResponse,
       })
 
-      fetchAllCustomersData();
+      fetchAllClientData();
     } catch (error) {
       toast({
         variant: "destructive",

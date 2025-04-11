@@ -58,33 +58,53 @@ const CustomerCreation = () => {
 
   const [natureOfBusiness, setNatureOfBusiness] = useState([]);
   const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState(otherNatureOfBusinessConstants);
-  const [country, setCountry] = useState([]);
+  const [locationData, setLocationData] = useState([]);
 
   useEffect(() => {
     if (clientIDParams) {
-      fetchCustomerData();
-      fetchCountryAndCities();
+      fetchClientData();
     }
+    fetchLocationData();
+    fetchNatureOfBusinessUsingQuery();
   }, [clientIDParams]);
 
-  const fetchCountryAndCities = async () => {
+  const fetchNatureOfBusinessUsingQuery = async () => {
     setLoading(true);
-    setError({});
     try {
-      const getDataModelPayload = {
-        dataModelName: "COUNTRY_CITIES",
-        whereCondition: "",
-        orderby: "",
+      const natureOfBusinessPayload = {
+        SQLQuery: "SELECT DISTINCT NATURE_OF_BUSINESS from CLIENT_MASTER where NATURE_OF_BUSINESS IS NOT NULL AND NATURE_OF_BUSINESS &lt;&gt; '' ORDER BY NATURE_OF_BUSINESS",
       };
-
-      const data = await getDataModelService(
-        getDataModelPayload,
+      const data = await getDataModelFromQueryService(
+        natureOfBusinessPayload,
         userData.currentUserLogin,
         userData.clientURL
       );
+      setNatureOfBusiness(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setCountry(data);
-
+  const fetchLocationData = async () => {
+    setLoading(true);
+    setError({});
+    try {
+      const locationDataPayload = {
+        DataModelName: "COUNTRY_CITIES",
+        WhereCondition: "",
+        Orderby: "",
+      };
+      const data = await getDataModelService(
+        locationDataPayload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+      setLocationData(data);
     } catch (error) {
       setError({ fetch: error.message });
       toast({
@@ -96,18 +116,18 @@ const CustomerCreation = () => {
     }
   };
 
-  const fetchCustomerData = async () => {
+  const fetchClientData = async () => {
     setLoading(true);
     setError({});
     try {
-      const getDataModelPayload = {
-        dataModelName: "CLIENT_MASTER",
-        whereCondition: `CLIENT_ID = ${clientIDParams}`,
-        orderby: "",
+      const clientDataPayload = {
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: `CLIENT_ID = ${clientIDParams}`,
+        Orderby: "",
       };
 
       const data = await getDataModelService(
-        getDataModelPayload,
+        clientDataPayload,
         userData.currentUserLogin,
         userData.clientURL
       );
@@ -247,9 +267,9 @@ const CustomerCreation = () => {
                       className="w-full justify-between text-left gap-2 min-h-10"
                     >
                       {customerFormData.NATURE_OF_BUSINESS
-                        ? natureOfBusinessConstants.find(
-                          (item) => item.value === customerFormData.NATURE_OF_BUSINESS
-                        )?.label
+                        ? natureOfBusiness.find(
+                          (item) => item.NATURE_OF_BUSINESS === customerFormData.NATURE_OF_BUSINESS
+                        )?.NATURE_OF_BUSINESS
                         : "Select nature of business..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
@@ -263,10 +283,10 @@ const CustomerCreation = () => {
                       <CommandList>
                         <CommandEmpty>No nature of business found.</CommandEmpty>
                         <CommandGroup>
-                          {natureOfBusinessConstants.map((item) => (
+                          {natureOfBusiness.map((item, index) => (
                             <CommandItem
-                              key={item.value}
-                              value={item.value}
+                              key={index}
+                              value={item.NATURE_OF_BUSINESS}
                               onSelect={(currentValue) => {
                                 setCustomerFormData((prev) => ({
                                   ...prev,
@@ -282,11 +302,11 @@ const CustomerCreation = () => {
                                 }));
                               }}
                             >
-                              {item.label}
+                              {item.NATURE_OF_BUSINESS}
                               <Check
                                 className={cn(
                                   "ml-auto",
-                                  customerFormData.NATURE_OF_BUSINESS === item.value
+                                  customerFormData.NATURE_OF_BUSINESS === item.NATURE_OF_BUSINESS
                                     ? "opacity-100"
                                     : "opacity-0"
                                 )}
@@ -429,7 +449,7 @@ const CustomerCreation = () => {
                       className="w-full justify-between text-left gap-2 min-h-10"
                     >
                       {customerFormData.COUNTRY
-                        ? countryConstants.find((item) => item.value === customerFormData.COUNTRY)?.label
+                        ? locationData.find((item) => item.COUNTRY === customerFormData.COUNTRY)?.COUNTRY
                         : "Select country..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
@@ -440,10 +460,10 @@ const CustomerCreation = () => {
                       <CommandList>
                         <CommandEmpty>No country found.</CommandEmpty>
                         <CommandGroup>
-                          {countryConstants.map((country) => (
+                          {locationData.map((location, index) => (
                             <CommandItem
-                              key={country.value}
-                              value={country.value}
+                              key={index}
+                              value={location.COUNTRY}
                               onSelect={(currentValue) => {
                                 setCustomerFormData((prev) => ({
                                   ...prev,
@@ -456,11 +476,11 @@ const CustomerCreation = () => {
                                 }));
                               }}
                             >
-                              {country.label}
+                              {location.COUNTRY}
                               <Check
                                 className={cn(
                                   "ml-auto",
-                                  customerFormData.COUNTRY === country.value
+                                  customerFormData.COUNTRY === location.COUNTRY
                                     ? "opacity-100"
                                     : "opacity-0"
                                 )}

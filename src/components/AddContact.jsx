@@ -48,9 +48,9 @@ const AddContact = ({ clientId }) => {
     const fetchClientContacts = async () => {
         try {
             const clientContactsPayload = {
-                dataModelName: "CLIENT_CONTACTS",
-                whereCondition: `CLIENT_ID = ${clientId}`,
-                orderby: "",
+                DataModelName: "CLIENT_CONTACTS",
+                WhereCondition: `CLIENT_ID = ${clientId}`,
+                Orderby: "",
             }
             const getClientContactsResponse = await getDataModelService(clientContactsPayload, userData.currentUserLogin, userData.clientURL);
 

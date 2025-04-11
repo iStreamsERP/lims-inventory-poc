@@ -29,11 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { deleteUser, getAllUsersList } from "@/services/userManagementService"
-import { useEffect, useState } from "react"
-import { PacmanLoader } from "react-spinners"
 import { useToast } from "@/hooks/use-toast"
+import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { PacmanLoader } from "react-spinners"
+
 
 const ProductList = () => {
   const [userTableData, setUserTableData] = useState([]);
@@ -47,39 +48,53 @@ const ProductList = () => {
   const { toast } = useToast()
   const navigate = useNavigate();
 
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
   useEffect(() => {
-    fetchAllUsersData();
+    fetchAllMaterialData();
   }, [])
 
-  const fetchAllUsersData = async () => {
+  const fetchAllMaterialData = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
+      const allProductDataPayload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: "",
+        Orderby: "ITEM_CODE DESC"
+      }
+      const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
       setUserTableData(data);
     } catch (error) {
-      setError(error.message);
+      setError(error?.message);
+      toast({
+        variant: "destructive",
+        title: error.message,
+      })
     } finally {
       setLoading(false);
     }
   }
 
   const handleDeleteUser = async (user) => {
-    alert("Are you sure you want to delete this user? This action cannot be undone.")
-    // throw new Error("User deletion is not implemented yet.");
+    const confirm = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
+    if (!confirm) return alert("datas not be deleted deleted");
 
     try {
-      const deleteUserPayload = {
-        fqUserName: user.EMAIL_ADDRESS,
-        userNameOnly: user.USER_NAME,
-      }
-      const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
+      const deleteProductPayload = {
+        UserName: userData.currentUserLogin,
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: `ITEM_CODE = '${user.ITEM_CODE}'`,
+      };
 
+      const deleteUserResponse = await deleteDataModelService(
+        deleteProductPayload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      // Refresh UI after successful deletion
       fetchAllUsersData();
+
       toast({
+        variant: "destructive",
         title: deleteUserResponse,
       })
     } catch (error) {
@@ -88,14 +103,14 @@ const ProductList = () => {
       toast({
         variant: "destructive",
         title: error?.message || "Unknown error occurred.",
-      })
+      });
     }
-  }
+  };
+
 
   const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setIsDialogOpen(true);
-  }
+    navigate("/products-list/create-product", { state: { product: user } });
+  };
 
 
   const columns = [
@@ -122,14 +137,7 @@ const ProductList = () => {
       enableHiding: false,
     },
     {
-      accessorKey: "id",
-      header: "S.No",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("id")}</div>
-      ),
-    },
-    {
-      accessorKey: "USER_NAME",
+      accessorKey: "ITEM_CODE",
       header: ({ column }) => {
         return (
           <Button
@@ -137,54 +145,54 @@ const ProductList = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            User Name
+            Item Code
             <ArrowUpDown />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
       ),
     },
     {
-      accessorKey: "FULL_NAME",
-      header: "Full Name",
+      accessorKey: "ITEM_NAME",
+      header: "Item Name",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "USER_TYPE",
-      header: "User Type",
+      accessorKey: "ITEM_TYPE",
+      header: "Type",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_TYPE")}</div>
+        <div className="capitalize">{row.getValue("ITEM_TYPE") || "-"}</div>
       ),
     },
     {
-      accessorKey: "EMAIL_ADDRESS",
+      accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
+            className="p-0 "
           >
-            Email
+            Item Rate
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
     {
-      accessorKey: "MOBILE_NO",
-      header: () => <div>Mobile No</div>,
-      cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
+      accessorKey: "SUPPLIER_NAME",
+      header: () => <div>SupplierRef</div>,
+      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
     },
     {
-      accessorKey: "EMP_NO",
-      header: () => <div>Employee No</div>,
-      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
+      accessorKey: "QTY_IN_HAND",
+      header: () => <div>Quantity</div>,
+      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
       accessorKey: "action",
@@ -305,7 +313,7 @@ const ProductList = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {true ? (
+              {loading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <PacmanLoader color="#6366f1" />
