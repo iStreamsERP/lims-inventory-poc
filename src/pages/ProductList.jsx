@@ -35,7 +35,6 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 
-
 const ProductList = () => {
   const [userTableData, setUserTableData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -156,10 +155,10 @@ const ProductList = () => {
       ),
     },
     {
-      accessorKey: "ITEM_TYPE",
+      accessorKey: "ITEM_GROUP",
       header: "Type",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_TYPE") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_GROUP") || "-"}</div>
       ),
     },
     {

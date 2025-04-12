@@ -30,14 +30,13 @@ import {
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
-import { deleteUser, getAllUsersList } from "@/services/userManagementService"
+import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 
-import { useNavigate } from "react-router-dom"
-
 const ServiceList = () => {
-  const [userTableData, setUserTableData] = useState([]);
+  const [serviceTableData, setServiceTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -48,56 +47,60 @@ const ServiceList = () => {
   const { toast } = useToast()
   const navigate = useNavigate();
 
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
   useEffect(() => {
-    fetchAllUsersData();
+    fetchAllServicesData();
   }, [])
 
-  const fetchAllUsersData = async () => {
+  const fetchAllServicesData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
-      setUserTableData(data);
+      const allServiceDataPayload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
+        Orderby: ""
+      }
+
+      const data = await getDataModelService(allServiceDataPayload, userData.currentUserLogin, userData.clientURL)
+      setServiceTableData(data);
     } catch (error) {
-      setError(error.message);
+      setError(error?.message);
+
     } finally {
       setLoading(false);
     }
   }
 
-  const handleDeleteUser = async (user) => {
-    alert("Are you sure you want to delete this user? This action cannot be undone.")
-    // throw new Error("User deletion is not implemented yet.");
+  const handleDelete = async (user) => {
+    const confirm = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
+    if (!confirm) return alert("data's not be deleted deleted");
 
     try {
-      const deleteUserPayload = {
-        fqUserName: user.EMAIL_ADDRESS,
-        userNameOnly: user.USER_NAME,
-      }
-      const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
+      const deleteServicePayload = {
+        UserName: userData.currentUserLogin,
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: `ITEM_CODE = '${user.ITEM_CODE}'`,
+      };
 
-      fetchAllUsersData();
-
-      toast({
-        title: deleteUserResponse,
-      })
-    } catch (error) {
-      console.error("Error deleting user:", error);
+      const deleteServiceResponse = await deleteDataModelService(
+        deleteServicePayload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
 
       toast({
         variant: "destructive",
-        title: error?.message || "Unknown error occurred.",
+        title: deleteServiceResponse,
       })
-    }
-  }
 
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setIsDialogOpen(true);
-  }
+      fetchAllServicesData();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: error?.message || "Unknown error occurred.",
+      });
+    }
+  };
 
   const columns = [
     {
@@ -123,14 +126,7 @@ const ServiceList = () => {
       enableHiding: false,
     },
     {
-      accessorKey: "id",
-      header: "S.No",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("id")}</div>
-      ),
-    },
-    {
-      accessorKey: "USER_NAME",
+      accessorKey: "ITEM_CODE",
       header: ({ column }) => {
         return (
           <Button
@@ -138,62 +134,61 @@ const ServiceList = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            User Name
+            Item Code
             <ArrowUpDown />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
       ),
     },
     {
-      accessorKey: "FULL_NAME",
-      header: "Full Name",
+      accessorKey: "ITEM_NAME",
+      header: "Item Name",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "USER_TYPE",
-      header: "User Type",
+      accessorKey: "ITEM_GROUP",
+      header: "Type",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("USER_TYPE")}</div>
+        <div className="capitalize">{row.getValue("ITEM_GROUP") || "-"}</div>
       ),
     },
     {
-      accessorKey: "EMAIL_ADDRESS",
+      accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
+            className="p-0 "
           >
-            Email
+            Item Rate
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
     {
-      accessorKey: "MOBILE_NO",
-      header: () => <div>Mobile No</div>,
-      cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
+      accessorKey: "SUPPLIER_NAME",
+      header: () => <div>SupplierRef</div>,
+      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
     },
     {
-      accessorKey: "EMP_NO",
-      header: () => <div>Employee No</div>,
-      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
+      accessorKey: "QTY_IN_HAND",
+      header: () => <div>Quantity</div>,
+      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
       accessorKey: "action",
       header: () => <div>Action</div>,
       id: "actions",
-      // enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original
+        const service = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -205,8 +200,8 @@ const ServiceList = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEditUser(user)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/services-list/create-service/${service.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(service)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -220,7 +215,7 @@ const ServiceList = () => {
   };
 
   const table = useReactTable({
-    data: userTableData,
+    data: serviceTableData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -279,7 +274,7 @@ const ServiceList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => navigate("/services-list/create-service")}>Create Service</Button>
+            <Button onClick={() => navigate("/services-list/create-service/")}>Create Service</Button>
 
           </div>
         </div>
@@ -304,7 +299,7 @@ const ServiceList = () => {
               ))}
             </TableHeader>
             <TableBody>
-              {true ? (
+              {loading ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <PacmanLoader color="#6366f1" />
@@ -329,7 +324,7 @@ const ServiceList = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
+                    No services found.
                   </TableCell>
                 </TableRow>
               )}
@@ -362,7 +357,6 @@ const ServiceList = () => {
         </div>
       </div>
     </div>
-
   );
 };
 
