@@ -49,20 +49,22 @@ const ProductList = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAllMaterialData();
+    fetchAllProductsData();
   }, [])
 
-  const fetchAllMaterialData = async () => {
+  const fetchAllProductsData = async () => {
     setLoading(true);
     setError(null);
     try {
       const allProductDataPayload = {
         DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: "COST_CODE = 'MXXXX'",
+        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT'",
         Orderby: ""
       }
       const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
       setUserTableData(data);
+      console.log(data);
+
     } catch (error) {
       setError(error?.message);
 
@@ -94,7 +96,7 @@ const ProductList = () => {
         variant: "destructive",
         title: deleteUserResponse,
       })
-      fetchAllMaterialData();
+      fetchAllProductsData();
     } catch (error) {
       console.error("Error deleting user:", error);
 
@@ -104,10 +106,6 @@ const ProductList = () => {
       });
     }
   };
-
-
-
-
 
   const columns = [
     {
@@ -222,7 +220,6 @@ const ProductList = () => {
     return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
   };
 
-
   const table = useReactTable({
     data: userTableData,
     columns,
@@ -244,7 +241,6 @@ const ProductList = () => {
   })
 
   return (
-
     <div className="flex flex-col gap-y-4">
       <h1 className="title">All Products</h1>
       <div className="w-full">
@@ -367,7 +363,6 @@ const ProductList = () => {
         </div>
       </div>
     </div>
-
   );
 };
 

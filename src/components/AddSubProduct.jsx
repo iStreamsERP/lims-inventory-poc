@@ -33,7 +33,7 @@ const AddSubProduct = ({ itemcode }) => {
   const [isEnabled, setIsEnabled] = useState(false);
   const fileInputRef = useRef(null);
 
-  const [SubMaterialForm, setSubMaterialForm] = useState(initialFormData);
+  const [subMaterialForm, setSubMaterialForm] = useState(initialFormData);
   const [subMaterialProducts, setSubMaterialProducts] = useState([]);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ const AddSubProduct = ({ itemcode }) => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      setSub((prev) => ({ ...prev, img: imageUrl }));
+      subMaterialForm((prev) => ({ ...prev, img: imageUrl }));
     }
   };
 
@@ -89,7 +89,7 @@ const AddSubProduct = ({ itemcode }) => {
       const deleteDataModelServicePayload = {
         UserName: userData.currentUserLogin,
         DataModelName: "INVT_SUBMATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = ${itemcode} AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
+        WhereCondition: `ITEM_CODE = '${itemcode}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
       }
       const deleteDataModelServiceResponse = await deleteDataModelService(deleteDataModelServicePayload, userData.currentUserLogin, userData.clientURL);
 
@@ -116,15 +116,16 @@ const AddSubProduct = ({ itemcode }) => {
     fetchSubmaterialProduct();
   };
 
-  const handleEdit = async (Submaterialproduct) => {
+  const handleEdit = async (subMaterialproduct) => {
     setIsDialogOpen(true)
+
     setSubMaterialForm({
       ITEM_CODE: itemcode,
-      SUB_MATERIAL_NO: Submaterialproduct.SUB_MATERIAL_NO,
-      ITEM_FINISH: Submaterialproduct.ITEM_FINISH,
-      ITEM_NAME: Submaterialproduct.ITEM_NAME,
-      QTY: Submaterialproduct.QTY,
-      img: Submaterialproduct.img,
+      SUB_MATERIAL_NO: subMaterialproduct.SUB_MATERIAL_NO,
+      ITEM_FINISH: subMaterialproduct.ITEM_FINISH,
+      ITEM_NAME: subMaterialproduct.ITEM_NAME,
+      QTY: subMaterialproduct.QTY,
+      img: subMaterialproduct.img,
 
     })
   }
@@ -132,36 +133,23 @@ const AddSubProduct = ({ itemcode }) => {
   const handleSumbit = async () => {
     try {
       setLoading(true);
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", SubMaterialForm);
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", subMaterialForm);
       const subMaterialPayload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
       }
 
-      const SubMaterialSaveResponse = await saveDataService(subMaterialPayload, userData.currentUserLogin, userData.clientURL);
+      console.log(subMaterialPayload);
+
+      const subMaterialSaveResponse = await saveDataService(subMaterialPayload, userData.currentUserLogin, userData.clientURL);
 
       toast({
-        title: SubMaterialSaveResponse,
+        title: subMaterialSaveResponse,
       })
 
       await fetchSubmaterialProduct();
 
-      setSubMaterialForm({
-        COMPANY_CODE: "1",
-        BRANCH_CODE: "0",
-        SUB_MATERIAL_NO: "0",
-        ITEM_CODE: "",
-        ITEM_FINISH: "",
-        ITEM_NAME: "",
-        UOM_STOCK: "NOS",
-        UOM_PURCHASE: "NOS",
-        GROUP_LEVEL1: "consumables",
-        GROUP_LEVEL2: "consumables",
-        GROUP_LEVEL3: "consumables",
-        COST_CODE: "MXXXX",
-        QTY: "",
-        img: "",
-      })
+      setSubMaterialForm(initialFormData)
 
     } catch (error) {
       toast({
@@ -173,7 +161,6 @@ const AddSubProduct = ({ itemcode }) => {
       setLoading(false);
     }
   };
-
 
   return (
     <Card>
@@ -267,7 +254,7 @@ const AddSubProduct = ({ itemcode }) => {
                     type="text"
                     name="ITEM_NAME"
                     className="col-span-3"
-                    value={SubMaterialForm.ITEM_NAME}
+                    value={subMaterialForm?.ITEM_NAME}
                     onChange={handleInputChange}
                   />
                   {/* {error.ITEM_NAME && <p className="text-sm text-red-500">{error.ITEM_NAME}</p>} */}
@@ -284,7 +271,7 @@ const AddSubProduct = ({ itemcode }) => {
                     type="text"
                     name="ITEM_FINISH"
                     className="col-span-3"
-                    value={SubMaterialForm.ITEM_FINISH}
+                    value={subMaterialForm?.ITEM_FINISH}
                     onChange={handleInputChange}
                   />
                   {/* {error.ITEM_FINISH && <p className="text-sm text-red-500">{error.ITEM_FINISH}</p>} */}
@@ -302,7 +289,7 @@ const AddSubProduct = ({ itemcode }) => {
                     name="ITEM_SIZE"
                     type="text"
                     className="col-span-3"
-                    value={SubMaterialForm.ITEM_SIZE}
+                    value={subMaterialForm?.ITEM_SIZE}
                     onChange={handleInputChange}
                   />
                   {/* {error.ITEM_SIZE && <p className="text-sm text-red-500">{error.ITEM_SIZE}</p>} */}
@@ -319,7 +306,7 @@ const AddSubProduct = ({ itemcode }) => {
                     name="QTY"
                     type="text"
                     className="col-span-3"
-                    value={SubMaterialForm.QTY}
+                    value={subMaterialForm?.QTY}
                     onChange={handleInputChange}
                   />
                   {/* {error.QTY && <p className="text-sm text-red-500">{error.QTY}</p>} */}
@@ -332,9 +319,9 @@ const AddSubProduct = ({ itemcode }) => {
                   className="flex h-24 w-full cursor-pointer items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  {SubMaterialForm.img ? (
+                  {subMaterialForm.img ? (
                     <img
-                      src={SubMaterialForm.img}
+                      src={subMaterialForm.img}
                       alt="preview"
                       className="h-full object-cover"
                     />

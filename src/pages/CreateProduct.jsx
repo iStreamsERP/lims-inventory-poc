@@ -16,13 +16,12 @@ import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
 
 export default function CreateProduct() {
-    const { id: itemcodeParams } = useParams();
+    const { id: itemCodeParams } = useParams();
     const { userData } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState({});
     const fileInput = useRef(null);
-    const [openitemType, setOpenItemType] = useState(false);
 
     const initialProductFormData = {
         COMPANY_CODE: "1",
@@ -31,15 +30,15 @@ export default function CreateProduct() {
         UOM_STOCK: "NOS",
         UOM_PURCHASE: "NOS",
         ITEM_F_PUINISH: "NOS",
-        GROUP_LEVEL1: "consumables",
+        GROUP_LEVEL1: "",
         GROUP_LEVEL2: "consumables",
         GROUP_LEVEL3: "consumables",
         COST_CODE: "MXXXX",
         ITEM_NAME: "",
+        ITEM_GROUP: "PRODUCT",
         SUPPLIER_NAME: "",
         SALE_RATE: "",
         SALE_MARGIN_PTG: "",
-        ITEM_TYPE: "",
         QTY_IN_HAND: "",
         REMARKS: "",
         // img: "",
@@ -71,7 +70,7 @@ export default function CreateProduct() {
         if (!productFormData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
         else if (!/^\d+$/.test(productFormData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
 
-        if (!productFormData.ITEM_TYPE) newError.ITEM_TYPE = "Category is required.";
+        if (!productFormData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
         if (!productFormData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
         if (!productFormData.REMARKS) newError.REMARKS = "Remarks are required.";
         // if (!productFormData.img) newError.img = "Image is required.";
@@ -81,10 +80,10 @@ export default function CreateProduct() {
     };
 
     useEffect(() => {
-        if (itemcodeParams) {
+        if (itemCodeParams) {
             fetchProductMaterialData();
         }
-    }, [itemcodeParams]);
+    }, [itemCodeParams]);
 
     const fetchProductMaterialData = async () => {
         setLoading(true);
@@ -92,7 +91,7 @@ export default function CreateProduct() {
         try {
             const ProductDataPayload = {
                 DataModelName: "INVT_MATERIAL_MASTER",
-                WhereCondition: `ITEM_CODE = '${itemcodeParams}'`,
+                WhereCondition: `ITEM_CODE = '${itemCodeParams}'`,
                 Orderby: "",
             };
 
@@ -134,7 +133,6 @@ export default function CreateProduct() {
         }
     };
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         const validationErrors = validateInput();
@@ -151,7 +149,6 @@ export default function CreateProduct() {
                 DModelData: convertedDataModel,
             };
             const saveDataServiceResponse = await saveDataService(ProductPayload, userData.currentUserLogin, userData.clientURL);
-            setProductFormData(initialProductFormData)
             const match = saveDataServiceResponse.match(/Item Code Ref\s*'([\w\d]+)'/);
             const newitemcode = match ? match[1] : "(NEW)";
 
@@ -178,7 +175,6 @@ export default function CreateProduct() {
     };
 
     return (
-
         <div className="flex flex-col gap-y-4">
             <h1 className="title">{productFormData.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
             <div className="flex w-full flex-col items-start gap-4 lg:flex-row">
@@ -305,11 +301,11 @@ export default function CreateProduct() {
                                                 <div className="w-full">
                                                     <Label>Category</Label>
                                                     <Select
-                                                        value={productFormData.ITEM_TYPE}
+                                                        value={productFormData.GROUP_LEVEL1}
                                                         onValueChange={(value) =>
                                                             setProductFormData((prev) => ({
                                                                 ...prev,
-                                                                ITEM_TYPE: value,
+                                                                GROUP_LEVEL1: value,
                                                             }))
                                                         }
                                                     >
@@ -327,7 +323,7 @@ export default function CreateProduct() {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-                                                    {error.ITEM_TYPE && <p className="text-sm text-red-500">{error.ITEM_TYPE}</p>}
+                                                    {error.GROUP_LEVEL1 && <p className="text-sm text-red-500">{error.GROUP_LEVEL1}</p>}
                                                 </div>
                                             </div>
 
@@ -440,14 +436,15 @@ export default function CreateProduct() {
                                                 <AccordionContent>
                                                     <div className="mb-3 flex flex-col gap-3 md:flex-row">
                                                         <div className="w-full">
-                                                            <Label htmlFor="GROUP_REF">Group ref</Label>
+                                                            <Label htmlFor="ITEM_GROUP">Group ref</Label>
                                                             <Input
-                                                                name="GROUP_REF"
-                                                                id="GROUP_REF"
+                                                                name="ITEM_GROUP"
+                                                                id="ITEM_GROUP"
                                                                 type="text"
                                                                 placeholder="Type group ref"
                                                                 onChange={handleChange}
-                                                                value={productFormData.GROUP_REF}
+                                                                value={productFormData.ITEM_GROUP}
+                                                                readOnly
                                                             />
                                                         </div>
                                                         <div className="w-full">
@@ -590,8 +587,5 @@ export default function CreateProduct() {
                 <AddSubProduct itemcode={productFormData.ITEM_CODE} />
             </div>
         </div>
-
-
-
     );
 }
