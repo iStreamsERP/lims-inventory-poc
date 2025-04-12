@@ -33,7 +33,9 @@ import { useEffect, useState } from "react"
 import { PacmanLoader } from "react-spinners"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
-import UserDialog from "@/components/dialog/UserDialog.jsx"
+import UserDialog from "@/components/dialog/UserDialog";
+
+// Trash
 
 const UserManagement = () => {
   const [userTableData, setUserTableData] = useState([]);
