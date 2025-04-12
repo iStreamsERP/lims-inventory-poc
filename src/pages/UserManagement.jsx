@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2, ALargeSmall  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -34,8 +34,6 @@ import { PacmanLoader } from "react-spinners"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import UserDialog from "@/components/dialog/UserDialog";
-
-// Trash
 
 const UserManagement = () => {
   const [userTableData, setUserTableData] = useState([]);
