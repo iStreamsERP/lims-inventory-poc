@@ -64,6 +64,7 @@ const CustomerCreation = () => {
     if (clientIDParams) {
       fetchClientData();
     }
+
     fetchLocationData();
     fetchNatureOfBusinessUsingQuery();
   }, [clientIDParams]);
@@ -190,8 +191,8 @@ const CustomerCreation = () => {
       setLoading(true);
       const convertedDataModel = convertDataModelToStringData("CLIENT_MASTER", customerFormData);
       const clientMasterPayload = {
-        userName: userData.currentUserLogin,
-        dModelData: convertedDataModel,
+        UserName: userData.currentUserLogin,
+        DModelData: convertedDataModel,
       }
 
       const saveDataServiceResponse = await saveDataService(clientMasterPayload, userData.currentUserLogin, userData.clientURL);
@@ -449,7 +450,7 @@ const CustomerCreation = () => {
                       className="w-full justify-between text-left gap-2 min-h-10"
                     >
                       {customerFormData.COUNTRY
-                        ? locationData.find((item) => item.COUNTRY === customerFormData.COUNTRY)?.COUNTRY
+                        ? locationData.find((location) => location.COUNTRY === customerFormData.COUNTRY)?.COUNTRY
                         : "Select country..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>

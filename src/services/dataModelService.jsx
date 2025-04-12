@@ -58,12 +58,10 @@ export const getDataModelFromQueryService = async (payload, loginUserName, dynam
 };
 
 export const saveDataService = async (
-  formData,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = saveDataServicePayload(formData);
-
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl

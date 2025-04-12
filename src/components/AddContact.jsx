@@ -132,8 +132,8 @@ const AddContact = ({ clientId }) => {
             console.log(convertedDataModel);
 
             const clientContactsPayload = {
-                userName: userData.currentUserLogin,
-                dModelData: convertedDataModel,
+                UserName: userData.currentUserLogin,
+                DModelData: convertedDataModel,
             }
 
             const clientContactsSaveResponse = await saveDataService(clientContactsPayload, userData.currentUserLogin, userData.clientURL);

@@ -54,20 +54,18 @@ const ProductList = () => {
 
   const fetchAllMaterialData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const allProductDataPayload = {
         DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: "",
-        Orderby: "ITEM_CODE DESC"
+        WhereCondition: "COST_CODE = 'MXXXX'",
+        Orderby: ""
       }
       const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
       setUserTableData(data);
     } catch (error) {
       setError(error?.message);
-      toast({
-        variant: "destructive",
-        title: error.message,
-      })
+
     } finally {
       setLoading(false);
     }
@@ -91,12 +89,12 @@ const ProductList = () => {
       );
 
       // Refresh UI after successful deletion
-      fetchAllUsersData();
 
       toast({
         variant: "destructive",
         title: deleteUserResponse,
       })
+      fetchAllMaterialData();
     } catch (error) {
       console.error("Error deleting user:", error);
 
@@ -108,9 +106,7 @@ const ProductList = () => {
   };
 
 
-  const handleEditUser = (user) => {
-    navigate("/products-list/create-product", { state: { product: user } });
-  };
+
 
 
   const columns = [
@@ -200,7 +196,7 @@ const ProductList = () => {
       id: "actions",
       // enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original
+        const product = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -212,8 +208,8 @@ const ProductList = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEditUser(user)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/products-list/create-product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(product)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -338,7 +334,7 @@ const ProductList = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
+                    No products found.
                   </TableCell>
                 </TableRow>
               )}
