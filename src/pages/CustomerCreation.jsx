@@ -35,19 +35,19 @@ const CustomerCreation = () => {
   const [openNatureOfBusiness, setOpenNatureOfBusiness] = useState(false)
   const [openCountry, setOpenCountry] = useState(false)
   const [openOtherNatureOfBusiness, setOpenOtherNatureOfBusiness] = useState(false)
-
+  const [commandInputValue, setCommandInputValue] = useState("");
   const [customerFormData, setCustomerFormData] = useState({
     CLIENT_ID: -1,
     CLIENT_NAME: "",
     EMAIL_ADDRESS: "",
     NATURE_OF_BUSINESS: "",
-    OTHER_NATURE_OF_BUSINESS: "",
+    NATURE_OF_BUSINESS2: [],
     TRN_VAT_NO: "",
     GROUP_NAME: "",
     TELEPHONE_NO: "",
     WEB_ADDRESS: "",
     COUNTRY: "",
-    STATE: "",
+    STATE_NAME: "",
     CITY_NAME: "",
     COMMUNICATION_ADDRESS: "",
     INVOICE_ADDRESS: "",
@@ -57,8 +57,10 @@ const CustomerCreation = () => {
   });
 
   const [natureOfBusiness, setNatureOfBusiness] = useState([]);
-  const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState(otherNatureOfBusinessConstants);
+  const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState([]);
   const [locationData, setLocationData] = useState([]);
+
+  console.table(customerFormData);
 
   useEffect(() => {
     if (clientIDParams) {
@@ -81,6 +83,7 @@ const CustomerCreation = () => {
         userData.clientURL
       );
       setNatureOfBusiness(data);
+      setOtherNatureOfBusiness(data);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -96,7 +99,7 @@ const CustomerCreation = () => {
     setError({});
     try {
       const locationDataPayload = {
-        DataModelName: "COUNTRY_CITIES",
+        DataModelName: "COUNTRY_MASTER",
         WhereCondition: "",
         Orderby: "",
       };
@@ -132,9 +135,15 @@ const CustomerCreation = () => {
         userData.currentUserLogin,
         userData.clientURL
       );
+
+      const client = data?.[0] || {};
+
       setCustomerFormData((prev) => ({
         ...prev,
-        ...(data?.[0] || {})
+        ...client,
+        NATURE_OF_BUSINESS2: client.NATURE_OF_BUSINESS2
+          ? client.NATURE_OF_BUSINESS2.split(',').map((item) => item.trim())
+          : [],
       }));
     } catch (error) {
       setError({ fetch: error.message });
@@ -258,31 +267,61 @@ const CustomerCreation = () => {
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="mt-3 w-full md:w-1/2">
-                <Label className="block text-sm font-medium">Select Nature Of Business <span className="text-gray-500">(Primary)</span> </Label>
+                <Label className="block text-sm font-medium">Select Nature Of Business <span className="font-normal text-gray-500">(Primary)</span> </Label>
                 <Popover open={openNatureOfBusiness} onOpenChange={setOpenNatureOfBusiness}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={openNatureOfBusiness}
-                      className="w-full justify-between text-left gap-2 min-h-10"
+                      className="w-full justify-between text-left gap-2 min-h-10 font-normal text-gray-400"
                     >
                       {customerFormData.NATURE_OF_BUSINESS
                         ? natureOfBusiness.find(
                           (item) => item.NATURE_OF_BUSINESS === customerFormData.NATURE_OF_BUSINESS
                         )?.NATURE_OF_BUSINESS
-                        : "Select nature of business..."}
+                        : "Select nature of business"}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command className="w-full justify-start">
                       <CommandInput
-                        placeholder="Search nature of business..."
+                        placeholder="Search nature of business"
                         className="h-9"
+                        onValueChange={setCommandInputValue}
                       />
                       <CommandList>
-                        <CommandEmpty>No nature of business found.</CommandEmpty>
+                        <CommandEmpty>
+                          <div className="flex items-center justify-between">
+                            <span>No nature of business found.</span>
+                            {commandInputValue && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const newValue = commandInputValue.trim();
+                                  if (newValue) {
+                                    setNatureOfBusiness((prev) => [
+                                      ...prev,
+                                      { NATURE_OF_BUSINESS: newValue },
+                                    ]);
+                                    setCustomerFormData((prev) => ({
+                                      ...prev,
+                                      NATURE_OF_BUSINESS: newValue,
+                                    }));
+                                    setOpenNatureOfBusiness(false);
+                                    setError((prev) => ({
+                                      ...prev,
+                                      NATURE_OF_BUSINESS: "",
+                                    }));
+                                  }
+                                }}
+                              >
+                                Add “{commandInputValue}”
+                              </Button>
+                            )}
+                          </div>
+                        </CommandEmpty>
                         <CommandGroup>
                           {natureOfBusiness.map((item, index) => (
                             <CommandItem
@@ -330,46 +369,62 @@ const CustomerCreation = () => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openOtherNatureOfBusiness}
-                      className="w-full justify-between text-left gap-2 min-h-10"
+                      className="w-full justify-between text-left gap-2 min-h-10 font-normal text-gray-400"
                     >
-                      {customerFormData.OTHER_NATURE_OF_BUSINESS
-                        ? otherNatureOfBusinessConstants.find(
-                          (item) => item.value === customerFormData.OTHER_NATURE_OF_BUSINESS
-                        )?.label
-                        : "Select other nature of business..."}
+                      {/* Display summary of selected values */}
+                      {customerFormData.NATURE_OF_BUSINESS2.length > 0
+                        ? customerFormData.NATURE_OF_BUSINESS2
+                          .map((value) => {
+                            const found = otherNatureOfBusiness.find(item => item.NATURE_OF_BUSINESS === value);
+                            return found ? found.NATURE_OF_BUSINESS : value;
+                          })
+                          .join(", ")
+                        : "Select other nature of business"}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command className="w-full justify-start">
-                      <CommandInput placeholder="Search other nature of business..." className="h-9" />
+                      <CommandInput placeholder="Search other nature of business" className="h-9" />
                       <CommandList>
                         <CommandEmpty>No other nature of business found.</CommandEmpty>
                         <CommandGroup>
-                          {otherNatureOfBusinessConstants.map((item) => (
+                          {otherNatureOfBusiness.map((item, index) => (
                             <CommandItem
-                              key={item.value}
-                              value={item.value}
+                              key={index}
+                              value={item.NATURE_OF_BUSINESS}
                               onSelect={(currentValue) => {
-                                setCustomerFormData((prev) => ({
-                                  ...prev,
-                                  OTHER_NATURE_OF_BUSINESS:
-                                    currentValue === prev.OTHER_NATURE_OF_BUSINESS
-                                      ? ""
-                                      : currentValue,
-                                }));
-                                setOpenOtherNatureOfBusiness(false);
+                                // Update the state array: add if not present, remove if already present
+                                setCustomerFormData((prev) => {
+                                  const currentSelections = prev.NATURE_OF_BUSINESS2 || [];
+                                  if (currentSelections.includes(currentValue)) {
+                                    // Remove the item if it's already selected
+                                    return {
+                                      ...prev,
+                                      NATURE_OF_BUSINESS2: currentSelections.filter(
+                                        (val) => val !== currentValue
+                                      ),
+                                    };
+                                  } else {
+                                    // Otherwise add the new selection
+                                    return {
+                                      ...prev,
+                                      NATURE_OF_BUSINESS2: [...currentSelections, currentValue],
+                                    };
+                                  }
+                                });
                                 setError((prev) => ({
                                   ...prev,
-                                  OTHER_NATURE_OF_BUSINESS: "",
+                                  NATURE_OF_BUSINESS2: "",
                                 }));
                               }}
                             >
-                              {item.label}
+                              {item.NATURE_OF_BUSINESS}
                               <Check
                                 className={cn(
                                   "ml-auto",
-                                  customerFormData.OTHER_NATURE_OF_BUSINESS === item.value
+                                  // Use a condition to check if the current item is included in the array
+                                  customerFormData.NATURE_OF_BUSINESS2.includes(item.NATURE_OF_BUSINESS)
                                     ? "opacity-100"
                                     : "opacity-0"
                                 )}
@@ -430,7 +485,7 @@ const CustomerCreation = () => {
                   id="WEB_ADDRESS"
                   name="WEB_ADDRESS"
                   type="url"
-                  placeholder="Enter your website"
+                  placeholder="Enter your website URL"
                   value={customerFormData.WEB_ADDRESS}
                   onChange={handleInputChange}
                 />
@@ -447,7 +502,7 @@ const CustomerCreation = () => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openCountry}
-                      className="w-full justify-between text-left gap-2 min-h-10"
+                      className="w-full justify-between text-left gap-2 min-h-10 font-normal text-gray-400"
                     >
                       {customerFormData.COUNTRY
                         ? locationData.find((location) => location.COUNTRY === customerFormData.COUNTRY)?.COUNTRY
@@ -496,13 +551,13 @@ const CustomerCreation = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="STATE">State</Label>
+                <Label htmlFor="STATE_NAME">State</Label>
                 <Input
-                  id="STATE"
-                  name="STATE"
+                  id="STATE_NAME"
+                  name="STATE_NAME"
                   type="text"
-                  placeholder="Enter City Name"
-                  value={customerFormData.STATE}
+                  placeholder="Enter State Name"
+                  value={customerFormData.STATE_NAME}
                   onChange={handleInputChange}
                 />
               </div>

@@ -52,7 +52,7 @@ const RecentSales = () => {
             <div className='flex flex-col gap-5'>
                 {data.map((data, index) => (
                     <div className="space-y-3" key={index}>
-                        <div className="flex items-start justify-between ">
+                        <div className="flex items-start justify-between">
                             <div className='flex gap-2'>
                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src={data.image} alt={data.name} />

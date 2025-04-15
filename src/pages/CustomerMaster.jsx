@@ -50,6 +50,7 @@ const CustomerMaster = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const navigate = useNavigate();
+console.log(customersData[0]);
 
   useEffect(() => {
     fetchAllClientData();
@@ -79,10 +80,13 @@ const CustomerMaster = () => {
 
     try {
       const deleteCustomerPayload = {
-        userName: userData.currentUserLogin,
-        dataModelName: "CLIENT_MASTER",
-        whereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
+        UserName: userData.currentUserLogin,
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
       }
+
+      console.log(deleteCustomerPayload);
+
       const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
 
       toast({

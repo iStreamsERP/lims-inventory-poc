@@ -182,8 +182,8 @@ const AddContact = ({ clientId }) => {
                                 <div>
                                     <p className="text-xl font-semibold leading-none">{contact.NAME}</p>
                                     <p className="mb-2 text-xs font-semibold text-gray-500">{contact.DESIGNATION}</p>
-                                    <p className="text-sm text-gray-600">{contact.EMAIL_ADDRESS}</p>
-                                    <p className="text-sm text-blue-600">{contact.TELEPHONE_NO}</p>
+                                    <p className="text-sm text-gray-600 hover:underline cursor-pointer" onClick={() => window.open(`mailto:${contact.EMAIL_ADDRESS}`)}>{contact.EMAIL_ADDRESS}</p>
+                                    <p className="text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => window.open(`tel:${contact.TELEPHONE_NO}`)}>{contact.TELEPHONE_NO}</p>
                                 </div>
                                 <div className="flex flex-row gap-2">
                                     <SquarePen

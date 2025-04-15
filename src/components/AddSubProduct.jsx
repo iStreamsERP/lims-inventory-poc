@@ -21,6 +21,7 @@ const AddSubProduct = ({ itemcode }) => {
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
     COST_CODE: "MXXXX",
+    ITEM_SIZE: "",
     QTY: "",
     img: "",
   }
@@ -65,21 +66,56 @@ const AddSubProduct = ({ itemcode }) => {
     }
   };
 
+  const validateSubMaterialForm = () => {
+    const newError = {};
+
+    if (!subMaterialForm.ITEM_NAME?.trim()) {
+      newError.ITEM_NAME = "Item Name is required.";
+    }
+
+    if (!subMaterialForm.ITEM_FINISH?.trim()) {
+      newError.ITEM_FINISH = "Color is required.";
+    }
+
+    if (!subMaterialForm.ITEM_SIZE?.trim()) {
+      newError.ITEM_SIZE = "Size is required.";
+    }
+
+    if (!subMaterialForm.QTY?.toString().trim()) {
+      newError.QTY = "Quantity is required.";
+    } else if (!/^\d+(\.\d{1,2})?$/.test(subMaterialForm.QTY)) {
+      newError.QTY = "Quantity must be a valid number.";
+    }
+
+    if (!subMaterialForm.img) {
+      newError.img = "Image is required.";
+    }
+
+    SetError(newError);
+
+    return Object.keys(newError).length === 0;
+  };
+
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSubMaterialForm((prev) => ({
       ...prev,
       [name]: value,
     }));
+    SetError((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      subMaterialForm((prev) => ({ ...prev, img: imageUrl }));
+      setSubMaterialForm((prev) => ({ ...prev, img: imageUrl }));
+      SetError((prev) => ({ ...prev, img: "" }));
     }
   };
+
 
   const handleDelete = async (product) => {
     alert("Are you sure you want to delete this product? This action cannot be undone.")
@@ -124,6 +160,7 @@ const AddSubProduct = ({ itemcode }) => {
       SUB_MATERIAL_NO: subMaterialproduct.SUB_MATERIAL_NO,
       ITEM_FINISH: subMaterialproduct.ITEM_FINISH,
       ITEM_NAME: subMaterialproduct.ITEM_NAME,
+      ITEM_SIZE: subMaterialproduct.ITEM_SIZE,
       QTY: subMaterialproduct.QTY,
       img: subMaterialproduct.img,
 
@@ -131,6 +168,8 @@ const AddSubProduct = ({ itemcode }) => {
   }
 
   const handleSumbit = async () => {
+    const isValid = validateSubMaterialForm();
+    if (!isValid) return; // Stop if validation fails
     try {
       setLoading(true);
       const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", subMaterialForm);
@@ -163,30 +202,30 @@ const AddSubProduct = ({ itemcode }) => {
   };
 
   return (
-    <Card>
+    <Card className="w-full lg:w-[40%] xl:w-[40%] 2xl:w-[30%] sm:w-[10%] h-[40%] md:w-[100%]">
       <CardHeader>
         <CardTitle>Create Sub Products</CardTitle>
         <CardDescription>Add and configure sub-products under your main product.</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* List of Sub Products */}
-        <div className="mt-4 flex flex-col flex-wrap gap-4">
+        <div className="mt-4 flex lg:h-[590px] w-full flex-col gap-4 mb-8 overflow-y-scroll pr-1">
           {subMaterialProducts.map((Submaterialproduct, index) => (
             <Card
-              className="flex h-[100px] w-full flex-col justify-center gap-2 p-3"
+              className="flex w-full flex-col justify-center gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 dark:border-gray-700 w-full dark:bg-gray-800 dark:hover:bg-gray-700"
               key={index}
             >
-              <div className="flex justify-between">
-                <div className="flex w-[200px] justify-start gap-2 text-start xl:w-[200px]">
+              <div className="flex justify-between  w-full">
+                <div className="flex w-full justify-start gap-2  text-start">
                   <img
-                    src="https://images.meesho.com/images/products/412300271/ib6hh_1200.jpg"
+                    src={Submaterialproduct.img || "https://images.meesho.com/images/products/412300271/ib6hh_1200.jpg"}
                     alt={Submaterialproduct.ITEM_NAME}
-                    className="h-[50px] w-[50px] rounded"
+                    className="h-[50px] w-[50px] mt-1 rounded"
                   />
-                  <div className="flex w-[200px] flex-col items-start">
-                    <p className="text-xl font-semibold text-gray-500">{Submaterialproduct.ITEM_NAME}</p>
+                  <div className="flex w-full flex-col items-start">
+                    <p className="text-sm font-bold mb-1">{Submaterialproduct.ITEM_NAME}</p>
+                    <p className="me-1 text-xs font-semibold text-gray-400">{Submaterialproduct.ITEM_CODE}</p>
                     <div className="flex items-center">
-                      <p className="me-1 text-xs font-semibold text-gray-500">{Submaterialproduct.ITEM_CODE}</p>
+                    
                       <span
                         style={{ backgroundColor: Submaterialproduct.ITEM_FINISH }}
                         className="mr-1 mt-1 rounded-full p-1"
@@ -195,7 +234,7 @@ const AddSubProduct = ({ itemcode }) => {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-row gap-2">
+                <div className="flex  flex-row gap-2">
                   <SquarePen
                     size={14}
                     className="cursor-pointer text-blue-700"
@@ -209,15 +248,10 @@ const AddSubProduct = ({ itemcode }) => {
                 </div>
               </div>
             </Card>
-
-
           ))}
-
         </div>
 
-        <CardFooter
-          className="flex items-center justify-center"
-          id="addSubMaterial">
+        <CardFooter className="flex items-center justify-center" id="addSubMaterial">
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -228,132 +262,125 @@ const AddSubProduct = ({ itemcode }) => {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full "
                 onClick={() => setIsDialogOpen(true)}
                 disabled={!isEnabled}
               >
                 Add SubMaterial <Plus />
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="lg:w-[40%] xl:w-[40%] 2xl:w-[30%] md:h-[450px] w-[90%] h-[400px] md:w-[400px] z-[100] overflow-y-scroll overflow-x-scroll " >
               <DialogHeader>
                 <DialogTitle>Add SubMaterial</DialogTitle>
-                <DialogDescription>Enter the details of the sub-material you'd like to add. Click save to confirm.</DialogDescription>
+                <DialogDescription>
+                  Enter the details of the sub-material you'd like to add. Click save to confirm.
+                </DialogDescription>
               </DialogHeader>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label
-                    htmlFor="itemname"
-                    className="text-right"
-                  >
-                    Item Name
-                  </Label>
-                  <Input
-                    id="itemname"
-                    type="text"
-                    name="ITEM_NAME"
-                    className="col-span-3"
-                    value={subMaterialForm?.ITEM_NAME}
-                    onChange={handleInputChange}
-                  />
-                  {/* {error.ITEM_NAME && <p className="text-sm text-red-500">{error.ITEM_NAME}</p>} */}
-                </div>
-                <div>
-                  <Label
-                    htmlFor="color"
-                    className="text-right"
-                  >
-                    Color
-                  </Label>
-                  <Input
-                    id="color"
-                    type="text"
-                    name="ITEM_FINISH"
-                    className="col-span-3"
-                    value={subMaterialForm?.ITEM_FINISH}
-                    onChange={handleInputChange}
-                  />
-                  {/* {error.ITEM_FINISH && <p className="text-sm text-red-500">{error.ITEM_FINISH}</p>} */}
-
-                </div>
-                <div>
-                  <Label
-                    htmlFor="size"
-                    className="text-right"
-                  >
-                    Size
-                  </Label>
-                  <Input
-                    id="size"
-                    name="ITEM_SIZE"
-                    type="text"
-                    className="col-span-3"
-                    value={subMaterialForm?.ITEM_SIZE}
-                    onChange={handleInputChange}
-                  />
-                  {/* {error.ITEM_SIZE && <p className="text-sm text-red-500">{error.ITEM_SIZE}</p>} */}
-                </div>
-                <div>
-                  <Label
-                    htmlFor="quantity"
-                    className="text-right"
-                  >
-                    Quantity
-                  </Label>
-                  <Input
-                    id="quantity"
-                    name="QTY"
-                    type="text"
-                    className="col-span-3"
-                    value={subMaterialForm?.QTY}
-                    onChange={handleInputChange}
-                  />
-                  {/* {error.QTY && <p className="text-sm text-red-500">{error.QTY}</p>} */}
-                </div>
-              </div>
-
-              {/* Image Upload Preview */}
-              <div className="mt-4 w-full space-y-2 text-left">
-                <div
-                  className="flex h-24 w-full cursor-pointer items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {subMaterialForm.img ? (
-                    <img
-                      src={subMaterialForm.img}
-                      alt="preview"
-                      className="h-full object-cover"
+              <div className="w-full h-full flex lg:flex-row w-[100%] h-[100%]  flex-col gap-2">
+                <div className="grid grid-cols-1 w-full gap-3">
+                  <div>
+                    <Label htmlFor="itemname" className="text-right">
+                      Item Name
+                    </Label>
+                    <Input
+                      id="itemname"
+                      type="text"
+                      name="ITEM_NAME"
+                      className="col-span-3"
+                      value={subMaterialForm?.ITEM_NAME}
+                      onChange={handleInputChange}
+                      required
                     />
-                  ) : (
-                    <div className="text-center text-sm text-gray-500">Click to Upload</div>
-                  )}
-                </div>
-                <input
-                  name="employeeImage"
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
+                    {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
+                  </div>
+                  <div>
+                    <Label htmlFor="color" className="text-right">
+                      Color
+                    </Label>
+                    <Input
+                      id="color"
+                      type="text"
+                      name="ITEM_FINISH"
+                      className="col-span-3"
+                      value={subMaterialForm?.ITEM_FINISH}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    {error.ITEM_FINISH && <p className="text-xs text-red-500">{error.ITEM_FINISH}</p>}
+
+                  </div>
+                  <div>
+                    <Label htmlFor="size" className="text-right">
+                      Size
+                    </Label>
+                    <Input
+                      id="size"
+                      name="ITEM_SIZE"
+                      type="text"
+                      className="col-span-3"
+                      value={subMaterialForm?.ITEM_SIZE}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    {error.ITEM_SIZE && <p className="text-xs text-red-500">{error.ITEM_SIZE}</p>}
+
+                  </div>
+                  <div>
+                    <Label htmlFor="quantity" className="text-right">
+                      Quantity
+                    </Label>
+                    <Input
+                      id="quantity"
+                      name="QTY"
+                      type="text"
+                      className="col-span-3"
+                      value={subMaterialForm?.QTY}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    {error.QTY && <p className="text-xs text-red-500">{error.QTY}</p>}
+
+                  </div>
+                </div>
+                <div className="mt-4 w-full space-y-2 text-left">
+                  <div
+                    className="flex h-[100%] w-[100%] aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {subMaterialForm.img ? (
+                      <img src={subMaterialForm.img} alt="preview" className="h-full object-cover" />
+                    ) : (
+                      <div className="text-center text-sm text-gray-500 dark:text-gray-400">Click to Upload</div>
+                    )}
+                  </div>
+                  <input
+                    name="employeeImage"
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    required
+                  />
+                  {error.img && <p className="text-xs text-red-500">{error.img}</p>}
+
+                </div>
+              </div>
+              <DialogFooter className={"mt-4"}>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleSumbit}>Save changes</Button>
+                <Button type="button" onClick={handleSumbit}>
+                  Save changes
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardFooter>
       </CardContent>
     </Card>
+
   );
 }
 export default AddSubProduct
