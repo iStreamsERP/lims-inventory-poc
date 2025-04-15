@@ -4,16 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
+import { cn } from "@/lib/utils"
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 export default function CreateProduct() {
   const { id: itemCodeParams } = useParams();
   const { userData } = useAuth();
@@ -21,6 +31,7 @@ export default function CreateProduct() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState({});
   const fileInput = useRef(null);
+  const [open, setOpen] = useState(false);
 
   const initialProductFormData = {
     COMPANY_CODE: "1",
@@ -282,43 +293,66 @@ export default function CreateProduct() {
                     </div>
                     <div className="w-full">
                       <Label>Category</Label>
-                      <Select
-                        value={productFormData.GROUP_LEVEL1}
-                        onValueChange={(value) =>
-                          setProductFormData((prev) => ({
-                            ...prev,
-                            GROUP_LEVEL1: value,
-                          }))
-                        }
+
+                      <Popover
+                        open={open}
+                        onOpenChange={setOpen}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {itemType.map((type) => (
-                            <SelectItem
-                              key={type}
-                              value={type}
-                            >
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-[200px] justify-between"
+                          >
+                            {productFormData.GROUP_LEVEL1 ? itemType.find((type) => type === productFormData.GROUP_LEVEL1) : "Select category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search category..."
+                              className="h-9"
+                            />
+                            <CommandList>
+                              <CommandEmpty>No category found.</CommandEmpty>
+                              <CommandGroup>
+                                {itemType.map((type) => (
+                                  <CommandItem
+                                    key={type}
+                                    value={type}
+                                    onSelect={(currentValue) => {
+                                      setProductFormData((prev) => ({
+                                        ...prev,
+                                        GROUP_LEVEL1: currentValue,
+                                      }));
+                                      setOpen(false);
+                                    }}
+                                  >
+                                    {type}
+                                    <Check className={cn("ml-auto h-4 w-4", productFormData.GROUP_LEVEL1 === type ? "opacity-100" : "opacity-0")} />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       {error.GROUP_LEVEL1 && <p className="text-sm text-red-500">{error.GROUP_LEVEL1}</p>}
                     </div>
                   </div>
                   <div className="w-full">
-                          <Label htmlFor="REMARKS">Remarks</Label>
-                          <Textarea
-                            name="REMARKS"
-                            id="REMARKS"
-                            placeholder="Enter item features"
-                            onChange={handleChange}
-                            value={productFormData.REMARKS}
-                          />
-                          {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
-                        </div>
+                    <Label htmlFor="REMARKS">Remarks</Label>
+                    <Textarea
+                      name="REMARKS"
+                      id="REMARKS"
+                      placeholder="Enter item features"
+                      onChange={handleChange}
+                      value={productFormData.REMARKS}
+                    />
+                    {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
+                  </div>
                   <Accordion
                     type="single"
                     collapsible
@@ -555,7 +589,7 @@ export default function CreateProduct() {
           </Tabs>
         </form>
       </div>
-      <div className="col-span-1 mt-5 h-full w-full lg:col-span-5 lg:mt-24">
+      <div className="col-span-1 mt-5 h-fit w-full lg:col-span-5 lg:mt-24">
         <AddSubProduct itemcode={productFormData.ITEM_CODE} />
       </div>
     </div>
