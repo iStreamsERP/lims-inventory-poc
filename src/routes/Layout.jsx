@@ -40,7 +40,7 @@ const Layout = () => {
           collapsed={collapsed}
           setCollapsed={setCollapsed}
         />
-        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6">
+        <div className="h-[calc(100vh-108px)] overflow-y-auto overflow-x-hidden p-6">
           <Outlet />
           <Toaster />
         </div>

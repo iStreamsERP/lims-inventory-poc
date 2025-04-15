@@ -25,9 +25,14 @@ export const navbarLinks = [
     title: "Categories",
     links: [
       {
-        label: "Category",
+        label: "Product Category",
         icon: Package,
         path: "/category",
+      },
+      {
+        label: "Category (Demo)",
+        icon: Package,
+        path: "/category-trash",
       },
     ],
   },

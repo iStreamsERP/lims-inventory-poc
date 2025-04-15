@@ -35,8 +35,9 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 
+
 const ProductList = () => {
-  const [userTableData, setUserTableData] = useState([]);
+  const [productTableList, setproductTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -61,7 +62,7 @@ const ProductList = () => {
         Orderby: ""
       }
       const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
-      setUserTableData(data);
+      setproductTableList(data);
       console.log(data);
 
     } catch (error) {
@@ -72,7 +73,7 @@ const ProductList = () => {
     }
   }
 
-  const handleDeleteUser = async (user) => {
+  const handleDeleteProduct = async (user) => {
     const confirm = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
     if (!confirm) return alert("datas not be deleted deleted");
 
@@ -88,8 +89,6 @@ const ProductList = () => {
         userData.currentUserLogin,
         userData.clientURL
       );
-
-      // Refresh UI after successful deletion
 
       toast({
         variant: "destructive",
@@ -206,7 +205,7 @@ const ProductList = () => {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate(`/products-list/create-product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(product)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteProduct(product)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -220,7 +219,7 @@ const ProductList = () => {
   };
 
   const table = useReactTable({
-    data: userTableData,
+    data: productTableList,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

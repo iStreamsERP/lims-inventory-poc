@@ -85,8 +85,6 @@ console.log(customersData[0]);
         WhereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
       }
 
-      console.log(deleteCustomerPayload);
-
       const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
 
       toast({

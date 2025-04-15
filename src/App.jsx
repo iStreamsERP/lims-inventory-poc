@@ -24,6 +24,7 @@ import CustomerMaster from "./pages/CustomerMaster";
 import ProductList from "./pages/ProductList";
 import OrderList from "./pages/OrderList";
 import ServiceList from "./pages/ServiceList";
+import CategoryPageTrash from "./pages/CategoryPageTrash";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -51,6 +52,7 @@ const App = () => {
             { path: "customer-master", element: <CustomerMaster /> },
             { path: "/customer-master/customer-creation/:id?", element: <CustomerCreation /> },
             { path: "category", element: <CategoryPage /> },
+            { path: "category-trash", element: <CategoryPageTrash /> },
             { path: "/customer-master/:id", element: <CustomerDetailPage /> },
             { path: "category/:category", element: <CategoryDetailsPage /> },
             { path: "user-management", element: <UserManagement /> },
