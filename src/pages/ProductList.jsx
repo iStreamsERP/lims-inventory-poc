@@ -59,7 +59,7 @@ const ProductList = () => {
       const allProductDataPayload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT'",
-        Orderby: ""
+        Orderby: "ITEM_CODE DESC"
       }
       const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
       setproductTableList(data);
