@@ -6,7 +6,7 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -248,7 +248,7 @@ const OrderList = () => {
 
     return (
         <div className="flex flex-col gap-y-4">
-            <h1 className="title">Order List</h1>
+            <h1 className="title">All Orders</h1>
             <div className="w-full">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
                     <Input
@@ -286,7 +286,7 @@ const OrderList = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        <Button onClick={() => navigate("/order-list/order-creation")}>Create Order</Button>
+                        <Button onClick={() => navigate("/new-order")}>Create <Plus /></Button>
 
                     </div>
                 </div>

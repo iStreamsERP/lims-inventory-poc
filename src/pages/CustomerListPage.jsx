@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,15 +29,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { useToast } from "@/hooks/use-toast"
 import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
+import { deleteUser } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
+import { useToast } from "@/hooks/use-toast"
 
-
-const ProductList = () => {
-  const [productTableList, setproductTableList] = useState([]);
+const CustomerListPage = () => {
+  const [customersData, setCustomersData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -46,62 +46,57 @@ const ProductList = () => {
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
   const { toast } = useToast()
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAllProductsData();
+    fetchAllClientData();
   }, [])
 
-  const fetchAllProductsData = async () => {
+  const fetchAllClientData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const allProductDataPayload = {
-        DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT'",
-        Orderby: "ITEM_CODE DESC"
+      const clientDataPayload = {
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: "",
+        Orderby: "CLIENT_ID DESC",
       }
-      const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
-      setproductTableList(data);
+      const data = await getDataModelService(clientDataPayload, userData.currentUserLogin, userData.clientURL)
+      setCustomersData(data);
     } catch (error) {
-      setError(error?.message);
-
+      setError(error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  const handleDelete = async (product) => {
-    const confirm = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
-    if (!confirm) return alert("datas not be deleted deleted");
+  const handleDeleteCustomer = async (customer) => {
+    alert("Are you sure you want to delete this customer? This action cannot be undone.")
+    // throw new Error("User deletion is not implemented yet.");
 
     try {
-      const deleteProductPayload = {
+      const deleteCustomerPayload = {
         UserName: userData.currentUserLogin,
-        DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${product.ITEM_CODE}'`,
-      };
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
+      }
 
-      const deleteProductResponse = await deleteDataModelService(
-        deleteProductPayload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
 
       toast({
         variant: "destructive",
-        title: deleteProductResponse,
+        title: deleteCustomerResponse,
       })
-      fetchAllProductsData();
-    } catch (error) {
-      console.error("Error deleting product:", error);
 
+      fetchAllClientData();
+    } catch (error) {
       toast({
         variant: "destructive",
         title: error?.message || "Unknown error occurred.",
-      });
+      })
     }
-  };
+  }
 
   const columns = [
     {
@@ -127,7 +122,14 @@ const ProductList = () => {
       enableHiding: false,
     },
     {
-      accessorKey: "ITEM_CODE",
+      accessorKey: "CLIENT_ID",
+      header: "Client ID",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("CLIENT_ID")}</div>
+      ),
+    },
+    {
+      accessorKey: "CLIENT_NAME",
       header: ({ column }) => {
         return (
           <Button
@@ -135,61 +137,54 @@ const ProductList = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            Item Code
+            Client Name
             <ArrowUpDown />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
+        <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "ITEM_NAME",
-      header: "Item Name",
+      accessorKey: "TELEPHONE_NO",
+      header: "Telephone No",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>
       ),
     },
     {
-      accessorKey: "GROUP_LEVEL1",
-      header: "Cateogry",
+      accessorKey: "EMAIL_ADDRESS",
+      header: "Email ID",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("GROUP_LEVEL1") || "-"}</div>
+        <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>
       ),
     },
     {
-      accessorKey: "ITEM_GROUP",
-      header: "Type",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_GROUP") || "-"}</div>
-      ),
-    },
-    {
-      accessorKey: "SALE_RATE",
+      accessorKey: "COUNTRY",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0 "
+            className="p-0"
           >
-            Item Rate
+            Country
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("COUNTRY") || "-"}</div>,
     },
     {
-      accessorKey: "SUPPLIER_NAME",
-      header: () => <div>SupplierRef</div>,
-      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
+      accessorKey: "GROUP_NAME",
+      header: () => <div>Group Name</div>,
+      cell: ({ row }) => <div>{row.getValue("GROUP_NAME") || "-"}</div>,
     },
     {
-      accessorKey: "QTY_IN_HAND",
-      header: () => <div>Quantity</div>,
-      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
+      accessorKey: "NATURE_OF_BUSINESS",
+      header: () => <div>Nature of Business</div>,
+      cell: ({ row }) => <div>{row.getValue("NATURE_OF_BUSINESS") || "-"}</div>,
     },
     {
       accessorKey: "action",
@@ -197,7 +192,7 @@ const ProductList = () => {
       id: "actions",
       // enableHiding: false,
       cell: ({ row }) => {
-        const product = row.original
+        const customer = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -209,8 +204,9 @@ const ProductList = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate(`/products-list/create-product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(product)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/customer-dashboard/1")} className="flex items-center gap-1"><Eye /> View</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/customer/${customer.CLIENT_ID}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteCustomer(customer)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -224,7 +220,7 @@ const ProductList = () => {
   };
 
   const table = useReactTable({
-    data: productTableList,
+    data: customersData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -245,7 +241,7 @@ const ProductList = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">All Products</h1>
+      <h1 className="title">All Customers</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
           <Input
@@ -282,9 +278,7 @@ const ProductList = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Button onClick={() => navigate("/products-list/create-product")}>Create Product</Button>
-
+            <Button onClick={() => navigate("/new-customer")}>Create<Plus /></Button>
           </div>
         </div>
         <div className="rounded-md border">
@@ -333,7 +327,7 @@ const ProductList = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No products found.
+                    No results.
                   </TableCell>
                 </TableRow>
               )}
@@ -366,7 +360,7 @@ const ProductList = () => {
         </div>
       </div>
     </div>
-  );
+  )
 };
 
-export default ProductList;
+export default CustomerListPage;

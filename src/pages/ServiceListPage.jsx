@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,15 +29,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
+import { useToast } from "@/hooks/use-toast"
 import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
-import { deleteUser } from "@/services/userManagementService"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
-import { useToast } from "@/hooks/use-toast"
 
-const CustomerMaster = () => {
-  const [customersData, setCustomersData] = useState([]);
+
+const ServiceListPage = () => {
+  const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -46,60 +46,61 @@ const CustomerMaster = () => {
   const [rowSelection, setRowSelection] = useState({})
   const { userData } = useAuth();
   const { toast } = useToast()
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
   const navigate = useNavigate();
-console.log(customersData[0]);
 
   useEffect(() => {
-    fetchAllClientData();
+    fetchAllServicesData();
   }, [])
 
-  const fetchAllClientData = async () => {
+  const fetchAllServicesData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const clientDataPayload = {
-        DataModelName: "CLIENT_MASTER",
-        WhereCondition: "",
-        Orderby: "CLIENT_ID DESC",
+      const payload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
+        Orderby: "ITEM_CODE DESC"
       }
-      const data = await getDataModelService(clientDataPayload, userData.currentUserLogin, userData.clientURL)
-      setCustomersData(data);
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL)
+      setTableData(response);
     } catch (error) {
-      setError(error.message);
+      setError(error?.message);
+
     } finally {
       setLoading(false);
     }
   }
 
-  const handleDeleteCustomer = async (customer) => {
-    alert("Are you sure you want to delete this customer? This action cannot be undone.")
-    // throw new Error("User deletion is not implemented yet.");
+  const handleDelete = async (service) => {
+    const confirm = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
+    if (!confirm) return alert("data's not be deleted deleted");
 
     try {
-      const deleteCustomerPayload = {
+      const payload = {
         UserName: userData.currentUserLogin,
-        DataModelName: "CLIENT_MASTER",
-        WhereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
-      }
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: `ITEM_CODE = '${service.ITEM_CODE}'`,
+      };
 
-      const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
+      const response = await deleteDataModelService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
 
       toast({
         variant: "destructive",
-        title: deleteCustomerResponse,
+        title: response,
       })
 
-      fetchAllClientData();
+      fetchAllServicesData();
     } catch (error) {
       toast({
         variant: "destructive",
         title: error?.message || "Unknown error occurred.",
-      })
+      });
     }
-  }
+  };
 
   const columns = [
     {
@@ -125,14 +126,7 @@ console.log(customersData[0]);
       enableHiding: false,
     },
     {
-      accessorKey: "CLIENT_ID",
-      header: "Client ID",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("CLIENT_ID")}</div>
-      ),
-    },
-    {
-      accessorKey: "CLIENT_NAME",
+      accessorKey: "ITEM_CODE",
       header: ({ column }) => {
         return (
           <Button
@@ -140,62 +134,61 @@ console.log(customersData[0]);
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            Client Name
+            Item Code
             <ArrowUpDown />
           </Button>
         )
       },
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
       ),
     },
     {
-      accessorKey: "TELEPHONE_NO",
-      header: "Telephone No",
+      accessorKey: "ITEM_NAME",
+      header: "Item Name",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>
+        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "EMAIL_ADDRESS",
-      header: "Email ID",
+      accessorKey: "ITEM_GROUP",
+      header: "Type",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>
+        <div className="capitalize">{row.getValue("ITEM_GROUP") || "-"}</div>
       ),
     },
     {
-      accessorKey: "COUNTRY",
+      accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
+            className="p-0 "
           >
-            Country
+            Item Rate
             <ArrowUpDown />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("COUNTRY") || "-"}</div>,
+      cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
     {
-      accessorKey: "GROUP_NAME",
-      header: () => <div>Group Name</div>,
-      cell: ({ row }) => <div>{row.getValue("GROUP_NAME") || "-"}</div>,
+      accessorKey: "SUPPLIER_NAME",
+      header: () => <div>SupplierRef</div>,
+      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
     },
     {
-      accessorKey: "NATURE_OF_BUSINESS",
-      header: () => <div>Nature of Business</div>,
-      cell: ({ row }) => <div>{row.getValue("NATURE_OF_BUSINESS") || "-"}</div>,
+      accessorKey: "QTY_IN_HAND",
+      header: () => <div>Quantity</div>,
+      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
       accessorKey: "action",
       header: () => <div>Action</div>,
       id: "actions",
-      // enableHiding: false,
       cell: ({ row }) => {
-        const customer = row.original
+        const service = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -207,9 +200,8 @@ console.log(customersData[0]);
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/customer-master/:1")} className="flex items-center gap-1"><Eye /> View</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/customer-master/customer-creation/${customer.CLIENT_ID}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteCustomer(customer)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/service/${service.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(service)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -223,7 +215,7 @@ console.log(customersData[0]);
   };
 
   const table = useReactTable({
-    data: customersData,
+    data: tableData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -244,7 +236,7 @@ console.log(customersData[0]);
 
   return (
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">All Customers</h1>
+      <h1 className="title">All Services</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
           <Input
@@ -281,7 +273,9 @@ console.log(customersData[0]);
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => navigate("/customer-master/customer-creation")}>Create Customer<Plus /></Button>
+
+            <Button onClick={() => navigate("/new-service")}>Create<Plus /></Button>
+
           </div>
         </div>
         <div className="rounded-md border">
@@ -330,7 +324,7 @@ console.log(customersData[0]);
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
+                    No services found.
                   </TableCell>
                 </TableRow>
               )}
@@ -363,7 +357,7 @@ console.log(customersData[0]);
         </div>
       </div>
     </div>
-  )
+  );
 };
 
-export default CustomerMaster;
+export default ServiceListPage;

@@ -40,10 +40,10 @@ const ServicePricingPage = () => {
                 Start For Free
               </Button>
             </div>
-            <div class="text-sm text-center  pt-2 text-gray-400">
+            <div className="text-sm text-center  pt-2 text-gray-400">
               Features
             </div>
-            <div class="text-sm text-start  pt-2 text-gray-400">
+            <div className="text-sm text-start  pt-2 text-gray-400">
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Account Aggregation</div>
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Expense Tracking</div>
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Budgeting Tools</div>
@@ -70,7 +70,7 @@ const ServicePricingPage = () => {
                 Start For Free
               </Button>
             </div>
-            <div class="text-sm text-center  pt-2 text-gray-400">
+            <div className="text-sm text-center  pt-2 text-gray-400">
               Features
             </div>
             <div className='text-sm font-normal text-muted-foreground'>
@@ -100,10 +100,10 @@ const ServicePricingPage = () => {
                 Start For Free
               </Button>
             </div>
-            <div class="text-sm text-center  pt-2 text-gray-400">
+            <div className="text-sm text-center  pt-2 text-gray-400">
               Features
             </div>
-            <div class="text-sm text-start  pt-2 text-gray-400">
+            <div className="text-sm text-start  pt-2 text-gray-400">
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Account Aggregation</div>
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Expense Tracking</div>
               <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Budgeting Tools</div>

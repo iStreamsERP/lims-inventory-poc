@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Lottie from 'react-lottie';
 import animationData from "@/lotties/crm-animation-lotties.json";
 
-const LoginPage = () => {
+const LoginFormPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -256,4 +256,4 @@ const LoginPage = () => {
   )
 }
 
-export default LoginPage
+export default LoginFormPage

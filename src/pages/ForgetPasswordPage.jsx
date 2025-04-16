@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const ForgetPassword = () => {
+const ForgetPasswordPage = () => {
   const navigate = useNavigate()
   return (
     <div className='flex flex-col gap-5 justify-center items-center h-screen bg-slate-200 dark:bg-slate-900'>
@@ -14,4 +14,4 @@ const ForgetPassword = () => {
   )
 }
 
-export default ForgetPassword
+export default ForgetPasswordPage

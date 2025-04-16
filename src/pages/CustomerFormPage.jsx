@@ -25,7 +25,7 @@ import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
 
 
-const CustomerCreation = () => {
+const CustomerFormPage = () => {
   const { id: clientIDParams } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -628,4 +628,4 @@ const CustomerCreation = () => {
   );
 };
 
-export default CustomerCreation;
+export default CustomerFormPage;

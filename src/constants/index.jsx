@@ -15,9 +15,9 @@ export const navbarLinks = [
     title: "Customers",
     links: [
       {
-        label: "Customer Master",
+        label: "Customers",
         icon: UserPlus,
-        path: "/customer-master",
+        path: "/customers",
       },
     ],
   },
@@ -27,12 +27,17 @@ export const navbarLinks = [
       {
         label: "Product Category",
         icon: Package,
-        path: "/category-list",
+        path: "/categories",
       },
       {
         label: "Category (Demo)",
         icon: Package,
         path: "/category-trash",
+      },
+      {
+        label: "Service Category",
+        icon: NotepadText,
+        path: "/service-price-page",
       },
     ],
   },
@@ -40,24 +45,19 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
-        label: "Product List",
+        label: "Products",
         icon: ShoppingBag,
-        path: "/products-list",
+        path: "/products",
       },
       {
-        label: "Service List",
+        label: "Services",
         icon: NotepadText,
-        path: "/services-list",
+        path: "/services",
       },
       {
-        label: "Service Price Card",
-        icon: NotepadText,
-        path: "/service-price-page",
-      },
-      {
-        label: "Order List",
+        label: "Orders",
         icon: ChartColumn,
-        path: "/order-list",
+        path: "/orders",
       },
       {
         label: "Enquiry",

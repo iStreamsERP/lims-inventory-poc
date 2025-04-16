@@ -24,8 +24,9 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
-export default function CreateProduct() {
-  const { id: itemCodeParams } = useParams();
+
+export default function ProductFormPage() {
+  const { id } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,7 @@ export default function CreateProduct() {
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false)
 
-  const initialProductFormData = {
+  const initialFormData = {
     COMPANY_CODE: "1",
     BRANCH_CODE: "1",
     ITEM_CODE: "(NEW)",
@@ -55,14 +56,15 @@ export default function CreateProduct() {
     REMARKS: "",
     img: "",
   };
-  const [productFormData, setProductFormData] = useState(initialProductFormData);
+
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
-    if (itemCodeParams) {
+    if (id) {
       fetchProductMaterialData();
     }
     fetchCategoryUsingQuery();
-  }, [itemCodeParams]);
+  }, [id]);
 
   const fetchCategoryUsingQuery = async () => {
     setLoading(true);
@@ -88,17 +90,17 @@ export default function CreateProduct() {
 
   const validateInput = () => {
     const newError = {};
-    if (!productFormData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-    if (!productFormData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
-    else if (!/^\d+$/.test(productFormData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
-    if (!productFormData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
-    else if (!/^\d+$/.test(productFormData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
-    if (!productFormData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
-    else if (!/^\d+$/.test(productFormData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
-    if (!productFormData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
-    if (!productFormData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-    if (!productFormData.REMARKS) newError.REMARKS = "Remarks are required.";
-    if (!productFormData.img) {
+    if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
+    if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
+    else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
+    if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
+    else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
+    if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
+    else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
+    if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
+    if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
+    if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
+    if (!formData.img) {
       newError.img = "Image is required.";
     }
     return newError;
@@ -110,11 +112,11 @@ export default function CreateProduct() {
     try {
       const ProductDataPayload = {
         DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${itemCodeParams}'`,
+        WhereCondition: `ITEM_CODE = '${id}'`,
         Orderby: "",
       };
       const data = await getDataModelService(ProductDataPayload, userData.currentUserLogin, userData.clientURL);
-      setProductFormData((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         ...(data?.[0] || {}),
       }));
@@ -131,7 +133,7 @@ export default function CreateProduct() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setProductFormData((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -145,7 +147,7 @@ export default function CreateProduct() {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      setProductFormData((prev) => ({ ...prev, img: imageUrl }));
+      setFormData((prev) => ({ ...prev, img: imageUrl }));
       setError((prev) => ({ ...prev, img: "" }));
     }
   };
@@ -160,7 +162,7 @@ export default function CreateProduct() {
     }
     try {
       setLoading(true);
-      const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", productFormData);
+      const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", formData);
       const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
@@ -170,7 +172,7 @@ export default function CreateProduct() {
       const newItemCode = match ? match[1] : "(NEW)";
 
       if (newItemCode !== "(NEW)") {
-        setProductFormData((prev) => ({
+        setFormData((prev) => ({
           ...prev,
           ITEM_CODE: newItemCode,
         }));
@@ -193,7 +195,7 @@ export default function CreateProduct() {
   return (
     <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-12">
       <div className="col-span-1 h-full w-full lg:col-span-7">
-        <h1 className="title">{productFormData.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
+        <h1 className="title">{formData.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
         <form
           onSubmit={handleSubmit}
           className="mt-4 h-full w-full"
@@ -219,7 +221,7 @@ export default function CreateProduct() {
                           id="ITEM_CODE"
                           type="text"
                           placeholder="Type item code (New)"
-                          value={productFormData.ITEM_CODE === "(NEW)" ? "New" : productFormData.ITEM_CODE}
+                          value={formData.ITEM_CODE === "(NEW)" ? "New" : formData.ITEM_CODE}
                           onChange={handleChange}
                           readOnly
                         />
@@ -233,7 +235,7 @@ export default function CreateProduct() {
                           type="text"
                           placeholder="Type item name"
                           onChange={handleChange}
-                          value={productFormData.ITEM_NAME}
+                          value={formData.ITEM_NAME}
                           required
                         />
                         {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
@@ -246,7 +248,7 @@ export default function CreateProduct() {
                           type="text"
                           placeholder="Type supplier ref"
                           onChange={handleChange}
-                          value={productFormData.SUPPLIER_NAME}
+                          value={formData.SUPPLIER_NAME}
                           required
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
@@ -259,7 +261,7 @@ export default function CreateProduct() {
                           type="text"
                           placeholder="Type sales price"
                           onChange={handleChange}
-                          value={productFormData.SALE_RATE}
+                          value={formData.SALE_RATE}
                           required
                         />
                         {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
@@ -271,9 +273,9 @@ export default function CreateProduct() {
                           className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
                           onClick={() => fileInput.current?.click()}
                         >
-                          {productFormData.img ? (
+                          {formData.img ? (
                             <img
-                              src={productFormData.img}
+                              src={formData.img}
                               alt="Product preview"
                               className="h-full w-full object-cover"
                             />
@@ -302,7 +304,7 @@ export default function CreateProduct() {
                         type="text"
                         placeholder="Type margin"
                         onChange={handleChange}
-                        value={productFormData.SALE_MARGIN_PTG}
+                        value={formData.SALE_MARGIN_PTG}
                         required
                       />
                       {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
@@ -316,7 +318,7 @@ export default function CreateProduct() {
                         type="text"
                         placeholder="Type quantity"
                         onChange={handleChange}
-                        value={productFormData.QTY_IN_HAND}
+                        value={formData.QTY_IN_HAND}
                         required
                       />
                       {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
@@ -331,8 +333,8 @@ export default function CreateProduct() {
                             aria-expanded={open}
                             className="w-[200px] justify-between"
                           >
-                            {productFormData.GROUP_LEVEL1
-                              ? categoryData.find(item => item.GROUP_LEVEL1 === productFormData.GROUP_LEVEL1)?.GROUP_LEVEL1
+                            {formData.GROUP_LEVEL1
+                              ? categoryData.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
                               : "Select category..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -359,7 +361,7 @@ export default function CreateProduct() {
                                             ...prev,
                                             { GROUP_LEVEL1: newValue },
                                           ]);
-                                          setProductFormData(prev => ({
+                                          setFormData(prev => ({
                                             ...prev,
                                             GROUP_LEVEL1: newValue,
                                           }));
@@ -382,7 +384,7 @@ export default function CreateProduct() {
                                     key={index}
                                     value={item.GROUP_LEVEL1}
                                     onSelect={(currentValue) => {
-                                      setProductFormData(prev => ({
+                                      setFormData(prev => ({
                                         ...prev,
                                         GROUP_LEVEL1: currentValue,
                                       }));
@@ -393,7 +395,7 @@ export default function CreateProduct() {
                                     <Check
                                       className={cn(
                                         "ml-auto h-4 w-4",
-                                        productFormData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0"
+                                        formData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0"
                                       )}
                                     />
                                   </CommandItem>
@@ -413,7 +415,7 @@ export default function CreateProduct() {
                       id="REMARKS"
                       placeholder="Enter item features"
                       onChange={handleChange}
-                      value={productFormData.REMARKS}
+                      value={formData.REMARKS}
                     />
                     {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
                   </div>
@@ -434,7 +436,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type size"
                               onChange={handleChange}
-                              value={productFormData.ITEM_SIZE}
+                              value={formData.ITEM_SIZE}
                             />
                           </div>
                           <div className="w-full">
@@ -445,7 +447,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type length"
                               onChange={handleChange}
-                              value={productFormData.ITEM_LENGTH}
+                              value={formData.ITEM_LENGTH}
                             />
                           </div>
                         </div>
@@ -458,7 +460,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type width"
                               onChange={handleChange}
-                              value={productFormData.ITEM_WIDTH}
+                              value={formData.ITEM_WIDTH}
                             />
                           </div>
                           <div className="w-full">
@@ -469,7 +471,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type thickness"
                               onChange={handleChange}
-                              value={productFormData.ITEM_THICKNESS}
+                              value={formData.ITEM_THICKNESS}
                             />
                           </div>
                         </div>
@@ -482,7 +484,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type volume"
                               onChange={handleChange}
-                              value={productFormData.ITEM_VOLUME}
+                              value={formData.ITEM_VOLUME}
                             />
                           </div>
                         </div>
@@ -500,7 +502,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type group ref"
                               onChange={handleChange}
-                              value={productFormData.ITEM_GROUP}
+                              value={formData.ITEM_GROUP}
                               readOnly
                             />
                           </div>
@@ -512,7 +514,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Item ref"
                               onChange={handleChange}
-                              value={productFormData.ITEM_REF}
+                              value={formData.ITEM_REF}
                             />
                           </div>
                         </div>
@@ -525,7 +527,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type brand"
                               onChange={handleChange}
-                              value={productFormData.ITEM_BRAND}
+                              value={formData.ITEM_BRAND}
                             />
                           </div>
                           <div className="w-full">
@@ -536,7 +538,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type color"
                               onChange={handleChange}
-                              value={productFormData.ITEM_COLOR}
+                              value={formData.ITEM_COLOR}
                             />
                           </div>
                         </div>
@@ -554,7 +556,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Min quantity"
                               onChange={handleChange}
-                              value={productFormData.MIN_STOCK_LEVEL}
+                              value={formData.MIN_STOCK_LEVEL}
                             />
                           </div>
                           <div className="w-full">
@@ -565,7 +567,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Max quantity"
                               onChange={handleChange}
-                              value={productFormData.MAX_STOCK_LEVEL}
+                              value={formData.MAX_STOCK_LEVEL}
                             />
                           </div>
                         </div>
@@ -578,7 +580,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Re-Order Quantity"
                               onChange={handleChange}
-                              value={productFormData.REORDER_QTY}
+                              value={formData.REORDER_QTY}
                             />
                           </div>
                           <div className="w-full">
@@ -589,7 +591,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Re-Order Alert Quantity"
                               onChange={handleChange}
-                              value={productFormData.REORDER_LEVEL}
+                              value={formData.REORDER_LEVEL}
                             />
                           </div>
                         </div>
@@ -602,7 +604,7 @@ export default function CreateProduct() {
                               type="text"
                               placeholder="Type Max Life Days"
                               onChange={handleChange}
-                              value={productFormData.MAX_AGE_DAYS}
+                              value={formData.MAX_AGE_DAYS}
                             />
                           </div>
                         </div>
@@ -616,7 +618,7 @@ export default function CreateProduct() {
                           color="#000"
                           size={8}
                         />
-                      ) : productFormData.ITEM_CODE === "(NEW)" ? (
+                      ) : formData.ITEM_CODE === "(NEW)" ? (
                         "Save Product"
                       ) : (
                         "Update Product"
@@ -640,7 +642,7 @@ export default function CreateProduct() {
                           color="#000"
                           size={8}
                         />
-                      ) : productFormData.ITEM_CODE === "(NEW)" ? (
+                      ) : formData.ITEM_CODE === "(NEW)" ? (
                         "Save Product"
                       ) : (
                         "Update Product"
@@ -654,7 +656,7 @@ export default function CreateProduct() {
         </form>
       </div>
       <div className="col-span-1 mt-5 h-fit w-full lg:col-span-5 lg:mt-24">
-        <AddSubProduct itemcode={productFormData.ITEM_CODE} />
+        <AddSubProduct itemcode={formData.ITEM_CODE} />
       </div>
     </div>
   );

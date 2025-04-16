@@ -21,8 +21,34 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
 
-export default function CreateService() {
-    const { id: itemCodeParams } = useParams();
+
+const initialFormData = {
+    COMPANY_CODE: "1",
+    BRANCH_CODE: "1",
+    ITEM_CODE: "(NEW)",
+    UOM_STOCK: "NOS",
+    UOM_PURCHASE: "NOS",
+    ITEM_F_PUINISH: "NOS",
+    GROUP_LEVEL1: "",
+    GROUP_LEVEL2: "consumables",
+    GROUP_LEVEL3: "consumables",
+    COST_CODE: "MXXXX",
+    ITEM_NAME: "",
+    ITEM_GROUP: "SERVICE",
+    SUPPLIER_NAME: "",
+    SALE_RATE: "",
+    SALE_MARGIN_PTG: "",
+    QTY_IN_HAND: "",
+    REMARKS: "",
+    img: "",
+    timeperiod: "",
+    features: "",
+};
+
+
+export default function ServiceFormPage() {
+    const [formData, setFormData] = useState(initialFormData);
+    const { id } = useParams();
     const { userData } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -32,29 +58,6 @@ export default function CreateService() {
     const [openUom, setOpenUom] = useState(false);
     const [featureInput, setFeatureInput] = useState("");
 
-    const initialProductFormData = {
-        COMPANY_CODE: "1",
-        BRANCH_CODE: "1",
-        ITEM_CODE: "(NEW)",
-        UOM_STOCK: "NOS",
-        UOM_PURCHASE: "NOS",
-        ITEM_F_PUINISH: "NOS",
-        GROUP_LEVEL1: "",
-        GROUP_LEVEL2: "consumables",
-        GROUP_LEVEL3: "consumables",
-        COST_CODE: "MXXXX",
-        ITEM_NAME: "",
-        ITEM_GROUP: "SERVICE",
-        SUPPLIER_NAME: "",
-        SALE_RATE: "",
-        SALE_MARGIN_PTG: "",
-        QTY_IN_HAND: "",
-        REMARKS: "",
-        img: "",
-        timeperiod: "",
-        features: "",
-    };
-    const [productFormData, setProductFormData] = useState(initialProductFormData);
     const itemType = ["Electronics", "Apparel", "Furniture", "Grocery", "Books", "Toys", "Beauty", "Stationery"];
     const timeperiod = ["Daily", "Weekly", "Monthly", "Yearly"];
     const uom = [
@@ -82,42 +85,40 @@ export default function CreateService() {
 
     const validateInput = () => {
         const newError = {};
-        if (!productFormData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-        if (!productFormData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
-        else if (!/^\d+$/.test(productFormData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
-        if (!productFormData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
-        else if (!/^\d+$/.test(productFormData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
-        if (!productFormData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
-        else if (!/^\d+$/.test(productFormData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
-        if (!productFormData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
-        if (!productFormData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-        if (!productFormData.REMARKS) newError.REMARKS = "Remarks are required.";
-        if (!productFormData.img) {
-            newError.img = "Image is required.";
-        }
+        if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
+        if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
+        else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
+        if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
+        else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
+        if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
+        else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
+        if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
+        if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
+        if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
         return newError;
     };
     useEffect(() => {
-        if (itemCodeParams) {
+        if (id) {
             fetchProductMaterialData();
         }
-    }, [itemCodeParams]);
+    }, [id]);
     const fetchProductMaterialData = async () => {
         setLoading(true);
         setError({});
         try {
-            const ProductDataPayload = {
+            const payload = {
                 DataModelName: "INVT_MATERIAL_MASTER",
-                WhereCondition: `ITEM_CODE = '${itemCodeParams}'`,
+                WhereCondition: `ITEM_CODE = '${id}'`,
                 Orderby: "",
             };
-            const data = await getDataModelService(ProductDataPayload, userData.currentUserLogin, userData.clientURL);
-            setProductFormData((prev) => ({
+            const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+            setFormData((prev) => ({
                 ...prev,
-                ...(data?.[0] || {}),
+                ...(response?.[0] || {}),
             }));
+
         } catch (error) {
-            setError({ fetch: error.message });
             toast({
                 variant: "destructive",
                 title: `Error fetching client: ${error?.message}`,
@@ -126,9 +127,10 @@ export default function CreateService() {
             setLoading(false);
         }
     };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setProductFormData((prev) => ({
+        setFormData((prev) => ({
             ...prev,
             [name]: value,
         }));
@@ -141,13 +143,12 @@ export default function CreateService() {
         const file = e.target.files[0];
         if (file) {
             const imageUrl = URL.createObjectURL(file);
-            setProductFormData((prev) => ({ ...prev, img: imageUrl }));
+            setFormData((prev) => ({ ...prev, img: imageUrl }));
             setError((prev) => ({ ...prev, img: "" }));
         }
     };
     const handleSubmit = async (e) => {
         e.preventDefault();
-        debugger;
         const validationErrors = validateInput();
         if (Object.keys(validationErrors).length > 0) {
             setError(validationErrors);
@@ -156,7 +157,7 @@ export default function CreateService() {
         }
         try {
             setLoading(true);
-            const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", productFormData);
+            const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", formData);
             const ProductPayload = {
                 UserName: userData.currentUserLogin,
                 DModelData: convertedDataModel,
@@ -166,7 +167,7 @@ export default function CreateService() {
             const newitemcode = match ? match[1] : "(NEW)";
 
             if (newitemcode !== "(NEW)") {
-                setProductFormData((prev) => ({
+                setFormData((prev) => ({
                     ...prev,
                     ITEM_CODE: newitemcode,
                 }));
@@ -188,7 +189,7 @@ export default function CreateService() {
     return (
         <div className="grid h-full w-full">
             <div className="h-full w-full">
-                <h1 className="title">{productFormData.ITEM_CODE === "(NEW)" ? "Create Service" : "Edit Service"}</h1>
+                <h1 className="title">{formData.ITEM_CODE === "(NEW)" ? "Create Service" : "Edit Service"}</h1>
                 <form
                     onSubmit={handleSubmit}
                     className="mt-4 h-full w-full"
@@ -209,7 +210,7 @@ export default function CreateService() {
                                             id="ITEM_CODE"
                                             type="text"
                                             placeholder="Type item code (New)"
-                                            value={productFormData.ITEM_CODE === "(NEW)" ? "New" : productFormData.ITEM_CODE}
+                                            value={formData.ITEM_CODE === "(NEW)" ? "New" : formData.ITEM_CODE}
                                             onChange={handleChange}
                                             readOnly
                                         />
@@ -223,7 +224,7 @@ export default function CreateService() {
                                             type="text"
                                             placeholder="Type item name"
                                             onChange={handleChange}
-                                            value={productFormData.ITEM_NAME}
+                                            value={formData.ITEM_NAME}
                                             required
                                         />
                                         {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
@@ -241,7 +242,7 @@ export default function CreateService() {
                                             type="text"
                                             placeholder="Type supplier ref"
                                             onChange={handleChange}
-                                            value={productFormData.SUPPLIER_NAME}
+                                            value={formData.SUPPLIER_NAME}
                                             required
                                         />
                                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
@@ -254,7 +255,7 @@ export default function CreateService() {
                                             type="text"
                                             placeholder="Type margin"
                                             onChange={handleChange}
-                                            value={productFormData.SALE_MARGIN_PTG}
+                                            value={formData.SALE_MARGIN_PTG}
                                             required
                                         />
                                         {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
@@ -272,7 +273,7 @@ export default function CreateService() {
                                             type="text"
                                             placeholder="Type quantity"
                                             onChange={handleChange}
-                                            value={productFormData.QTY_IN_HAND}
+                                            value={formData.QTY_IN_HAND}
                                             required
                                         />
                                         {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
@@ -286,7 +287,7 @@ export default function CreateService() {
                                                 type="text"
                                                 placeholder="Type sales price"
                                                 onChange={handleChange}
-                                                value={productFormData.SALE_RATE}
+                                                value={formData.SALE_RATE}
                                                 required
                                             />
                                             {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
@@ -303,9 +304,9 @@ export default function CreateService() {
                                                         role="combobox"
                                                         aria-expanded={open}
                                                         className="w-full justify-between"
-                                                        disabled={!productFormData.SALE_RATE}
+                                                        disabled={!formData.SALE_RATE}
                                                     >
-                                                        {productFormData.timeperiod ? timeperiod.find((period) => period === productFormData.timeperiod) : "Select..."}
+                                                        {formData.timeperiod ? timeperiod.find((period) => period === formData.timeperiod) : "Select..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -323,7 +324,7 @@ export default function CreateService() {
                                                                         key={type}
                                                                         value={type}
                                                                         onSelect={(currentValue) => {
-                                                                            setProductFormData((prev) => ({
+                                                                            setFormData((prev) => ({
                                                                                 ...prev,
                                                                                 timeperiod: currentValue,
                                                                             }));
@@ -331,7 +332,7 @@ export default function CreateService() {
                                                                         }}
                                                                     >
                                                                         {type}
-                                                                        <Check className={`ml-auto h-4 w-4 ${productFormData.timeperiod === type ? "opacity-100" : "opacity-0"}`} />
+                                                                        <Check className={`ml-auto h-4 w-4 ${formData.timeperiod === type ? "opacity-100" : "opacity-0"}`} />
                                                                     </CommandItem>
                                                                 ))}
                                                             </CommandGroup>
@@ -359,7 +360,7 @@ export default function CreateService() {
                                                     aria-expanded={openUom}
                                                     className="w-full justify-between"
                                                 >
-                                                    {productFormData.UOM_STOCK ? uom.find((type) => type.value === productFormData.UOM_STOCK)?.label : "Select UOM..."}
+                                                    {formData.UOM_STOCK ? uom.find((type) => type.value === formData.UOM_STOCK)?.label : "Select UOM..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
@@ -377,7 +378,7 @@ export default function CreateService() {
                                                                     key={type.value}
                                                                     value={type.value}
                                                                     onSelect={(currentValue) => {
-                                                                        setProductFormData((prev) => ({
+                                                                        setFormData((prev) => ({
                                                                             ...prev,
                                                                             UOM_STOCK: currentValue,
                                                                         }));
@@ -385,7 +386,7 @@ export default function CreateService() {
                                                                     }}
                                                                 >
                                                                     {type.label}
-                                                                    <Check className={`ml-auto h-4 w-4 ${productFormData.UOM_STOCK === type.value ? "opacity-100" : "opacity-0"}`} />
+                                                                    <Check className={`ml-auto h-4 w-4 ${formData.UOM_STOCK === type.value ? "opacity-100" : "opacity-0"}`} />
                                                                 </CommandItem>
                                                             ))}
                                                         </CommandGroup>
@@ -408,7 +409,7 @@ export default function CreateService() {
                                                     aria-expanded={open}
                                                     className="w-full justify-between"
                                                 >
-                                                    {productFormData.GROUP_LEVEL1 ? itemType.find((type) => type === productFormData.GROUP_LEVEL1) : "Select category..."}
+                                                    {formData.GROUP_LEVEL1 ? itemType.find((type) => type === formData.GROUP_LEVEL1) : "Select category..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
@@ -426,7 +427,7 @@ export default function CreateService() {
                                                                     key={type}
                                                                     value={type}
                                                                     onSelect={(currentValue) => {
-                                                                        setProductFormData((prev) => ({
+                                                                        setFormData((prev) => ({
                                                                             ...prev,
                                                                             GROUP_LEVEL1: currentValue,
                                                                         }));
@@ -434,7 +435,7 @@ export default function CreateService() {
                                                                     }}
                                                                 >
                                                                     {type}
-                                                                    <Check className={`ml-auto h-4 w-4 ${productFormData.GROUP_LEVEL1 === type ? "opacity-100" : "opacity-0"}`} />
+                                                                    <Check className={`ml-auto h-4 w-4 ${formData.GROUP_LEVEL1 === type ? "opacity-100" : "opacity-0"}`} />
                                                                 </CommandItem>
                                                             ))}
                                                         </CommandGroup>
@@ -453,7 +454,7 @@ export default function CreateService() {
                                         id="REMARKS"
                                         placeholder="Enter Remarks"
                                         onChange={handleChange}
-                                        value={productFormData.REMARKS}
+                                        value={formData.REMARKS}
                                     />
                                     {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
                                 </div>
@@ -475,8 +476,8 @@ export default function CreateService() {
                                             onClick={() => {
                                                 const trimmed = featureInput.trim();
                                                 if (trimmed !== "") {
-                                                    const updatedFeatures = [...(productFormData.features || []), trimmed];
-                                                    setProductFormData((prev) => ({
+                                                    const updatedFeatures = [...(formData.features || []), trimmed];
+                                                    setFormData((prev) => ({
                                                         ...prev,
                                                         features: updatedFeatures,
                                                     }));
@@ -490,7 +491,7 @@ export default function CreateService() {
                                     {error.features && <p className="text-sm text-red-500">{error.features}</p>}
                                     {/* Display features as removable chips */}
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {(productFormData.features || []).map((feature, index) => (
+                                        {(formData.features || []).map((feature, index) => (
                                             <div
                                                 key={index}
                                                 className="bg-gray-600 flex items-center gap-1 rounded-full  px-3 py-1 text-sm "
@@ -499,8 +500,8 @@ export default function CreateService() {
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const updated = productFormData.features.filter((_, i) => i !== index);
-                                                        setProductFormData((prev) => ({
+                                                        const updated = formData.features.filter((_, i) => i !== index);
+                                                        setFormData((prev) => ({
                                                             ...prev,
                                                             features: updated,
                                                         }));
@@ -522,7 +523,7 @@ export default function CreateService() {
                                                 color="#000"
                                                 size={8}
                                             />
-                                        ) : productFormData.ITEM_CODE === "(NEW)" ? (
+                                        ) : formData.ITEM_CODE === "(NEW)" ? (
                                             "Save Service"
                                         ) : (
                                             "Update Service"

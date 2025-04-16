@@ -77,7 +77,7 @@ const CategoryListPage = () => {
 						key={index}
 						className="relative overflow-hidden h-48 w-full rounded-lg shadow-md group"
 					>
-						<Link to={`/category-list/${category.GROUP_LEVEL1}`}>
+						<Link to={`/product-card-list/${category.GROUP_LEVEL1}`}>
 							<div className="w-full h-full cursor-pointer relative bg-slate-700 flex items-center justify-center">
 								{category.imageUrl ? (
 									<img

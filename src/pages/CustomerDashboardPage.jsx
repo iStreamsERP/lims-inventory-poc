@@ -3,14 +3,11 @@ import { Overview } from "@/components/charts/OverviewChart";
 import ProfitEarnedChart from "@/components/charts/ProfitEarnedChart";
 import { SalesActivityChart } from "@/components/charts/SalesActivityChart";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
     Card, CardContent,
     CardHeader,
     CardTitle
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
     Tabs,
     TabsContent,
@@ -26,7 +23,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, MoreHorizontal, Phone } from "lucide-react";
 
-const CustomerDetailPage = () => {
+const CustomerDashboardPage = () => {
     const { userData } = useAuth();
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 h-full">
@@ -177,4 +174,4 @@ const CustomerDetailPage = () => {
     )
 }
 
-export default CustomerDetailPage
+export default CustomerDashboardPage

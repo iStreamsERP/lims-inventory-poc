@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DialogClose } from "@radix-ui/react-dialog";
 
-const OrderCreationPage = () => {
+const OrderFormPage = () => {
   const CustomerList = [
     { customername: "Alice", country: "USA", city: "New York", phone: "+1 9876543210" },
     { customername: "Hiroshi", country: "Japan", city: "Tokyo", phone: "+81 2345678901" },
@@ -628,4 +628,4 @@ const OrderCreationPage = () => {
   );
 };
 
-export default OrderCreationPage;
+export default OrderFormPage;
