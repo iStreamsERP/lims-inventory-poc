@@ -70,15 +70,12 @@ export default function CreateProduct() {
       const payload = {
         SQLQuery: "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
       };
-      const data = await getDataModelFromQueryService(
+      const response = await getDataModelFromQueryService(
         payload,
         userData.currentUserLogin,
         userData.clientURL
       );
-
-      console.log(data);
-
-      setCategoryData(data);
+      setCategoryData(response);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -155,7 +152,6 @@ export default function CreateProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    debugger;
     const validationErrors = validateInput();
     if (Object.keys(validationErrors).length > 0) {
       setError(validationErrors);
@@ -165,22 +161,22 @@ export default function CreateProduct() {
     try {
       setLoading(true);
       const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", productFormData);
-      const ProductPayload = {
+      const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
       };
-      const saveDataServiceResponse = await saveDataService(ProductPayload, userData.currentUserLogin, userData.clientURL);
-      const match = saveDataServiceResponse.match(/Item Code Ref\s*'([\w\d]+)'/);
-      const newitemcode = match ? match[1] : "(NEW)";
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
+      const newItemCode = match ? match[1] : "(NEW)";
 
-      if (newitemcode !== "(NEW)") {
+      if (newItemCode !== "(NEW)") {
         setProductFormData((prev) => ({
           ...prev,
-          ITEM_CODE: newitemcode,
+          ITEM_CODE: newItemCode,
         }));
 
         toast({
-          title: saveDataServiceResponse,
+          title: response,
         });
       }
     } catch (error) {

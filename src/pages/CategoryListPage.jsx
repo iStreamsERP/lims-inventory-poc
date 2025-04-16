@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 
-const CategoryPage = () => {
+const CategoryListPage = () => {
 	const { userData } = useAuth();
 	const { toast } = useToast();
 	const [categories, setCategories] = useState([]);
@@ -71,13 +71,13 @@ const CategoryPage = () => {
 	) : (
 		<div className="flex flex-col gap-y-4">
 			<h1 className="title">All Categories</h1>
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				{categories.map((category, index) => (
 					<div
 						key={index}
 						className="relative overflow-hidden h-48 w-full rounded-lg shadow-md group"
 					>
-						<Link to={`/category/${category.GROUP_LEVEL1}`}>
+						<Link to={`/category-list/${category.GROUP_LEVEL1}`}>
 							<div className="w-full h-full cursor-pointer relative bg-slate-700 flex items-center justify-center">
 								{category.imageUrl ? (
 									<img
@@ -117,4 +117,4 @@ const CategoryPage = () => {
 	);
 };
 
-export default CategoryPage;
+export default CategoryListPage;

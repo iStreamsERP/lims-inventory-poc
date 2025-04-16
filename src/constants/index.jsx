@@ -27,7 +27,7 @@ export const navbarLinks = [
       {
         label: "Product Category",
         icon: Package,
-        path: "/category",
+        path: "/category-list",
       },
       {
         label: "Category (Demo)",

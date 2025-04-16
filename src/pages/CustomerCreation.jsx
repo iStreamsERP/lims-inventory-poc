@@ -98,17 +98,17 @@ const CustomerCreation = () => {
     setLoading(true);
     setError({});
     try {
-      const locationDataPayload = {
+      const payload = {
         DataModelName: "COUNTRY_MASTER",
         WhereCondition: "",
         Orderby: "",
       };
-      const data = await getDataModelService(
-        locationDataPayload,
+      const response = await getDataModelService(
+        payload,
         userData.currentUserLogin,
         userData.clientURL
       );
-      setLocationData(data);
+      setLocationData(response);
     } catch (error) {
       setError({ fetch: error.message });
       toast({
@@ -124,19 +124,19 @@ const CustomerCreation = () => {
     setLoading(true);
     setError({});
     try {
-      const clientDataPayload = {
+      const payload = {
         DataModelName: "CLIENT_MASTER",
         WhereCondition: `CLIENT_ID = ${clientIDParams}`,
         Orderby: "",
       };
 
-      const data = await getDataModelService(
-        clientDataPayload,
+      const response = await getDataModelService(
+        payload,
         userData.currentUserLogin,
         userData.clientURL
       );
 
-      const client = data?.[0] || {};
+      const client = response?.[0] || {};
 
       setCustomerFormData((prev) => ({
         ...prev,

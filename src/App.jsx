@@ -3,8 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import EnquiryForm from "./components/form/EnquiryForm";
 import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
-import CategoryDetailsPage from "./pages/CategoryDetailsPage";
-import CategoryPage from "./pages/CategoryPage";
+import CategoryListPage from "./pages/CategoryListPage";
 import CategoryPageTrash from "./pages/CategoryPageTrash";
 import CreateProduct from "./pages/CreateProduct";
 import CreateService from "./pages/CreateService";
@@ -25,6 +24,9 @@ import SignUpPage from "./pages/SignUpPage";
 import UserManagement from "./pages/UserManagement";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import ProductListPage from "./pages/ProductListPage";
+import UserPreferences from "./pages/UserPreferences";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -51,11 +53,11 @@ const App = () => {
             { path: "account-settings", element: <AccountSettings /> },
             { path: "customer-master", element: <CustomerMaster /> },
             { path: "/customer-master/customer-creation/:id?", element: <CustomerCreation /> },
-            { path: "category", element: <CategoryPage /> },
-            { path: "category-trash", element: <CategoryPageTrash /> },
             { path: "/customer-master/:id", element: <CustomerDetailPage /> },
-            { path: "category/:category", element: <CategoryDetailsPage /> },
-            { path: "user-management", element: <UserManagement /> },
+            { path: "category-list", element: <CategoryListPage /> },
+            { path: "category-trash", element: <CategoryPageTrash /> },
+            { path: "category-list/:id", element: <ProductListPage /> },
+            { path: "product-detail/:id", element: <ProductDetailPage /> },
             { path: "/order-list/order-creation", element: <OrderCreationPage /> },
             { path: "products-list", element: <ProductList /> },
             { path: "/products-list/create-product/:id?", element: <CreateProduct /> },
@@ -64,6 +66,8 @@ const App = () => {
             { path: "service-price-page", element: <ServicePricingPage /> },
             { path: "order-list", element: <OrderList /> },
             { path: "enquiry-form", element: <EnquiryForm /> },
+            { path: "user-management", element: <UserManagement /> },
+            { path: "user-preferences", element: <UserPreferences /> },
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
           ]

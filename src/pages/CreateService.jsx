@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
@@ -28,6 +28,9 @@ export default function CreateService() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState({});
     const [open, setOpen] = useState(false);
+    const [opened, setOpened] = useState(false);
+    const [openUom, setOpenUom] = useState(false);
+    const [featureInput, setFeatureInput] = useState("");
 
     const initialProductFormData = {
         COMPANY_CODE: "1",
@@ -48,9 +51,35 @@ export default function CreateService() {
         QTY_IN_HAND: "",
         REMARKS: "",
         img: "",
+        timeperiod: "",
+        features: "",
     };
     const [productFormData, setProductFormData] = useState(initialProductFormData);
     const itemType = ["Electronics", "Apparel", "Furniture", "Grocery", "Books", "Toys", "Beauty", "Stationery"];
+    const timeperiod = ["Daily", "Weekly", "Monthly", "Yearly"];
+    const uom = [
+        { label: "Pic", value: "Pic" },
+        { label: "Unit", value: "Unit" },
+        { label: "Kg", value: "Kg" },
+        { label: "G", value: "G" },
+        { label: "L", value: "L" },
+        { label: "ML", value: "ML" },
+        { label: "M", value: "M" },
+        { label: "CM", value: "CM" },
+        { label: "Box", value: "Box" },
+        { label: "Dozen", value: "Dozen" },
+        { label: "Pack", value: "Pack" },
+        { label: "Pallet", value: "Pallet" },
+        { label: "Roll", value: "Roll" },
+        { label: "Bag", value: "Bag" },
+        { label: "Bottle", value: "Bottle" },
+        { label: "Can", value: "Can" },
+        { label: "Carton", value: "Carton" },
+        { label: "Jar", value: "Jar" },
+        { label: "Tube", value: "Tube" },
+        { label: "Tray", value: "Tray" },
+    ];
+
     const validateInput = () => {
         const newError = {};
         if (!productFormData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
@@ -91,7 +120,7 @@ export default function CreateService() {
             setError({ fetch: error.message });
             toast({
                 variant: "destructive",
-                title: `Error fetching client: ${error.message}`,
+                title: `Error fetching client: ${error?.message}`,
             });
         } finally {
             setLoading(false);
@@ -170,7 +199,8 @@ export default function CreateService() {
                             <CardDescription> Provide essential information to define and manage your product.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
+                            <div className="space-y-2">
+
                                 <div className="flex flex-col gap-4 lg:flex-row">
                                     <div className="flex-1">
                                         <Label htmlFor="itemcode">Item Code</Label>
@@ -198,6 +228,11 @@ export default function CreateService() {
                                         />
                                         {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
                                     </div>
+
+
+                                </div>
+
+                                <div className="flex flex-col gap-4 lg:flex-row">
                                     <div className="flex-1">
                                         <Label htmlFor="SUPPLIER_NAME">Supplier Ref</Label>
                                         <Input
@@ -212,22 +247,6 @@ export default function CreateService() {
                                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                                     </div>
                                     <div className="flex-1">
-                                        <Label htmlFor="SALE_RATE">Sales Price</Label>
-                                        <Input
-                                            name="SALE_RATE"
-                                            id="SALE_RATE"
-                                            type="text"
-                                            placeholder="Type sales price"
-                                            onChange={handleChange}
-                                            value={productFormData.SALE_RATE}
-                                            required
-                                        />
-                                        {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-4 lg:flex-row">
-                                    <div className="flex-1">
                                         <Label htmlFor="margin">Margin %</Label>
                                         <Input
                                             name="SALE_MARGIN_PTG"
@@ -240,6 +259,11 @@ export default function CreateService() {
                                         />
                                         {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
                                     </div>
+
+
+                                </div>
+
+                                <div className="flex flex-col gap-4 lg:flex-row">
                                     <div className="flex-1">
                                         <Label htmlFor="QTY_IN_HAND">Quantity</Label>
                                         <Input
@@ -253,9 +277,130 @@ export default function CreateService() {
                                         />
                                         {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                                     </div>
+                                    <div className="flex flex-col lg:w-[49%] justify-between gap-1 md:flex-row lg:flex-row">
+                                        <div className="flex-1 ">
+                                            <Label htmlFor="SALE_RATE">Sales Price</Label>
+                                            <Input
+                                                name="SALE_RATE"
+                                                id="SALE_RATE"
+                                                type="text"
+                                                placeholder="Type sales price"
+                                                onChange={handleChange}
+                                                value={productFormData.SALE_RATE}
+                                                required
+                                            />
+                                            {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <Label>Time Period</Label>
+                                            <Popover
+                                                open={opened}
+                                                onOpenChange={setOpened}
+                                            >
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={open}
+                                                        className="w-full justify-between"
+                                                        disabled={!productFormData.SALE_RATE}
+                                                    >
+                                                        {productFormData.timeperiod ? timeperiod.find((period) => period === productFormData.timeperiod) : "Select..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-full p-0">
+                                                    <Command>
+                                                        <CommandInput
+                                                            placeholder="Search period..."
+                                                            className="h-9"
+                                                        />
+                                                        <CommandList>
+                                                            <CommandEmpty>No timeperiod found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {timeperiod.map((type) => (
+                                                                    <CommandItem
+                                                                        key={type}
+                                                                        value={type}
+                                                                        onSelect={(currentValue) => {
+                                                                            setProductFormData((prev) => ({
+                                                                                ...prev,
+                                                                                timeperiod: currentValue,
+                                                                            }));
+                                                                            setOpened(false);
+                                                                        }}
+                                                                    >
+                                                                        {type}
+                                                                        <Check className={`ml-auto h-4 w-4 ${productFormData.timeperiod === type ? "opacity-100" : "opacity-0"}`} />
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                            {error.timeperiod && <p className="text-sm text-red-500">{error.timeperiod}</p>}
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div className="flex flex-col gap-4 lg:flex-row">
+                                    <div className="flex-1">
+                                        <Label>UOM</Label>
+                                        <Popover
+                                            open={openUom}
+                                            onOpenChange={setOpenUom}
+                                        >
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={openUom}
+                                                    className="w-full justify-between"
+                                                >
+                                                    {productFormData.UOM_STOCK ? uom.find((type) => type.value === productFormData.UOM_STOCK)?.label : "Select UOM..."}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-full p-0">
+                                                <Command>
+                                                    <CommandInput
+                                                        placeholder="Search UOM..."
+                                                        className="h-9"
+                                                    />
+                                                    <CommandList>
+                                                        <CommandEmpty>No UOM found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {uom.map((type) => (
+                                                                <CommandItem
+                                                                    key={type.value}
+                                                                    value={type.value}
+                                                                    onSelect={(currentValue) => {
+                                                                        setProductFormData((prev) => ({
+                                                                            ...prev,
+                                                                            UOM_STOCK: currentValue,
+                                                                        }));
+                                                                        setOpenUom(false);
+                                                                    }}
+                                                                >
+                                                                    {type.label}
+                                                                    <Check className={`ml-auto h-4 w-4 ${productFormData.UOM_STOCK === type.value ? "opacity-100" : "opacity-0"}`} />
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                        {error.UOM_STOCK && <p className="text-sm text-red-500">{error.UOM_STOCK}</p>}
+                                    </div>
                                     <div className="flex-1">
                                         <Label>Category</Label>
-                                        <Popover open={open} onOpenChange={setOpen}>
+                                        <Popover
+                                            open={open}
+                                            onOpenChange={setOpen}
+                                        >
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -263,15 +408,16 @@ export default function CreateService() {
                                                     aria-expanded={open}
                                                     className="w-full justify-between"
                                                 >
-                                                    {productFormData.GROUP_LEVEL1
-                                                        ? itemType.find((type) => type === productFormData.GROUP_LEVEL1)
-                                                        : "Select category..."}
+                                                    {productFormData.GROUP_LEVEL1 ? itemType.find((type) => type === productFormData.GROUP_LEVEL1) : "Select category..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-full p-0">
                                                 <Command>
-                                                    <CommandInput placeholder="Search category..." className="h-9" />
+                                                    <CommandInput
+                                                        placeholder="Search category..."
+                                                        className="h-9"
+                                                    />
                                                     <CommandList>
                                                         <CommandEmpty>No category found.</CommandEmpty>
                                                         <CommandGroup>
@@ -305,17 +451,77 @@ export default function CreateService() {
                                     <Textarea
                                         name="REMARKS"
                                         id="REMARKS"
-                                        placeholder="Enter item features"
+                                        placeholder="Enter Remarks"
                                         onChange={handleChange}
                                         value={productFormData.REMARKS}
                                     />
                                     {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
                                 </div>
 
+                                <div>
+                                    <Label htmlFor="features">Features</Label>
+                                    <div className="flex gap-1 lg:w-1/2">
+                                        <Input
+                                            name="features"
+                                            id="features"
+                                            placeholder="Enter item features"
+                                            value={featureInput}
+                                            onChange={(e) => setFeatureInput(e.target.value)}
+                                            className="mb-2 flex-1"
+                                        />
+                                        <Button
+                                            type="button"
+                                            className="h-fit w-fit"
+                                            onClick={() => {
+                                                const trimmed = featureInput.trim();
+                                                if (trimmed !== "") {
+                                                    const updatedFeatures = [...(productFormData.features || []), trimmed];
+                                                    setProductFormData((prev) => ({
+                                                        ...prev,
+                                                        features: updatedFeatures,
+                                                    }));
+                                                    setFeatureInput("");
+                                                }
+                                            }}
+                                        >
+                                            Add <PlusIcon className="ml-1 h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    {error.features && <p className="text-sm text-red-500">{error.features}</p>}
+                                    {/* Display features as removable chips */}
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {(productFormData.features || []).map((feature, index) => (
+                                            <div
+                                                key={index}
+                                                className="bg-gray-600 flex items-center gap-1 rounded-full  px-3 py-1 text-sm "
+                                            >
+                                                {feature}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updated = productFormData.features.filter((_, i) => i !== index);
+                                                        setProductFormData((prev) => ({
+                                                            ...prev,
+                                                            features: updated,
+                                                        }));
+                                                    }}
+                                                    className="ml-1 text-red-500 hover:text-red-700"
+                                                >
+                                                    <XIcon className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                </div>
+
                                 <div className="flex justify-center pt-5">
                                     <Button disabled={loading}>
                                         {loading ? (
-                                            <BeatLoader color="#000" size={8} />
+                                            <BeatLoader
+                                                color="#000"
+                                                size={8}
+                                            />
                                         ) : productFormData.ITEM_CODE === "(NEW)" ? (
                                             "Save Service"
                                         ) : (
