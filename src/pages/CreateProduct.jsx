@@ -2,6 +2,14 @@ import AddSubProduct from "@/components/AddSubProduct";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -9,29 +17,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelService, saveDataService } from "@/services/dataModelService";
+import { cn } from "@/lib/utils";
+import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
-import { cn } from "@/lib/utils"
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
 export default function CreateProduct() {
   const { id: itemCodeParams } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState({});
+  const [commandInputValue, setCommandInputValue] = useState("");
   const fileInput = useRef(null);
-  const [open, setOpen] = useState(false);
+  const [categoryData, setCategoryData] = useState([]);
+  const [openCategoryData, setOpenCategoryData] = useState(false)
 
   const initialProductFormData = {
     COMPANY_CODE: "1",
@@ -54,7 +56,39 @@ export default function CreateProduct() {
     img: "",
   };
   const [productFormData, setProductFormData] = useState(initialProductFormData);
-  const itemType = ["Electronics", "Apparel", "Furniture", "Grocery", "Books", "Toys", "Beauty", "Stationery"];
+
+  useEffect(() => {
+    if (itemCodeParams) {
+      fetchProductMaterialData();
+    }
+    fetchCategoryUsingQuery();
+  }, [itemCodeParams]);
+
+  const fetchCategoryUsingQuery = async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        SQLQuery: "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
+      };
+      const data = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      console.log(data);
+
+      setCategoryData(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateInput = () => {
     const newError = {};
     if (!productFormData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
@@ -72,11 +106,7 @@ export default function CreateProduct() {
     }
     return newError;
   };
-  useEffect(() => {
-    if (itemCodeParams) {
-      fetchProductMaterialData();
-    }
-  }, [itemCodeParams]);
+
   const fetchProductMaterialData = async () => {
     setLoading(true);
     setError({});
@@ -101,6 +131,7 @@ export default function CreateProduct() {
       setLoading(false);
     }
   };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProductFormData((prev) => ({
@@ -112,6 +143,7 @@ export default function CreateProduct() {
       [name]: "",
     }));
   };
+
   const handleProductImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -120,6 +152,7 @@ export default function CreateProduct() {
       setError((prev) => ({ ...prev, img: "" }));
     }
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     debugger;
@@ -160,6 +193,7 @@ export default function CreateProduct() {
       setLoading(false);
     }
   };
+
   return (
     <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-12">
       <div className="col-span-1 h-full w-full lg:col-span-7">
@@ -293,11 +327,7 @@ export default function CreateProduct() {
                     </div>
                     <div className="w-full">
                       <Label>Category</Label>
-
-                      <Popover
-                        open={open}
-                        onOpenChange={setOpen}
-                      >
+                      <Popover open={openCategoryData} onOpenChange={setOpenCategoryData}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -305,33 +335,71 @@ export default function CreateProduct() {
                             aria-expanded={open}
                             className="w-[200px] justify-between"
                           >
-                            {productFormData.GROUP_LEVEL1 ? itemType.find((type) => type === productFormData.GROUP_LEVEL1) : "Select category..."}
+                            {productFormData.GROUP_LEVEL1
+                              ? categoryData.find(item => item.GROUP_LEVEL1 === productFormData.GROUP_LEVEL1)?.GROUP_LEVEL1
+                              : "Select category..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[200px] p-0">
                           <Command>
+                            {/* Capture command input value */}
                             <CommandInput
                               placeholder="Search category..."
                               className="h-9"
+                              onValueChange={(value) => setCommandInputValue(value)}
                             />
                             <CommandList>
-                              <CommandEmpty>No category found.</CommandEmpty>
+                              <CommandEmpty>
+                                <div className="flex items-center justify-between">
+                                  <span>No category found.</span>
+                                  {commandInputValue && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        const newValue = commandInputValue.trim();
+                                        if (newValue) {
+                                          setCategoryData(prev => [
+                                            ...prev,
+                                            { GROUP_LEVEL1: newValue },
+                                          ]);
+                                          setProductFormData(prev => ({
+                                            ...prev,
+                                            GROUP_LEVEL1: newValue,
+                                          }));
+                                          setOpenCategoryData(false);
+                                          setError(prev => ({
+                                            ...prev,
+                                            GROUP_LEVEL1: "",
+                                          }));
+                                        }
+                                      }}
+                                    >
+                                      Add “{commandInputValue}”
+                                    </Button>
+                                  )}
+                                </div>
+                              </CommandEmpty>
                               <CommandGroup>
-                                {itemType.map((type) => (
+                                {categoryData.map((item, index) => (
                                   <CommandItem
-                                    key={type}
-                                    value={type}
+                                    key={index}
+                                    value={item.GROUP_LEVEL1}
                                     onSelect={(currentValue) => {
-                                      setProductFormData((prev) => ({
+                                      setProductFormData(prev => ({
                                         ...prev,
                                         GROUP_LEVEL1: currentValue,
                                       }));
-                                      setOpen(false);
+                                      setOpenCategoryData(false);
                                     }}
                                   >
-                                    {type}
-                                    <Check className={cn("ml-auto h-4 w-4", productFormData.GROUP_LEVEL1 === type ? "opacity-100" : "opacity-0")} />
+                                    {item.GROUP_LEVEL1}
+                                    <Check
+                                      className={cn(
+                                        "ml-auto h-4 w-4",
+                                        productFormData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
                                   </CommandItem>
                                 ))}
                               </CommandGroup>

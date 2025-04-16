@@ -5,26 +5,26 @@ import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
 import CategoryDetailsPage from "./pages/CategoryDetailsPage";
 import CategoryPage from "./pages/CategoryPage";
+import CategoryPageTrash from "./pages/CategoryPageTrash";
 import CreateProduct from "./pages/CreateProduct";
 import CreateService from "./pages/CreateService";
+import CustomerCreation from "./pages/CustomerCreation";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
+import CustomerMaster from "./pages/CustomerMaster";
 import DashboardPage from "./pages/DashboardPage";
 import ForgetPassword from "./pages/ForgetPassword";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderCreationPage from "./pages/OrderCreationPage";
+import OrderList from "./pages/OrderList";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
+import ProductList from "./pages/ProductList";
+import ServiceList from "./pages/ServiceList";
 import ServicePricingPage from "./pages/ServicePricingPage";
 import SignUpPage from "./pages/SignUpPage";
 import UserManagement from "./pages/UserManagement";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import CustomerCreation from "./pages/CustomerCreation";
-import CustomerMaster from "./pages/CustomerMaster";
-import ProductList from "./pages/ProductList";
-import OrderList from "./pages/OrderList";
-import ServiceList from "./pages/ServiceList";
-import CategoryPageTrash from "./pages/CategoryPageTrash";
 
 const App = () => {
   const router = createBrowserRouter([

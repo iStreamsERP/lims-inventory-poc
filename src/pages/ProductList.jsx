@@ -63,8 +63,6 @@ const ProductList = () => {
       }
       const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
       setproductTableList(data);
-      console.log(data);
-
     } catch (error) {
       setError(error?.message);
 
@@ -73,7 +71,7 @@ const ProductList = () => {
     }
   }
 
-  const handleDeleteProduct = async (user) => {
+  const handleDelete = async (product) => {
     const confirm = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
     if (!confirm) return alert("datas not be deleted deleted");
 
@@ -81,10 +79,10 @@ const ProductList = () => {
       const deleteProductPayload = {
         UserName: userData.currentUserLogin,
         DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${user.ITEM_CODE}'`,
+        WhereCondition: `ITEM_CODE = '${product.ITEM_CODE}'`,
       };
 
-      const deleteUserResponse = await deleteDataModelService(
+      const deleteProductResponse = await deleteDataModelService(
         deleteProductPayload,
         userData.currentUserLogin,
         userData.clientURL
@@ -92,11 +90,11 @@ const ProductList = () => {
 
       toast({
         variant: "destructive",
-        title: deleteUserResponse,
+        title: deleteProductResponse,
       })
       fetchAllProductsData();
     } catch (error) {
-      console.error("Error deleting user:", error);
+      console.error("Error deleting product:", error);
 
       toast({
         variant: "destructive",
@@ -154,6 +152,13 @@ const ProductList = () => {
       ),
     },
     {
+      accessorKey: "GROUP_LEVEL1",
+      header: "Cateogry",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("GROUP_LEVEL1") || "-"}</div>
+      ),
+    },
+    {
       accessorKey: "ITEM_GROUP",
       header: "Type",
       cell: ({ row }) => (
@@ -205,7 +210,7 @@ const ProductList = () => {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate(`/products-list/create-product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteProduct(product)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(product)}> <Trash2 /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )

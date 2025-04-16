@@ -35,8 +35,9 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
 
+
 const ServiceList = () => {
-  const [serviceTableData, setServiceTableData] = useState([]);
+  const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([])
@@ -55,14 +56,13 @@ const ServiceList = () => {
     setLoading(true);
     setError(null);
     try {
-      const allServiceDataPayload = {
+      const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
-        Orderby: ""
+        Orderby: "ITEM_CODE DESC"
       }
-
-      const data = await getDataModelService(allServiceDataPayload, userData.currentUserLogin, userData.clientURL)
-      setServiceTableData(data);
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL)
+      setTableData(response);
     } catch (error) {
       setError(error?.message);
 
@@ -71,26 +71,26 @@ const ServiceList = () => {
     }
   }
 
-  const handleDelete = async (user) => {
+  const handleDelete = async (service) => {
     const confirm = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
     if (!confirm) return alert("data's not be deleted deleted");
 
     try {
-      const deleteServicePayload = {
+      const payload = {
         UserName: userData.currentUserLogin,
         DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${user.ITEM_CODE}'`,
+        WhereCondition: `ITEM_CODE = '${service.ITEM_CODE}'`,
       };
 
-      const deleteServiceResponse = await deleteDataModelService(
-        deleteServicePayload,
+      const response = await deleteDataModelService(
+        payload,
         userData.currentUserLogin,
         userData.clientURL
       );
 
       toast({
         variant: "destructive",
-        title: deleteServiceResponse,
+        title: response,
       })
 
       fetchAllServicesData();
@@ -215,7 +215,7 @@ const ServiceList = () => {
   };
 
   const table = useReactTable({
-    data: serviceTableData,
+    data: tableData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -274,7 +274,7 @@ const ServiceList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => navigate("/services-list/create-service/")}>Create Service</Button>
+            <Button onClick={() => navigate("/services-list/create-service")}>Create Service</Button>
 
           </div>
         </div>

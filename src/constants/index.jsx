@@ -40,11 +40,6 @@ export const navbarLinks = [
     title: "Lists",
     links: [
       {
-        label: "User Management",
-        icon: Users,
-        path: "/user-management",
-      },
-      {
         label: "Product List",
         icon: ShoppingBag,
         path: "/products-list",
@@ -68,6 +63,16 @@ export const navbarLinks = [
         label: "Enquiry",
         icon: UserCheck,
         path: "/enquiry-form",
+      },
+      {
+        label: "User Management",
+        icon: Users,
+        path: "/user-management",
+      },
+      {
+        label: "User Preferences",
+        icon: Users,
+        path: "/user-preferences",
       },
     ],
   },
