@@ -12,7 +12,7 @@ const CategoryListPage = () => {
 	const [categories, setCategories] = useState([]);
 	const [categoryCountMap, setCategoryCountMap] = useState({});
 	const [loading, setLoading] = useState(true);
-
+	
 	useEffect(() => {
 		const fetchData = async () => {
 			setLoading(true);

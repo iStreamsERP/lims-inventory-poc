@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getDataModelService } from "@/services/dataModelService";
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { BarLoader } from "react-spinners";
@@ -13,13 +14,14 @@ export default function ProductCardListPage() {
   const [loading, setLoading] = useState(false);
   const [productList, setProductList] = useState([]);
 
+
   useEffect(() => {
     fetchProductList();
   }, [id]);
 
   const fetchProductList = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: `GROUP_LEVEL1 = '${id}' AND COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT'`,
@@ -31,7 +33,17 @@ export default function ProductCardListPage() {
         userData.currentUserLogin,
         userData.clientURL
       );
-      setProductList(response);
+
+      const updatedList = await Promise.all(
+        response.map(async (item) => {
+          const imageBlob = await fetchProductImage(item.ITEM_CODE);
+          const imageUrl = URL.createObjectURL(imageBlob);
+          return { ...item, imageUrl };
+        })
+      );
+
+      setProductList(updatedList);
+
     } catch (error) {
       toast({
         variant: "destructive",
@@ -41,6 +53,24 @@ export default function ProductCardListPage() {
       setLoading(false);
     }
   };
+
+  const fetchProductImage = async (itemCode) => {
+    try {
+      const response = await axios.get(
+        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${itemCode}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching image for ${itemCode}`, error);
+      return null; // Handle missing images gracefully
+    }
+  };
+
+  console.log(productList[0]);
+
 
   return loading ? (
     <BarLoader color="#36d399" height={2} width="100%" />

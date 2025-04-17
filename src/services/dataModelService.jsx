@@ -83,8 +83,6 @@ export const saveDataService = async (
     soapBody
   );
 
-  console.log(soapResponse);
-  
   const parsedResponse = parseDataModelResponse(
     soapResponse,
     "DataModel_SaveData"

@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -32,13 +33,12 @@ export default function ProductFormPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState({});
   const [commandInputValue, setCommandInputValue] = useState("");
-  const fileInput = useRef(null);
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false)
 
   const initialFormData = {
-    COMPANY_CODE: "1",
-    BRANCH_CODE: "1",
+    COMPANY_CODE: 1,
+    BRANCH_CODE: 1,
     ITEM_CODE: "(NEW)",
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
@@ -54,20 +54,39 @@ export default function ProductFormPage() {
     SALE_MARGIN_PTG: "",
     QTY_IN_HAND: "",
     REMARKS: "",
-    img: "",
+    image_file: null,
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (id) {
-      fetchProductMaterialData();
+      fetchProductData();
+      fetchProductImage();
     }
     fetchCategoryUsingQuery();
   }, [id]);
 
+  const validateInput = () => {
+    const newError = {};
+    if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
+    if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
+    else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
+    if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
+    else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
+    if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
+    else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
+    if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
+    if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
+    if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
+    if (!formData.image_file) {
+      newError.image_file = "Image is required.";
+    }
+    return newError;
+  };
+
   const fetchCategoryUsingQuery = async () => {
-    setLoading(true);
     try {
       const payload = {
         SQLQuery: "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
@@ -83,72 +102,158 @@ export default function ProductFormPage() {
         variant: "destructive",
         title: `Error fetching client: ${error.message}`,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const validateInput = () => {
-    const newError = {};
-    if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-    if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
-    else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
-    if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
-    else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
-    if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
-    else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
-    if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
-    if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-    if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
-    if (!formData.img) {
-      newError.img = "Image is required.";
-    }
-    return newError;
-  };
-
-  const fetchProductMaterialData = async () => {
-    setLoading(true);
-    setError({});
+  const fetchProductData = async () => {
     try {
-      const ProductDataPayload = {
+      const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: `ITEM_CODE = '${id}'`,
         Orderby: "",
       };
-      const data = await getDataModelService(ProductDataPayload, userData.currentUserLogin, userData.clientURL);
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
       setFormData((prev) => ({
         ...prev,
-        ...(data?.[0] || {}),
+        ...(response?.[0] || {}),
       }));
     } catch (error) {
-      setError({ fetch: error.message });
       toast({
         variant: "destructive",
         title: `Error fetching client: ${error.message}`,
       });
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchProductImage = async () => {
+    try {
+      const response = await axios.get(
+        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${id}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = response.data;
+
+      const mimeType = blob.type;
+      const extension = mimeType.split("/")[1] || "png";
+      const filename = `PRODUCT_IMAGE_${id}.${extension}`;
+
+      const file = new File([blob], filename, { type: mimeType });
+
+      setFormData((prev) => ({
+        ...prev,
+        image_file: file,
+      }));
+
+      // Optional: Preview the image
+      const imagePreviewUrl = URL.createObjectURL(file);
+      setPreviewUrl(imagePreviewUrl);
+
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching product image: ${error.message}`,
+      });
     }
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
+    const { name, type, value, files } = e.target;
+    if (type === "file") {
+      const file = files[0] || null;
+      setFormData((prev) => ({ ...prev, [name]: file }));
+      setError((prev) => ({ ...prev, [name]: "" }));
+
+      // generate preview URL
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl(null);
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      setError((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
-  const handleProductImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, img: imageUrl }));
-      setError((prev) => ({ ...prev, img: "" }));
+
+  const handleImage = async (newItemCode) => {
+
+    setLoading(true);
+
+    const file = formData.image_file;
+
+    try {
+      if (id) {
+        const payload = new FormData();
+        payload.append("file", file);
+        payload.append("email", userData.currentUserLogin);
+        payload.append("fileName", `PRODUCT_IMAGE_DMO000014`);
+
+        const response = await axios.put(
+          `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.currentUserLogin}&fileName=PRODUCT_IMAGE_${newItemCode}`,
+          payload,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          toast({
+            title: "Product saved and image updated!",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: `image update failed with status: ${response.status}`,
+          });
+        }
+
+      } else if (newItemCode) {
+        const payload = new FormData();
+        payload.append("file", file);
+        payload.append("email", userData.currentUserLogin);
+        payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
+
+        const response = await axios.post(
+          "https://cloud.istreams-erp.com:4499/api/MaterialImage/upload",
+          payload,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          toast({
+            title: "Product saved and image uploaded!",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: `image upload failed with status: ${response.status}`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Image upload error:", error);
+
+      toast({
+        variant: "destructive",
+        title: "Error saving image.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,13 +268,17 @@ export default function ProductFormPage() {
     try {
       setLoading(true);
       const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", formData);
+
       const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
       };
+
       const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
+
+      handleImage(newItemCode);
 
       if (newItemCode !== "(NEW)") {
         setFormData((prev) => ({
@@ -227,6 +336,7 @@ export default function ProductFormPage() {
                         />
                         {error.ITEM_CODE && <p className="text-xs text-red-500">{error.ITEM_CODE}</p>}
                       </div>
+
                       <div className="w-full">
                         <Label htmlFor="itemname">Item Name</Label>
                         <Input
@@ -240,6 +350,7 @@ export default function ProductFormPage() {
                         />
                         {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
                       </div>
+
                       <div className="w-full">
                         <Label htmlFor="SUPPLIER_NAME">Supplier Ref</Label>
                         <Input
@@ -253,6 +364,7 @@ export default function ProductFormPage() {
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                       </div>
+
                       <div className="w-full">
                         <Label htmlFor="SALE_RATE">Sales Price</Label>
                         <Input
@@ -269,29 +381,29 @@ export default function ProductFormPage() {
                     </div>
                     <div className="w-full">
                       <div className="mt-8 w-full text-left">
-                        <div
+                        <label
+                          htmlFor="image_file"
                           className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
-                          onClick={() => fileInput.current?.click()}
                         >
-                          {formData.img ? (
+                          {formData.image_file ? (
                             <img
-                              src={formData.img}
+                              src={previewUrl}
                               alt="Product preview"
                               className="h-full w-full object-cover"
                             />
                           ) : (
                             <div className="text-center text-xs text-gray-500 dark:text-gray-400">Click to Upload</div>
                           )}
-                        </div>
+                        </label>
                         <input
-                          name="productImage"
+                          id="image_file"
+                          name="image_file"
                           type="file"
                           accept="image/*"
-                          ref={fileInput}
-                          onChange={handleProductImageUpload}
+                          onChange={handleChange}
                           className="hidden"
                         />
-                        {error.img && <p className="text-xs text-red-500">{error.img}</p>}
+                        {error.image_file && <p className="text-xs text-red-500">{error.image_file}</p>}
                       </div>
                     </div>
                   </div>
@@ -323,6 +435,7 @@ export default function ProductFormPage() {
                       />
                       {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                     </div>
+
                     <div className="w-full">
                       <Label>Category</Label>
                       <Popover open={openCategoryData} onOpenChange={setOpenCategoryData}>
@@ -408,6 +521,7 @@ export default function ProductFormPage() {
                       {error.GROUP_LEVEL1 && <p className="text-sm text-red-500">{error.GROUP_LEVEL1}</p>}
                     </div>
                   </div>
+
                   <div className="w-full">
                     <Label htmlFor="REMARKS">Remarks</Label>
                     <Textarea
@@ -636,7 +750,7 @@ export default function ProductFormPage() {
                 </CardHeader>
                 <CardContent className="flex justify-center space-y-2">
                   <div>
-                    <Button disabled={loading}>
+                    <Button disabled={loading} type="submit">
                       {loading ? (
                         <BeatLoader
                           color="#000"
