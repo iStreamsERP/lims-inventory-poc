@@ -30,11 +30,6 @@ export const navbarLinks = [
         path: "/categories",
       },
       {
-        label: "Category (Demo)",
-        icon: Package,
-        path: "/category-trash",
-      },
-      {
         label: "Service Category",
         icon: NotepadText,
         path: "/service-price-page",

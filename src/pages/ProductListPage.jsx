@@ -34,6 +34,7 @@ import { deleteDataModelService, getDataModelService } from "@/services/dataMode
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
+import axios from "axios"
 
 const ProductListPage = () => {
   const [productTableList, setproductTableList] = useState([]);
@@ -70,10 +71,45 @@ const ProductListPage = () => {
     }
   }
 
+  const handleImageDelete = async (newItemCode) => {
+    setLoading(true);
+
+    try {
+      const email = encodeURIComponent(userData.currentUserLogin);
+      const fileName = encodeURIComponent(`PRODUCT_IMAGE_${newItemCode}`);
+      const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+
+      const response = await axios.delete(url);
+
+      if (response.status === 200) {
+        toast({
+          title: response.data.message,
+        });
+      } else {
+        s
+        toast({
+          variant: "destructive",
+          title: `Image delete failed with status: ${response.status}`,
+        });
+      }
+
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting image.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleDelete = async (product) => {
-    const confirm = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
-    if (!confirm) return alert("datas not be deleted deleted");
+    window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
 
     try {
       const deleteProductPayload = {
@@ -92,6 +128,9 @@ const ProductListPage = () => {
         variant: "destructive",
         title: deleteProductResponse,
       })
+
+      await handleImageDelete(product.ITEM_CODE);
+
       fetchAllProductsData();
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -180,11 +219,6 @@ const ProductListPage = () => {
         )
       },
       cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
-    },
-    {
-      accessorKey: "SUPPLIER_NAME",
-      header: () => <div>SupplierRef</div>,
-      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
     },
     {
       accessorKey: "QTY_IN_HAND",

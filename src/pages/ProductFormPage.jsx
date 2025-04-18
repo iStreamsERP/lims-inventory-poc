@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { capitalizeFirstLetter } from "@/utils/stringUtils";
 import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -179,9 +180,7 @@ export default function ProductFormPage() {
     }
   };
 
-
   const handleImage = async (newItemCode) => {
-
     setLoading(true);
 
     const file = formData.image_file;
@@ -468,7 +467,7 @@ export default function ProductFormPage() {
                                     <Button
                                       size="sm"
                                       onClick={() => {
-                                        const newValue = commandInputValue.trim();
+                                        const newValue = capitalizeFirstLetter(commandInputValue.trim());
                                         if (newValue) {
                                           setCategoryData(prev => [
                                             ...prev,

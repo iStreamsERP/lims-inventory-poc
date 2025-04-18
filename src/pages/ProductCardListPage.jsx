@@ -69,9 +69,6 @@ export default function ProductCardListPage() {
     }
   };
 
-  console.log(productList[0]);
-
-
   return loading ? (
     <BarLoader color="#36d399" height={2} width="100%" />
   ) : (
@@ -81,8 +78,8 @@ export default function ProductCardListPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {productList.map((product, index) => (
             <Link key={product.id || index} to={`/product-detail/${product.ITEM_CODE}`}>
-              <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                <div className="relative flex items-center justify-center bg-slate-700 h-36">
+              <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">
+                <div className="relative flex items-center justify-center bg-neutral-300 h-36">
                   {product?.imageUrl ? (
                     <img
                       src={product.imageUrl}
@@ -94,7 +91,7 @@ export default function ProductCardListPage() {
                         e.target.style.backgroundColor = "black";
                         e.target.style.display = "none";
                       }}
-                      className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   ) : (
                     <span className="text-sm text-white">No Image</span>
@@ -105,7 +102,7 @@ export default function ProductCardListPage() {
                     +1 other colour/pattern
                   </p>
                   <div className="flex flex-col h-full justify-between">
-                    <h2 className="mb-2 line-clamp-2 text-sm leading-snug">
+                    <h2 className="mb-2 line-clamp-2 text-sm leading-snug group-hover:underline">
                       {product.ITEM_NAME}
                     </h2>
                     <span className="text-lg font-semibold">

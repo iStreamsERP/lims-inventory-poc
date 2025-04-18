@@ -4,8 +4,6 @@ import EnquiryForm from "./components/form/EnquiryForm";
 import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
 import CategoryListPage from "./pages/CategoryListPage";
-import CategoryPageTrash from "./pages/CategoryPageTrash";
-import CreateServicePage from "./pages/ServiceFormPage";
 import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import CustomerFormPage from "./pages/CustomerFormPage";
 import CustomerListPage from "./pages/CustomerListPage";
@@ -13,13 +11,14 @@ import DashboardPage from "./pages/DashboardPage";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage";
 import LoginFormPage from "./pages/LoginFormPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import OrderCreationPage from "./pages/OrderFormPage";
+import OrderFormPage from "./pages/OrderFormPage";
 import OrderList from "./pages/OrderList";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
 import ProductCardListPage from "./pages/ProductCardListPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import ProductFormPage from "./pages/ProductFormPage";
 import ProductListPage from "./pages/ProductListPage";
+import ServiceFormPage from "./pages/ServiceFormPage";
 import ServiceListPage from "./pages/ServiceListPage";
 import ServicePricingPage from "./pages/ServicePricingPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -27,8 +26,6 @@ import UserManagement from "./pages/UserManagement";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import ServiceFormPage from "./pages/ServiceFormPage";
-import OrderFormPage from "./pages/OrderFormPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -59,7 +56,6 @@ const App = () => {
             { path: "/customer-dashboard/:id", element: <CustomerDashboardPage /> },
 
             { path: "categories", element: <CategoryListPage /> },
-            { path: "category-trash", element: <CategoryPageTrash /> },
             { path: "product-card-list/:id", element: <ProductCardListPage /> },
             { path: "product-detail/:id", element: <ProductDetailPage /> },
 

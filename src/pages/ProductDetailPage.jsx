@@ -15,19 +15,19 @@ const ProductDetailPage = () => {
     const { userData } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [productDetail, setProductDetail] = useState([]);
+    const [productList, setProductList] = useState([]);
 
     useEffect(() => {
-        fetchProductDetail();
-    }, []);
+        fetchProductList();
+    }, [id]);
 
-    const fetchProductDetail = async () => {
+    const fetchProductList = async () => {
+        setLoading(true);
         try {
-            setLoading(true);
             const payload = {
-                DataModelName: 'INVT_MATERIAL_MASTER',
-                WhereCondition: `ITEM_CODE = '${id}'`,
-                Orderby: '',
+                DataModelName: "INVT_MATERIAL_MASTER",
+                WhereCondition: `iTEM_CODE = 'DMO000004' AND COST_CODE = 'MXXXX'`,
+                Orderby: "",
             };
 
             const response = await getDataModelService(
@@ -35,25 +35,49 @@ const ProductDetailPage = () => {
                 userData.currentUserLogin,
                 userData.clientURL
             );
-            setProductDetail(response);
+
+            console.log(response);
+
+            const updatedList = await Promise.all(
+                response.map(async (item) => {
+                    const imageBlob = await fetchProductImage(item.ITEM_CODE);
+                    const imageUrl = URL.createObjectURL(imageBlob);
+                    return { ...item, imageUrl };
+                })
+            );
+
+            setProductList(updatedList);
+
         } catch (error) {
             toast({
-                variant: 'destructive',
-                title: `Error fetching product detail: ${error?.message}`,
+                variant: "destructive",
+                title: `Error fetching product list: ${error?.message || "An error occurred"}`,
             });
         } finally {
             setLoading(false);
         }
     };
 
-    console.log(productDetail);
-
+    const fetchProductImage = async (itemCode) => {
+        try {
+            const response = await axios.get(
+                `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${itemCode}`,
+                {
+                    responseType: "blob",
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching image for ${itemCode}`, error);
+            return null; // Handle missing images gracefully
+        }
+    };
 
     return loading ? (
         <BarLoader color="#36d399" height={2} width="100%" />
     ) : (
-        productDetail?.length > 0 ? (
-            productDetail.map((item, index) => (
+        productList?.length > 0 ? (
+            productList.map((item, index) => (
                 <div>
                     <Card className="lg:w-full md:w-fit sm:w-fit">
                         <CardContent className="p-0">
