@@ -79,7 +79,7 @@ export default function ProductCardListPage() {
           {productList.map((product, index) => (
             <Link key={product.id || index} to={`/product-detail/${product.ITEM_CODE}`}>
               <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">
-                <div className="relative flex items-center justify-center bg-neutral-300 h-36">
+                <div className="relative flex items-center justify-center bg-neutral-300 dark:bg-gray-800 h-36 overflow-hidden">
                   {product?.imageUrl ? (
                     <img
                       src={product.imageUrl}

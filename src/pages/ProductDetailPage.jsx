@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getDataModelService } from '@/services/dataModelService';
+import axios from 'axios';
 import { InfoIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -36,8 +37,6 @@ const ProductDetailPage = () => {
                 userData.clientURL
             );
 
-            console.log(response);
-
             const updatedList = await Promise.all(
                 response.map(async (item) => {
                     const imageBlob = await fetchProductImage(item.ITEM_CODE);
@@ -45,6 +44,7 @@ const ProductDetailPage = () => {
                     return { ...item, imageUrl };
                 })
             );
+            console.log(updatedList);
 
             setProductList(updatedList);
 
@@ -78,20 +78,20 @@ const ProductDetailPage = () => {
     ) : (
         productList?.length > 0 ? (
             productList.map((item, index) => (
-                <div>
+                <div key={index}>
                     <Card className="lg:w-full md:w-fit sm:w-fit">
                         <CardContent className="p-0">
                             <div key={index} className="flex md:flex-col flex-col  lg:flex-row gap-x-2">
-                                <div className="lg:w-80 md:w-full sm:w-full  w-full h-full">
+                                <div className="lg:w-80 md:w-full sm:w-full w-full h-full">
                                     <img
-                                        className="w-full  h-full lg:rounded-l-lg md:rounded-l-lg rounded-l-lg sm:rounded md:rounded-b-none sm:rounded-b-none  lg:rounded-r-none object-cover"
-                                        src="https://www.urbanofashion.com/cdn/shop/files/jeanloose-lblue-3.jpg?v=1708169302"
-                                        alt="image"
+                                        className="w-full h-full lg:rounded-l-lg md:rounded-l-lg rounded-l-lg sm:rounded md:rounded-b-none sm:rounded-b-none lg:rounded-r-none object-cover"
+                                        src={item.imageUrl}
+                                        alt={item.ITEM_NAME}
                                     />
                                 </div>
                                 <div className="lg:mt-0 mt-2  p-4">
-                                    <p className=" font-semibold">{item.ITEM_NAMe || "Jeans"}</p>
-                                    <p className="text-muted-foreground text-sm mb-2">{item.ITEM_BRAND || "Levis"} , <span className="text-muted-foreground text-sm">{item.ITEM_CATEGORY || "Fashion"}</span></p>
+                                    <p className=" font-semibold">{item.ITEM_NAME}</p>
+                                    <p className="text-muted-foreground text-sm mb-2">{item.ITEM_BRAND || "Brand not available"} , <span className="text-muted-foreground text-sm">{item.GROUP_LEVEL1 || "Fashion"}</span></p>
                                     <div className="mb-2 flex flex-row flex-wrap  gap-2">
                                         <Badge variant="outline" className={"w-fit"}>4.3 ★</Badge>
                                         <span className="text-muted-foreground text-sm">15,760 Ratings & 2,040 Reviews</span>

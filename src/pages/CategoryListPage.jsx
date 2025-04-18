@@ -89,10 +89,9 @@ const CategoryListPage = () => {
 			<h1 className="title">All Categories</h1>
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 				{categories.map((category, index) => (
-					<div className="group">
+					<div key={index} className="group overflow-hidden">
 						<div
-							key={index}
-							className="h-36 w-full rounded-lg bg-neutral-300"
+							className="h-36 w-full rounded-lg bg-neutral-300 dark:bg-gray-800 overflow-hidden"
 						>
 							<Link to={`/product-card-list/${category.GROUP_LEVEL1}`} className="relative">
 								{category.imageUrl ? (
@@ -106,7 +105,7 @@ const CategoryListPage = () => {
 											e.target.style.backgroundColor = "red";
 											e.target.style.display = "none";
 										}}
-										className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105 "
+										className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
 									/>
 								) : (
 									<span className="text-sm text-white">No Image</span>
