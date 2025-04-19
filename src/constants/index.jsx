@@ -60,9 +60,9 @@ export const navbarLinks = [
         path: "/enquiry-form",
       },
       {
-        label: "User Management",
+        label: "Users",
         icon: Users,
-        path: "/user-management",
+        path: "/users",
       },
       {
         label: "User Preferences",

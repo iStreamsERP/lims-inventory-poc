@@ -87,7 +87,6 @@ const ProductListPage = () => {
           title: response.data.message,
         });
       } else {
-        s
         toast({
           variant: "destructive",
           title: `Image delete failed with status: ${response.status}`,

@@ -410,7 +410,7 @@ export default function ProductFormPage() {
                           {formData.image_file ? (
                             <img
                               src={previewUrl}
-                              alt="Product preview"
+                              alt={formData.ITEM_NAME}
                               className="h-full w-full object-cover"
                             />
                           ) : (

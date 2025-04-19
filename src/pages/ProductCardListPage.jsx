@@ -102,7 +102,7 @@ export default function ProductCardListPage() {
                     +1 other colour/pattern
                   </p>
                   <div className="flex flex-col h-full justify-between">
-                    <h2 className="mb-2 line-clamp-2 text-sm leading-snug group-hover:underline">
+                    <h2 className="mb-2 line-clamp-2 text-sm leading-snug group-hover:underline truncate">
                       {product.ITEM_NAME}
                     </h2>
                     <span className="text-lg font-semibold">

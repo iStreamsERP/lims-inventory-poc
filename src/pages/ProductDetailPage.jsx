@@ -18,6 +18,14 @@ const ProductDetailPage = () => {
     const [loading, setLoading] = useState(false);
     const [productList, setProductList] = useState([]);
 
+    const colorMap = {
+        red: "bg-red-500 peer-checked:ring-red-500 dark:peer-checked:ring-red-400",
+        blue: "bg-blue-500 peer-checked:ring-blue-500 dark:peer-checked:ring-blue-400",
+        green: "bg-green-500 peer-checked:ring-green-500 dark:peer-checked:ring-green-400",
+        purple: "bg-purple-500 peer-checked:ring-purple-500 dark:peer-checked:ring-purple-400",
+        pink: "bg-pink-500 peer-checked:ring-pink-500 dark:peer-checked:ring-pink-400",
+    };
+
     useEffect(() => {
         fetchProductList();
     }, [id]);
@@ -79,60 +87,81 @@ const ProductDetailPage = () => {
 
     return loading ? (
         <BarLoader color="#36d399" height={2} width="100%" />
-    ) : (
-        productList?.length > 0 ? (
-            productList.map((item, index) => (
-                <div key={index}>
-                    <Card className="lg:w-full md:w-fit sm:w-fit">
-                        <CardContent className="p-0">
-                            <div key={index} className="flex md:flex-col flex-col  lg:flex-row gap-x-2">
-                                <div className="lg:rounded-l-lg lg:rounded-t-lg lg:rounded-b-lg md:rounded-l-lg rounded-l-lg sm:rounded-t-lg lg:rounded-b-none md:rounded-b-none sm:rounded-b-none bg-neutral-300 dark:bg-gray-800 overflow-hidden">
-                                    <img
-                                        className="w-72  flex items-center justify-center  h-full  object-cover"
-                                        src={item.imageUrl}
-                                        alt={item.ITEM_NAME}
-                                    />
-                                </div>
-                                <div className="lg:mt-0 mt-2  p-4">
-                                    <p className=" font-semibold">{item.ITEM_NAME}</p>
-                                    <p className="text-muted-foreground text-sm mb-2">{item.ITEM_BRAND || "Brand not available"} , <span className="text-muted-foreground text-sm">{item.GROUP_LEVEL1 || "Fashion"}</span></p>
-                                    <div className="mb-2 flex flex-row flex-wrap  gap-2">
-                                        <Badge variant="outline" className={"w-fit"}>4.3 ★</Badge>
-                                        <span className="text-muted-foreground text-sm">15,760 Ratings & 2,040 Reviews</span>
+    ) : productList?.length > 0 ? (
+        productList.map((item, index) => (
+            <div
+                key={index}
+                className="w-full"
+            >
+                <Card className="mx-auto w-full">
+                    <CardContent className="p-4 md:p-4">
+                        <div className="flex flex-col gap-6 md:flex-row">
+                            {/* Image Section */}
+                            <div className="h-[290px] w-full overflow-hidden rounded-lg bg-neutral-300 dark:bg-gray-800 sm:h-[390px] md:w-1/2">
+                                <img
+                                    className="h-full w-full object-contain"
+                                    src={item.imageUrl}
+                                    alt={item.ITEM_NAME}
+                                />
+                            </div>
+
+                            {/* Details Section */}
+                            <div className="flex w-full flex-col justify-between gap-4 md:w-1/2">
+                                <div>
+                                    <p className="text-xl font-semibold">{item.ITEM_NAME}</p>
+                                    <p className="text-muted-foreground mb-3 text-sm">
+                                        {item.ITEM_BRAND || "Brand not available"}, <span>{item.GROUP_LEVEL1 || "Fashion"}</span>
+                                    </p>
+
+                                    {/* Rating */}
+                                    <div className="mb-3 flex flex-wrap gap-2">
+                                        <Badge
+                                            variant="outline"
+                                            className="w-fit"
+                                        >
+                                            4.3 ★
+                                        </Badge>
                                     </div>
-                                    <div>
+
+                                    {/* Color Selection */}
+                                    <div className="mb-4">
                                         <Label className="text-sm font-medium">Select Color</Label>
-                                        <div className="flex items-center gap-6 mt-2 ms-1">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="color" value="red" className="sr-only peer" />
-                                                <span className="w-3 h-3 rounded-full  bg-red-500 peer-checked:ring-4 peer-checked:ring-red-500 ring-offset-1 ring-3 ring-transparent transition" />
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="color" value="blue" className="sr-only peer" />
-                                                <span className="w-3 h-3 rounded-full bg-blue-500 peer-checked:ring-4 peer-checked:ring-blue-500 ring-offset-1 ring-3 ring-transparent transition" />
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="color" value="green" className="sr-only peer" />
-                                                <span className="w-3 h-3 rounded-full bg-green-500 peer-checked:ring-4  peer-checked:ring-green-500 ring-offset-1 ring-3 ring-transparent transition" />
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="color" value="yellow" className="sr-only peer" />
-                                                <span className="w-3 h-3 rounded-full bg-yellow-400 peer-checked:ring-4 peer-checked:ring-yellow-400 ring-offset-1 ring-3 ring-transparent transition" />
-                                            </label>
+                                        <div className="mt-2 flex flex-wrap gap-3">
+                                            {Object.keys(colorMap).map((color) => (
+                                                <label
+                                                    key={color}
+                                                    className="flex cursor-pointer items-center gap-2"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="color"
+                                                        value={color}
+                                                        className="peer sr-only"
+                                                    />
+                                                    <span
+                                                        className={`h-6 w-6 rounded-full ring-2 ring-transparent ring-offset-1 transition dark:ring-offset-gray-800 ${colorMap[color]}`}
+                                                    />
+                                                </label>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className="mb-5 mt-2">
-                                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-200">Select Size</Label>
-                                        <div className="flex items-center gap-4 mt-3 ms-1">
+
+                                    {/* Size Selection */}
+                                    <div className="mb-4">
+                                        <Label className="text-sm font-medium">Select Size</Label>
+                                        <div className="mt-2 flex flex-wrap gap-3">
                                             {["S", "M", "L", "XL"].map((size) => (
-                                                <label key={size} className="cursor-pointer">
+                                                <label
+                                                    key={size}
+                                                    className="cursor-pointer"
+                                                >
                                                     <input
                                                         type="radio"
                                                         name="size"
                                                         value={size}
-                                                        className="sr-only peer"
+                                                        className="peer sr-only"
                                                     />
-                                                    <span className="w-4 h-4 p-3 flex items-center justify-center rounded-full border border-black dark:border-white peer-checked:ring-2 peer-checked:ring-black dark:peer-checked:bg-gray-500 peer-checked:bg-gray-200 dark:peer-checked:ring-white  ring-transparent transition text-xs font-semibold text-black dark:text-white">
+                                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
                                                         {size}
                                                     </span>
                                                 </label>
@@ -140,31 +169,38 @@ const ProductDetailPage = () => {
                                         </div>
                                     </div>
 
-                                    <div className="mt-2 text-sm font-semibold mb-2">Special price</div>
-                                    <div className="flex gap-3 rounded mb-12">
-                                        <div className="text-3xl  font-bold">
-                                            <span className="text-xl ">₹</span>
-                                            {item.SALE_RATE} <span className="text-sm font-semibold  line-through">₹{item.SALE_RATE * 2}</span>
-                                        </div>
-                                        <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-green-700">
-                                            <span>33% off </span>
-                                            <InfoIcon className="h-4 w-4 text-gray-500" />
+                                    {/* Pricing */}
+                                    <div className="mb-4">
+                                        <div className="text-sm font-semibold">Special price</div>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <div className="text-2xl font-bold">
+                                                ₹{item.SALE_RATE} <span className="text-sm font-semibold text-gray-400 line-through">₹{item.SALE_RATE * 2}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-xs font-semibold text-green-700">
+                                                33% off <InfoIcon className="h-4 w-4 text-gray-500" />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex w-full lg:mt-7 gap-2">
-                                        <Button variant="outline" className="w-1/2"> Add to Cart </Button>
-                                        <Button className="w-1/2"> Buy Now</Button>
-                                    </div>
+                                </div>
 
+                                {/* Action Buttons */}
+                                <div className="flex flex-col gap-3 sm:flex-row">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full sm:w-1/2"
+                                    >
+                                        Add to Cart
+                                    </Button>
+                                    <Button className="w-full sm:w-1/2">Buy Now</Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            ))
-        ) : (
-            <p className="text-center mt-4">No product details found.</p>
-        )
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        ))
+    ) : (
+        <p className="mt-4 text-center">No product details found.</p>
     );
 };
 

@@ -1,121 +1,97 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react';
+import { Check, CircleCheck } from "lucide-react";
 
-import { BellRing, Check, CircleCheck } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-
+import { Button } from "@/components/ui/button";
 import {
-
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Badge } from '@/components/ui/badge'
-
+} from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge';
+import { getDataModelService } from '@/services/dataModelService';
+import { useAuth } from '@/contexts/AuthContext';
+import { BarLoader } from 'react-spinners';
 
 const ServicePricingPage = () => {
-  return (
-    <div className='mx-auto w-full'>
+  const [serviceData, setServiceData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { userData } = useAuth();
 
+  useEffect(() => {
+    fetchAllServicesData();
+  }, []);
+
+  const fetchAllServicesData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
+        Orderby: ""
+      };
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+      setServiceData(response);
+      console.log("response", response[0]);
+    } catch (error) {
+      setError(error?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className='mx-auto w-full px-4'>
       <div className='w-full flex justify-center mt-4'>
         <h1 className='text-5xl text-center font-medium text-white-400 w-full'>
           Simple and Affordable <br /> Pricing Plans
         </h1>
       </div>
-      <div className='w-full h-full flex flex-col  justify-center lg:flex-row gap-3 mt-4'>
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="mb-3 text-sm text-gray-400 " >Free</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="mb-4 text-4xl font-semibold">$0,00<span className='text-sm  text-gray-400'>/month</span></div>
-            <div className=" text-gray-400 text-sm">Greate For Trying Out Finament And For Tiny Teams</div>
-            <div>
-              <Button
-                variant="secondary"
-                className="w-full text-xs font-normal">
-                Start For Free
-              </Button>
-            </div>
-            <div className="text-sm text-center  pt-2 text-gray-400">
-              Features
-            </div>
-            <div className="text-sm text-start  pt-2 text-gray-400">
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Account Aggregation</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Expense Tracking</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Budgeting Tools</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Transaction Insights</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Basic Security</div>
-            </div>
-          </CardContent>
+      {
+        loading ? (
+          <BarLoader color="#36d399" height={2} width="100%" className='mt-12' />
+        ) : (
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6'>
+            {serviceData.map((item, index) => (
+              <Card key={index} className="w-full">
+                <CardHeader>
+                  <CardTitle className=" mb-3 text-sm text-gray-400 ">
+                    <div>{item.ITEM_NAME}</div>
+                    <Badge className="mt-2">{item.GROUP_LEVEL1}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <div className="mb-4 text-4xl font-semibold">
+                    ₹{item.SALE_RATE}<span className='text-sm text-gray-400'>/{item.SALE_UOM || "null"}</span>
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    Great for trying out Finament and for small teams
+                  </div>
+                  <div>
+                    <Button className="w-full bg-gradient-to-tr from-violet-600 via-violet-600 to-indigo-600">
+                      Start For Free
+                    </Button>
+                  </div>
+                  <div className="text-sm text-center pt-2 text-gray-400">
+                    Features
+                  </div>
+                  <div className='text-sm font-normal text-muted-foreground'>
+                    <p className='flex items-center gap-1'>
+                      <CircleCheck size={18} className="text-violet-500" />
+                      Transaction Insights
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
+      }
 
-        </Card>
-
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="flex mb-3 text-sm text-gray-400 justify-between">
-              <div  >Professional</div>
-              <Badge variant="default">Most Popular</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="mb-4 text-4xl font-semibold">₹0,00<span className='text-sm  text-gray-400'>/month</span></div>
-            <div className=" text-gray-400 text-sm">Greate For Trying Out Finament And For Tiny Teams</div>
-            <div>
-              <Button
-                className="w-full bg-gradient-to-tr from-violet-600 via-violet-600 to-indigo-600">
-                Start For Free
-              </Button>
-            </div>
-            <div className="text-sm text-center  pt-2 text-gray-400">
-              Features
-            </div>
-            <div className='text-sm font-normal text-muted-foreground'>
-              <p className='flex items-center gap-1'>
-                <CircleCheck
-                  size={18}
-                  className="text-violet-500"
-                />
-                Transaction Insights
-              </p>
-            </div>
-          </CardContent>
-
-        </Card>
-
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="mb-3 text-sm text-gray-400 " >Free</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="mb-4 text-4xl font-semibold">$0,00<span className='text-sm  text-gray-400'>/month</span></div>
-            <div className=" text-gray-400 text-sm">Greate For Trying Out Finament And For Tiny Teams</div>
-            <div>
-              <Button
-                variant="secondary"
-                className="w-full text-xs font-normal">
-                Start For Free
-              </Button>
-            </div>
-            <div className="text-sm text-center  pt-2 text-gray-400">
-              Features
-            </div>
-            <div className="text-sm text-start  pt-2 text-gray-400">
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Account Aggregation</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Expense Tracking</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Budgeting Tools</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Transaction Insights</div>
-              <div className="flex items-center gap-2 mb-1"><Check size={16} className='rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white p-1 ' />Basic Security</div>
-            </div>
-          </CardContent>
-
-        </Card>
-      </div>
     </div>
-  )
-}
+  );
+};
 
-export default ServicePricingPage
+export default ServicePricingPage;

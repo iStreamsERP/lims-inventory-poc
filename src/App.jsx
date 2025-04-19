@@ -22,7 +22,7 @@ import ServiceFormPage from "./pages/ServiceFormPage";
 import ServiceListPage from "./pages/ServiceListPage";
 import ServicePricingPage from "./pages/ServicePricingPage";
 import SignUpPage from "./pages/SignUpPage";
-import UserManagement from "./pages/UserManagement";
+import UserListPage from "./pages/UserListPage";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -72,7 +72,10 @@ const App = () => {
             { path: "/new-order", element: <OrderFormPage /> },
 
             { path: "enquiry-form", element: <EnquiryForm /> },
-            { path: "user-management", element: <UserManagement /> },
+
+            { path: "users", element: <UserListPage /> },
+
+
             { path: "user-preferences", element: <UserPreferences /> },
             { path: "account-settings", element: <AccountSettings /> },
             { path: "cart-page", element: <CartPage /> },

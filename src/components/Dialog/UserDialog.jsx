@@ -15,7 +15,7 @@ import { Check, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BeatLoader } from "react-spinners";
 import { useToast } from "@/hooks/use-toast"
-
+import axios from "axios";
 
 // Validate the entire form on submission.
 const validateForm = (data) => {
@@ -92,9 +92,9 @@ const UserDialog = ({ user, open, onClose }) => {
     const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
     const [loading, setLoading] = useState({});
     const [errors, setErrors] = useState({});
-    const [image, setImage] = useState(null);
-    const fileInputRef = useRef(null);
-    const [userFormData, setUserFormData] = useState({
+    const [previewUrl, setPreviewUrl] = useState(null);
+
+    const intialFormData = {
         loginUserName: userData.currentUserName,
         newUserName: "",
         password: "",
@@ -107,7 +107,9 @@ const UserDialog = ({ user, open, onClose }) => {
         employeeImage: "",
         accountExpired: false,
         accountLocked: false,
-    });
+    }
+
+    const [formData, setFormData] = useState(intialFormData);
     const [isFocused, setIsFocused] = useState({
         newUserName: false,
         password: false,
@@ -124,7 +126,7 @@ const UserDialog = ({ user, open, onClose }) => {
     useEffect(() => {
         if (user) {
             const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
-            setUserFormData({
+            setFormData({
                 loginUserName: userData.currentUserName,
                 newUserName: user?.USER_NAME || "",
                 password: "",
@@ -138,44 +140,86 @@ const UserDialog = ({ user, open, onClose }) => {
                 accountExpired: user?.ACCOUNT_EXPIRED || false,
                 accountLocked: user?.ACCOUNT_LOCKED || false,
             });
+            fetchUserImage();
         } else {
-            setUserFormData({
-                loginUserName: userData.currentUserName,
-                newUserName: "",
-                password: "",
-                isAdminUser: false,
-                emailAddress: "",
-                mobileNumber: "",
-                fullName: "",
-                empNo: "",
-                domainName: DOMAIN_NAME,
-                employeeImage: "",
-                accountExpired: false,
-                accountLocked: false,
-            })
+            setFormData(intialFormData)
         }
     }, [user, open])
 
-    const handleChange = (eventOrValue, fieldName) => {
-        const { name, value, type, checked } = eventOrValue.target;
-        if (eventOrValue && eventOrValue.target) {
-            setUserFormData((prevData) => ({
-                ...prevData,
-                [name]: type === "checkbox" ? checked : value,
+    const fetchUserImage = async () => {
+
+        try {
+            const response = await axios.get(
+                `https://cloud.istreams-erp.com:4498/api/empImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=EMPLOYEE_IMAGE_${user.EMP_NO}`,
+                {
+                    responseType: "blob",
+                }
+            );
+
+            const blob = response.data;
+
+            const mimeType = blob.type;
+            const extension = mimeType.split("/")[1] || "png";
+            const filename = `EMPLOYEE_IMAGE_${user.EMP_NO}.${extension}`;
+
+            const file = new File([blob], filename, { type: mimeType });
+
+            setFormData((prev) => ({
+                ...prev,
+                employeeImage: file,
             }));
+
+            // Optional: Preview the image
+            const imagePreviewUrl = URL.createObjectURL(file);
+            setPreviewUrl(imagePreviewUrl);
+
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: `Error fetching user image: ${error.message}`,
+            });
+        }
+    };
+
+    const handleChange = async (eventOrValue, fieldName) => {
+        if (eventOrValue && eventOrValue.target) {
+            const { name, value, type, checked, files } = eventOrValue.target;
+
+            if (type === "file") {
+                const file = files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    setPreviewUrl(url);
+
+                    setFormData((prevData) => ({
+                        ...prevData,
+                        [name]: file,
+                    }));
+
+                    if (user) {
+                        await handleUpdatedImage(formData.empNo);
+                    }
+                } else {
+                    setPreviewUrl(null);
+                }
+            } else {
+                setFormData((prevData) => ({
+                    ...prevData,
+                    [name]: type === "checkbox" ? checked : value,
+                }));
+            }
+
+            if (user) {
+                setIsFocused((prev) => ({ ...prev, [name]: true }));
+            }
         } else {
-            // For custom components like Select or Checkbox with onCheckedChange.
-            setUserFormData((prevData) => ({
+            // For custom components (like Select or toggle switch)
+            setFormData((prevData) => ({
                 ...prevData,
                 [fieldName]: eventOrValue,
             }));
         }
-        if (user) {
-            setIsFocused((prev) => ({ ...prev, [name]: true }))
-        }
     };
-
-    // console.table(isFocused);
 
     const handleBlur = (e) => {
         const { name, value } = e.target;
@@ -211,57 +255,122 @@ const UserDialog = ({ user, open, onClose }) => {
         }
     }
 
+    const handleUploadImage = async (empNo) => {
+        setLoading(true);
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImage(URL.createObjectURL(file));
-            setUserFormData((prevData) => ({
-                ...prevData,
-                employeeImage: file.name,
-            }));
+        const file = formData.employeeImage;
+        const form = new FormData();
+        form.append("file", file);
+        form.append("email", userData.currentUserLogin);
+        form.append("fileName", `EMPLOYEE_IMAGE_${empNo}`);
+
+        try {
+            const uploadUrl = "https://cloud.istreams-erp.com:4498/api/empImage/upload";
+            const response = await axios.post(uploadUrl, form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (response.status === 200) {
+                toast({ title: "Employee saved and image uploaded!" });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: `Upload failed (status ${response.status})`,
+                });
+            }
+        } catch (error) {
+            console.error("Image upload error:", error);
+
+            toast({
+                variant: "destructive",
+                title: "Error saving image.",
+                description:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Unknown error occurred.",
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleClick = () => {
-        fileInputRef.current.click();
+    const handleUpdatedImage = async (empNo) => {
+        setLoading(true);
+
+        const file = formData.employeeImage;
+
+        try {
+            const payload = new FormData();
+            payload.append("file", file);
+            payload.append("email", userData.currentUserLogin);
+            payload.append("fileName", `EMPLOYEE_IMAGE_${empNo}`);
+            console.log(`https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${empNo}`);
+
+            debugger
+
+            const response = await axios.put(
+                `https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${empNo}`,
+                payload,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.status === 200) {
+                toast({
+                    title: "User saved and image updated!",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: `image update failed with status: ${response.status}`,
+                });
+            }
+        } catch (error) {
+            console.error("Image upload error:", error);
+
+            toast({
+                variant: "destructive",
+                title: "Error saving image.",
+                description:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Unknown error occurred.",
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const validationErrors = validateForm(userFormData);
+        const validationErrors = validateForm(formData);
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return
         }
         setErrors({});
 
+        setLoading(true);
         try {
+            const response = await createNewUser(formData, userData.currentUserLogin, userData.clientURL)
+
             if (!user) {
-                const createNewUserResponse = await createNewUser(userFormData, userData.currentUserLogin, userData.clientURL)
-                toast(createNewUserResponse)
-            } else {
-                // Handle edit user case if needed
+                await handleUploadImage(formData.empNo);
             }
 
-            setUserFormData({
-                loginUserName: userData.currentUserName,
-                newUserName: "",
-                password: "",
-                isAdminUser: false,
-                emailAddress: "",
-                mobileNumber: "",
-                fullName: "",
-                empNo: "",
-                domainName: DOMAIN_NAME,
-                employeeImage: "",
-                accountExpired: false,
-                accountLocked: false,
-            })
+            toast({ title: "Employee saved successfully!", response });
+
+            setFormData(intialFormData)
             onClose();
         } catch (error) {
-            console.log("Error creating user:", error);
+            toast({
+                variant: "destructive",
+                title: "Error creating user:", error,
+            })
         }
     };
 
@@ -294,14 +403,14 @@ const UserDialog = ({ user, open, onClose }) => {
                                     type="text"
                                     placeholder="Type username"
                                     className="w-full"
-                                    value={userFormData.newUserName}
+                                    value={formData.newUserName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     tabIndex={-1}
                                 />
                                 {
                                     (loading["USER_NAME"] || (isFocused.newUserName && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_NAME", userFormData.newUserName)}>
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_NAME", formData.newUserName)}>
                                             {loading["USER_NAME"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
@@ -322,7 +431,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     type="password"
                                     placeholder="Type password"
                                     className="w-full"
-                                    value={userFormData.password}
+                                    value={formData.password}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     tabIndex={-1}
@@ -346,9 +455,9 @@ const UserDialog = ({ user, open, onClose }) => {
                             <div className="flex items-center gap-1">
                                 <ToggleGroup
                                     type="single"
-                                    value={userFormData.isAdminUser ? "true" : "false"}
+                                    value={formData.isAdminUser ? "true" : "false"}
                                     onValueChange={(value) =>
-                                        setUserFormData((prev) => ({ ...prev, isAdminUser: value === "true" }))
+                                        setFormData((prev) => ({ ...prev, isAdminUser: value === "true" }))
                                     }
                                     className="flex justify-start"
                                 >
@@ -361,7 +470,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                 </ToggleGroup>
                                 {
                                     (loading["USER_TYPE"] || (isFocused.isAdminUser && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_TYPE", userFormData.isAdminUser)}>
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("USER_TYPE", formData.isAdminUser)}>
                                             {loading["USER_TYPE"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
@@ -379,14 +488,14 @@ const UserDialog = ({ user, open, onClose }) => {
                                     type="email"
                                     placeholder="Enter email address"
                                     className="w-full"
-                                    value={userFormData.emailAddress}
+                                    value={formData.emailAddress}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     tabIndex={-1}
                                 />
                                 {
                                     (loading["EMAIL_ADDRESS"] || (isFocused.emailAddress && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMAIL_ADDRESS", userFormData.emailAddress)}>
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMAIL_ADDRESS", formData.emailAddress)}>
                                             {loading["EMAIL_ADDRESS"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
@@ -408,14 +517,14 @@ const UserDialog = ({ user, open, onClose }) => {
                                         type="text"
                                         placeholder="Enter mobile number"
                                         className="w-full"
-                                        value={userFormData.mobileNumber}
+                                        value={formData.mobileNumber}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         tabIndex={-1}
                                     />
                                     {
                                         (loading["MOBILE_NO"] || (isFocused.mobileNumber && user)) ?
-                                            <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("MOBILE_NO", userFormData.mobileNumber)}>
+                                            <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("MOBILE_NO", formData.mobileNumber)}>
                                                 {loading["MOBILE_NO"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                             </Button> : null
                                     }
@@ -437,14 +546,14 @@ const UserDialog = ({ user, open, onClose }) => {
                                     type="text"
                                     placeholder="Enter full name"
                                     className="w-full"
-                                    value={userFormData.fullName}
+                                    value={formData.fullName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     tabIndex={-1}
                                 />
                                 {
                                     (loading["FULL_NAME"] || (isFocused.fullName && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("FULL_NAME", userFormData.fullName)}>
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("FULL_NAME", formData.fullName)}>
                                             {loading["FULL_NAME"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
@@ -465,14 +574,14 @@ const UserDialog = ({ user, open, onClose }) => {
                                     type="text"
                                     placeholder="Enter employee number"
                                     className="w-full"
-                                    value={userFormData.empNo}
+                                    value={formData.empNo}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     tabIndex={-1}
                                 />
                                 {
                                     (loading["EMP_NO"] || (isFocused.empNo && user)) ?
-                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMP_NO", userFormData.empNo)}>
+                                        <Button className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500" onMouseDown={() => handleUpdate("EMP_NO", formData.empNo)}>
                                             {loading["EMP_NO"] ? <BeatLoader color="#000" size={8} /> : <Check className="h-5 w-5" />}
                                         </Button> : null
                                 }
@@ -485,6 +594,35 @@ const UserDialog = ({ user, open, onClose }) => {
 
                     {/* Right Side */}
                     <div className="flex flex-col gap-2">
+                        <div className="w-full">
+                            <Label htmlFor="image_file" className="text-left">
+                                Upload Image
+                            </Label>
+                            <label
+                                htmlFor="employeeImage"
+                                className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+                            >
+                                {formData.employeeImage ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt={formData.fullName}
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="text-center text-xs text-gray-500 dark:text-gray-400">Click to Upload</div>
+                                )}
+                            </label>
+                            <input
+                                id="employeeImage"
+                                name="employeeImage"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleChange}
+                                className="hidden"
+                            />
+                            {errors.employeeImage && <p className="text-xs text-red-500">{errors.employeeImage}</p>}
+                        </div>
+
                         <div>
                             <Label htmlFor="domainName" className="text-left">
                                 Domain Name
@@ -495,7 +633,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                 type="text"
                                 placeholder="Enter domain name"
                                 className="w-full"
-                                value={userFormData.domainName}
+                                value={formData.domainName}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
                                 readOnly={true}
@@ -506,40 +644,12 @@ const UserDialog = ({ user, open, onClose }) => {
                             )}
                         </div>
 
-                        <div className="space-y-0">
-                            <Label htmlFor="employeeImage" className="text-left">
-                                Upload Picture
-                            </Label>
-                            <div
-                                className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-gray-200"
-                                onClick={handleClick}
-                            >
-                                {image ? (
-                                    <img
-                                        src={image}
-                                        alt="Profile Preview"
-                                        className="h-full w-full rounded-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="text-center text-sm text-gray-500">Click to Upload</div>
-                                )}
-                            </div>
-                            <input
-                                name="employeeImage"
-                                type="file"
-                                ref={fileInputRef}
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleImageChange}
-                            />
-                        </div>
-
                         <div className="flex flex-col space-y-1">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
                                     name="accountExpired"
                                     id="accountExpired"
-                                    checked={userFormData.accountExpired}
+                                    checked={formData.accountExpired}
                                     onCheckedChange={(checked) => handleChange(checked, "accountExpired")}
                                 />
                                 <label
@@ -555,7 +665,7 @@ const UserDialog = ({ user, open, onClose }) => {
                                     <Checkbox
                                         name="accountLocked"
                                         id="accountLocked"
-                                        checked={userFormData.accountLocked}
+                                        checked={formData.accountLocked}
                                         onCheckedChange={(checked) => handleChange(checked, "accountLocked")}
                                     />
                                     <label
@@ -569,7 +679,6 @@ const UserDialog = ({ user, open, onClose }) => {
                         </div>
                     </div>
                 </div>
-
 
                 {
                     !user ?
@@ -585,7 +694,8 @@ const UserDialog = ({ user, open, onClose }) => {
                                     </Button>
                                 </div>
                             </>
-                        ) : null}
+                        ) : null
+                }
 
             </form>
         </DialogContent>

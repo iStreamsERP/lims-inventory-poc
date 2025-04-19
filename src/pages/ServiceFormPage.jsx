@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelService, saveDataService } from "@/services/dataModelService";
+import { cn } from "@/lib/utils";
+import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Check, ChevronsUpDown, PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -53,11 +54,13 @@ export default function ServiceFormPage() {
     const [open, setOpen] = useState(false);
     const [opened, setOpened] = useState(false);
     const [featureInput, setFeatureInput] = useState("");
+    const [categoryData, setCategoryData] = useState([]);
+    const [openCategoryData, setOpenCategoryData] = useState(false);
+    const [commandInputValue, setCommandInputValue] = useState("");
     const { id } = useParams();
     const { userData } = useAuth();
     const { toast } = useToast();
 
-    const itemType = ["Electronics", "Apparel", "Furniture", "Grocery", "Books", "Toys", "Beauty", "Stationery"];
     const timeperiod = ["Daily", "Weekly", "Monthly", "Yearly"];
 
     const validateInput = () => {
@@ -79,6 +82,7 @@ export default function ServiceFormPage() {
         if (id) {
             fetchProductMaterialData();
         }
+        fetchCategoryList();
     }, [id]);
 
     const fetchProductMaterialData = async () => {
@@ -104,6 +108,25 @@ export default function ServiceFormPage() {
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCategoryList = async () => {
+        try {
+            const payload = {
+                SQLQuery: "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE' ORDER BY GROUP_LEVEL1",
+            };
+            const response = await getDataModelFromQueryService(
+                payload,
+                userData.currentUserLogin,
+                userData.clientURL
+            );
+            setCategoryData(response);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: `Error fetching client: ${error.message}`,
+            });
         }
     };
 
@@ -324,46 +347,81 @@ export default function ServiceFormPage() {
                                 </div>
 
                                 <div className="flex flex-col gap-4 lg:flex-row">
-                                    <div className="flex-1">
+                                    <div className="flex flex-col gap-1 flex-1">
                                         <Label>Category</Label>
-                                        <Popover
-                                            open={open}
-                                            onOpenChange={setOpen}
-                                        >
+                                        <Popover open={openCategoryData} onOpenChange={setOpenCategoryData}>
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
                                                     role="combobox"
                                                     aria-expanded={open}
-                                                    className="w-full justify-between"
+                                                    className="w-[200px] justify-between"
                                                 >
-                                                    {formData.GROUP_LEVEL1 ? itemType.find((type) => type === formData.GROUP_LEVEL1) : "Select category..."}
+                                                    {formData.GROUP_LEVEL1
+                                                        ? categoryData.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
+                                                        : "Select category..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                                 <Command>
+                                                    {/* Capture command input value */}
                                                     <CommandInput
                                                         placeholder="Search category..."
                                                         className="h-9"
+                                                        onValueChange={(value) => setCommandInputValue(value)}
                                                     />
                                                     <CommandList>
-                                                        <CommandEmpty>No category found.</CommandEmpty>
+                                                        <CommandEmpty>
+                                                            <div className="flex items-center justify-between">
+                                                                <span>No category found.</span>
+                                                                {commandInputValue && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            const newValue = capitalizeFirstLetter(commandInputValue.trim());
+                                                                            if (newValue) {
+                                                                                setCategoryData(prev => [
+                                                                                    ...prev,
+                                                                                    { GROUP_LEVEL1: newValue },
+                                                                                ]);
+                                                                                setFormData(prev => ({
+                                                                                    ...prev,
+                                                                                    GROUP_LEVEL1: newValue,
+                                                                                }));
+                                                                                setOpenCategoryData(false);
+                                                                                setError(prev => ({
+                                                                                    ...prev,
+                                                                                    GROUP_LEVEL1: "",
+                                                                                }));
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Add “{commandInputValue}”
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </CommandEmpty>
                                                         <CommandGroup>
-                                                            {itemType.map((type) => (
+                                                            {categoryData.map((item, index) => (
                                                                 <CommandItem
-                                                                    key={type}
-                                                                    value={type}
+                                                                    key={index}
+                                                                    value={item.GROUP_LEVEL1}
                                                                     onSelect={(currentValue) => {
-                                                                        setFormData((prev) => ({
+                                                                        setFormData(prev => ({
                                                                             ...prev,
                                                                             GROUP_LEVEL1: currentValue,
                                                                         }));
-                                                                        setOpen(false);
+                                                                        setOpenCategoryData(false);
                                                                     }}
                                                                 >
-                                                                    {type}
-                                                                    <Check className={`ml-auto h-4 w-4 ${formData.GROUP_LEVEL1 === type ? "opacity-100" : "opacity-0"}`} />
+                                                                    {item.GROUP_LEVEL1}
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "ml-auto h-4 w-4",
+                                                                            formData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
                                                                 </CommandItem>
                                                             ))}
                                                         </CommandGroup>
@@ -430,7 +488,6 @@ export default function ServiceFormPage() {
                                         </div>
 
                                     </div>
-
                                 </div>
 
                                 <div>

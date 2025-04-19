@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2, ALargeSmall } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2, ALargeSmall, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -34,8 +34,9 @@ import { PacmanLoader } from "react-spinners"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import UserDialog from "@/components/dialog/UserDialog";
+import axios from "axios"
 
-const UserManagement = () => {
+const UserListPage = () => {
   const [userTableData, setUserTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -66,9 +67,47 @@ const UserManagement = () => {
     }
   }
 
+  const handleImageDelete = async (empNo) => {
+    setLoading(true);
+
+    try {
+      const email = encodeURIComponent(userData.currentUserLogin);
+      const fileName = encodeURIComponent(`EMPLOYEE_IMAGE_${empNo}`);
+      const url = `https://cloud.istreams-erp.com:4498/api/empImage/delete?email=${email}&fileName=${fileName}`;
+
+      const response = await axios.delete(url);
+
+      console.log(response);
+
+      if (response.status === 200) {
+        toast({
+          title: response.data.message,
+        });
+      } else {
+
+        toast({
+          variant: "destructive",
+          title: `Image delete failed with status: ${response.status}`,
+        });
+      }
+
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting image.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const handleDeleteUser = async (user) => {
-    alert("Are you sure you want to delete this user? This action cannot be undone.")
-    // throw new Error("User deletion is not implemented yet.");
+    window.confirm("Are you sure you want to delete this user? This action cannot be undone.")
 
     try {
       const deleteUserPayload = {
@@ -77,11 +116,14 @@ const UserManagement = () => {
       }
       const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
 
-      fetchAllUsersData();
       toast({
         variant: "destructive",
         title: deleteUserResponse,
       })
+
+      await handleImageDelete(user.EMP_NO);
+
+      fetchAllUsersData();
     } catch (error) {
       console.error("Error deleting user:", error);
 
@@ -282,14 +324,13 @@ const UserManagement = () => {
               setIsDialogOpen(open);
             }} className="z-50">
               <DialogTrigger asChild>
-                <Button onClick={() => setIsDialogOpen(true)}>Create User</Button>
+                <Button onClick={() => setIsDialogOpen(true)}>Create <Plus /></Button>
               </DialogTrigger>
               <UserDialog
                 open={isDialogOpen}
                 onClose={handleUserDialogClose}
                 user={selectedUser} />
             </Dialog>
-
           </div>
         </div>
         <div className="rounded-md border">
@@ -374,4 +415,4 @@ const UserManagement = () => {
   )
 };
 
-export default UserManagement;
+export default UserListPage;
