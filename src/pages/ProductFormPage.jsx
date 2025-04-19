@@ -36,6 +36,7 @@ export default function ProductFormPage() {
   const [commandInputValue, setCommandInputValue] = useState("");
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false)
+  const [uomList, setUomList] = useState([]);
 
   const initialFormData = {
     COMPANY_CODE: 1,
@@ -67,6 +68,7 @@ export default function ProductFormPage() {
       fetchProductImage();
     }
     fetchCategoryUsingQuery();
+    fetchUom();
   }, [id]);
 
   const validateInput = () => {
@@ -159,6 +161,27 @@ export default function ProductFormPage() {
       });
     }
   };
+
+  const fetchUom = async () => {
+    try {
+      const payload = {
+        DataModelName: "INVT_UOM_MASTER",
+        WhereCondition: "",
+        Orderby: "",
+      };
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      setUomList((prev) => ({
+        ...prev,
+        ...(response),
+      }));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching uom: ${error?.message}`,
+      })
+    }
+  }
 
   const handleChange = (e) => {
     const { name, type, value, files } = e.target;

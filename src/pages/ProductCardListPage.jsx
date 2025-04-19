@@ -75,7 +75,7 @@ export default function ProductCardListPage() {
     <div className="flex flex-col gap-y-4">
       <h1 className="title">Explore {id}</h1>
       <div className="w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {productList.map((product, index) => (
             <Link key={product.id || index} to={`/product-detail/${product.ITEM_CODE}`}>
               <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">

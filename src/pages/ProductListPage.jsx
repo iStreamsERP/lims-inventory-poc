@@ -44,6 +44,7 @@ const ProductListPage = () => {
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
   const [rowSelection, setRowSelection] = useState({})
+  const [globalFilter, setGlobalFilter] = useState("")
   const { userData } = useAuth();
   const { toast } = useToast()
   const navigate = useNavigate();
@@ -198,13 +199,6 @@ const ProductListPage = () => {
       ),
     },
     {
-      accessorKey: "ITEM_GROUP",
-      header: "Type",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_GROUP") || "-"}</div>
-      ),
-    },
-    {
       accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (
@@ -254,7 +248,8 @@ const ProductListPage = () => {
   ]
 
   const fuzzyFilter = (row, columnId, filterValue) => {
-    return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
+    const value = row.getValue(columnId);
+    return String(value || "").toLowerCase().includes(filterValue.toLowerCase());
   };
 
   const table = useReactTable({
@@ -268,12 +263,14 @@ const ProductListPage = () => {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: fuzzyFilter,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter,
     },
   })
 

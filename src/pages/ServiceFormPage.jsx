@@ -23,15 +23,15 @@ import { BeatLoader } from "react-spinners";
 
 
 const initialFormData = {
-    COMPANY_CODE: "1",
-    BRANCH_CODE: "1",
+    COMPANY_CODE: 1,
+    BRANCH_CODE: 1,
     ITEM_CODE: "(NEW)",
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
     ITEM_F_PUINISH: "NOS",
     GROUP_LEVEL1: "",
-    GROUP_LEVEL2: "consumables",
-    GROUP_LEVEL3: "consumables",
+    GROUP_LEVEL2: "Consumables",
+    GROUP_LEVEL3: "Consumables",
     COST_CODE: "MXXXX",
     ITEM_NAME: "",
     ITEM_GROUP: "SERVICE",
@@ -48,40 +48,17 @@ const initialFormData = {
 
 export default function ServiceFormPage() {
     const [formData, setFormData] = useState(initialFormData);
-    const { id } = useParams();
-    const { userData } = useAuth();
-    const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState({});
     const [open, setOpen] = useState(false);
     const [opened, setOpened] = useState(false);
-    const [openUom, setOpenUom] = useState(false);
     const [featureInput, setFeatureInput] = useState("");
+    const { id } = useParams();
+    const { userData } = useAuth();
+    const { toast } = useToast();
 
     const itemType = ["Electronics", "Apparel", "Furniture", "Grocery", "Books", "Toys", "Beauty", "Stationery"];
     const timeperiod = ["Daily", "Weekly", "Monthly", "Yearly"];
-    const uom = [
-        { label: "Pic", value: "Pic" },
-        { label: "Unit", value: "Unit" },
-        { label: "Kg", value: "Kg" },
-        { label: "G", value: "G" },
-        { label: "L", value: "L" },
-        { label: "ML", value: "ML" },
-        { label: "M", value: "M" },
-        { label: "CM", value: "CM" },
-        { label: "Box", value: "Box" },
-        { label: "Dozen", value: "Dozen" },
-        { label: "Pack", value: "Pack" },
-        { label: "Pallet", value: "Pallet" },
-        { label: "Roll", value: "Roll" },
-        { label: "Bag", value: "Bag" },
-        { label: "Bottle", value: "Bottle" },
-        { label: "Can", value: "Can" },
-        { label: "Carton", value: "Carton" },
-        { label: "Jar", value: "Jar" },
-        { label: "Tube", value: "Tube" },
-        { label: "Tray", value: "Tray" },
-    ];
 
     const validateInput = () => {
         const newError = {};
@@ -97,11 +74,13 @@ export default function ServiceFormPage() {
         if (!formData.remarks) newError.remarks = "Remarks are required.";
         return newError;
     };
+
     useEffect(() => {
         if (id) {
             fetchProductMaterialData();
         }
     }, [id]);
+
     const fetchProductMaterialData = async () => {
         setLoading(true);
         setError({});
@@ -183,6 +162,7 @@ export default function ServiceFormPage() {
             setLoading(false);
         }
     };
+
     return (
         <div className="grid h-full w-full">
             <div className="h-full w-full">

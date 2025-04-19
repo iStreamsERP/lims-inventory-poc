@@ -27,7 +27,7 @@ const ProductDetailPage = () => {
         try {
             const payload = {
                 DataModelName: "INVT_MATERIAL_MASTER",
-                WhereCondition: `iTEM_CODE = 'DMO000004' AND COST_CODE = 'MXXXX'`,
+                WhereCondition: `iTEM_CODE = '${id}' AND COST_CODE = 'MXXXX'`,
                 Orderby: "",
             };
 
@@ -73,6 +73,10 @@ const ProductDetailPage = () => {
         }
     };
 
+
+    console.log(productList);
+
+
     return loading ? (
         <BarLoader color="#36d399" height={2} width="100%" />
     ) : (
@@ -82,9 +86,9 @@ const ProductDetailPage = () => {
                     <Card className="lg:w-full md:w-fit sm:w-fit">
                         <CardContent className="p-0">
                             <div key={index} className="flex md:flex-col flex-col  lg:flex-row gap-x-2">
-                                <div className="lg:w-80 md:w-full sm:w-full w-full h-full">
+                                <div className="lg:rounded-l-lg lg:rounded-t-lg lg:rounded-b-lg md:rounded-l-lg rounded-l-lg sm:rounded-t-lg lg:rounded-b-none md:rounded-b-none sm:rounded-b-none bg-neutral-300 dark:bg-gray-800 overflow-hidden">
                                     <img
-                                        className="w-full h-full lg:rounded-l-lg md:rounded-l-lg rounded-l-lg sm:rounded md:rounded-b-none sm:rounded-b-none lg:rounded-r-none object-cover"
+                                        className="w-72  flex items-center justify-center  h-full  object-cover"
                                         src={item.imageUrl}
                                         alt={item.ITEM_NAME}
                                     />

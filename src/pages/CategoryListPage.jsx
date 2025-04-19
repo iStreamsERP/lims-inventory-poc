@@ -19,7 +19,7 @@ const CategoryListPage = () => {
 			try {
 				const payload = {
 					SQLQuery:
-						"SELECT GROUP_LEVEL1, COUNT(ITEM_CODE) AS productCount, MIN(ITEM_CODE) AS firstItemCode FROM INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' GROUP BY GROUP_LEVEL1 ORDER BY GROUP_LEVEL1",
+						"SELECT GROUP_LEVEL1, COUNT(ITEM_CODE) AS productCount, MIN(ITEM_CODE) AS firstItemCode FROM INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT' GROUP BY GROUP_LEVEL1 ORDER BY GROUP_LEVEL1",
 				};
 
 				const data = await getDataModelFromQueryService(
@@ -91,7 +91,7 @@ const CategoryListPage = () => {
 				{categories.map((category, index) => (
 					<div key={index} className="group overflow-hidden">
 						<div
-							className="h-36 w-full rounded-lg bg-neutral-300 dark:bg-gray-800 overflow-hidden"
+							className="h-36 w-full rounded-lg bg-neutral-300 dark:bg-gray-900 overflow-hidden"
 						>
 							<Link to={`/product-card-list/${category.GROUP_LEVEL1}`} className="relative">
 								{category.imageUrl ? (

@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2, ALargeSmall  } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Pencil, Settings2, Trash2, ALargeSmall } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
