@@ -2,14 +2,8 @@ import AddSubProduct from "@/components/AddSubProduct";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,9 +29,10 @@ export default function ProductFormPage() {
   const [error, setError] = useState({});
   const [commandInputValue, setCommandInputValue] = useState("");
   const [categoryData, setCategoryData] = useState([]);
-  const [openCategoryData, setOpenCategoryData] = useState(false)
+  const [openCategoryData, setOpenCategoryData] = useState(false);
   const [uomList, setUomList] = useState([]);
-  const [opened, setOpened] = useState(false);
+  const [openOtherNatureOfBusiness, setOpenOtherNatureOfBusiness] = useState(false);
+  const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState(["color", "size", "length", "width", "height", "weight", "volume", "capacity"]);
 
   const initialFormData = {
     COMPANY_CODE: 1,
@@ -46,6 +41,8 @@ export default function ProductFormPage() {
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
     ITEM_F_PUINISH: "NOS",
+
+    NATURE_OF_BUSINESS2: [],
     GROUP_LEVEL1: "",
     GROUP_LEVEL2: "consumables",
     GROUP_LEVEL3: "consumables",
@@ -59,40 +56,6 @@ export default function ProductFormPage() {
     REMARKS: "",
     image_file: null,
   };
-
-  const uom = [
-    "PCS",
-    "UNIT",
-    "NOS",
-    "PKT",
-    "BOX",
-    "BAG",
-    "SET",
-    "PR",
-    "ROL",
-    "L",
-    "ML",
-    "KG",
-    "GM",
-    "MT",
-    "MTR",
-    "CM",
-    "MM",
-    "SQM",
-    "CUM",
-    "FT",
-    "IN",
-    "DOZ",
-    "CAN",
-    "BTL",
-    "TIN",
-    "JAR",
-    "DAY",
-    "HR",
-    "WK",
-    "MON",
-    "YR",
-  ];
 
   const [formData, setFormData] = useState(initialFormData);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -127,13 +90,10 @@ export default function ProductFormPage() {
   const fetchCategoryUsingQuery = async () => {
     try {
       const payload = {
-        SQLQuery: "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
+        SQLQuery:
+          "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
       };
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
       setCategoryData(response);
     } catch (error) {
       toast({
@@ -169,7 +129,7 @@ export default function ProductFormPage() {
         `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${id}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
       const blob = response.data;
@@ -188,7 +148,6 @@ export default function ProductFormPage() {
       // Optional: Preview the image
       const imagePreviewUrl = URL.createObjectURL(file);
       setPreviewUrl(imagePreviewUrl);
-
     } catch (error) {
       toast({
         variant: "destructive",
@@ -208,15 +167,15 @@ export default function ProductFormPage() {
 
       setUomList((prev) => ({
         ...prev,
-        ...(response),
+        ...response,
       }));
     } catch (error) {
       toast({
         variant: "destructive",
         title: `Error fetching uom: ${error?.message}`,
-      })
+      });
     }
-  }
+  };
 
   const handleChange = (e) => {
     const { name, type, value, files } = e.target;
@@ -257,7 +216,7 @@ export default function ProductFormPage() {
             headers: {
               "Content-Type": "multipart/form-data",
             },
-          }
+          },
         );
 
         if (response.status === 200) {
@@ -270,22 +229,17 @@ export default function ProductFormPage() {
             title: `image update failed with status: ${response.status}`,
           });
         }
-
       } else if (newItemCode) {
         const payload = new FormData();
         payload.append("file", file);
         payload.append("email", userData.currentUserLogin);
         payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
 
-        const response = await axios.post(
-          "https://cloud.istreams-erp.com:4499/api/MaterialImage/upload",
-          payload,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        const response = await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
 
         if (response.status === 200) {
           toast({
@@ -304,10 +258,7 @@ export default function ProductFormPage() {
       toast({
         variant: "destructive",
         title: "Error saving image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        description: error?.response?.data?.message || error?.message || "Unknown error occurred.",
       });
     } finally {
       setLoading(false);
@@ -421,70 +372,19 @@ export default function ProductFormPage() {
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                       </div>
-                      <div className="flex flex-col lg:flex-row w-full gap-2">
-                        <div className="w-full">
-                          <Label htmlFor="SALE_RATE">Sales Price</Label>
-                          <Input
-                            name="SALE_RATE"
-                            id="SALE_RATE"
-                            type="text"
-                            placeholder="Type sales price"
-                            onChange={handleChange}
-                            value={formData.SALE_RATE}
-                            required
-                          />
-                          {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
-                        </div>
-                        <div className="w-full">
-                          <Label>UoM</Label>
-                          <Popover
-                            open={opened}
-                            onOpenChange={setOpened}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={open}
-                                className="w-full justify-between"
 
-                              >
-                                {formData.SALE_UOM ? uom.find((period) => period === formData.SALE_UOM) : "Select..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput
-                                  placeholder="Search uom..."
-                                  className="h-9"
-                                />
-                                <CommandList>
-                                  <CommandEmpty>No uom found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {uom.map((type) => (
-                                      <CommandItem
-                                        key={type}
-                                        value={type}
-                                        onSelect={(currentValue) => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            SALE_UOM: currentValue,
-                                          }));
-                                          setOpened(false);
-                                        }}
-                                      >
-                                        {type}
-                                        <Check className={`ml-auto h-4 w-4 ${formData.SALE_UOM === type ? "opacity-100" : "opacity-0"}`} />
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          {error.SALE_UOM && <p className="text-sm text-red-500">{error.SALE_UOM}</p>}
-                        </div>
+                      <div className="w-full">
+                        <Label htmlFor="SALE_RATE">Sales Price</Label>
+                        <Input
+                          name="SALE_RATE"
+                          id="SALE_RATE"
+                          type="text"
+                          placeholder="Type sales price"
+                          onChange={handleChange}
+                          value={formData.SALE_RATE}
+                          required
+                        />
+                        {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
                       </div>
                     </div>
                     <div className="w-full">
@@ -538,13 +438,14 @@ export default function ProductFormPage() {
                         type="text"
                         placeholder="Type quantity"
                         onChange={handleChange}
-                        value={formData.QTY_IN_HAND}
+                        value={formData.QTY_IN_HAND || 0}
                         required
+                        readOnly
                       />
                       {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                     </div>
 
-                    <div className="w-full flex flex-col gap-1 mt-[14px]">
+                    <div className="w-full">
                       <Label>Category</Label>
                       <Popover
                         open={openCategoryData}
@@ -555,7 +456,7 @@ export default function ProductFormPage() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={open}
-                            className="w-full justify-between"
+                            className="w-[200px] justify-between"
                           >
                             {formData.GROUP_LEVEL1
                               ? categoryData.find((item) => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
@@ -563,7 +464,7 @@ export default function ProductFormPage() {
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
+                        <PopoverContent className="w-[200px] p-0">
                           <Command>
                             {/* Capture command input value */}
                             <CommandInput
@@ -853,7 +754,75 @@ export default function ProductFormPage() {
                   <CardTitle>Product Configuration</CardTitle>
                   <CardDescription>Customize product settings such as options, variants, and default behaviors to suit your needs.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex justify-center space-y-2">
+                <CardContent>
+                  <div className="mb-2 flex space-x-2">
+                    <Checkbox id="terms" />
+                    <label
+                      htmlFor="terms"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      This Material Has SubProducts
+                    </label>
+                  </div>
+
+                  <div className="mt-3 w-full md:w-1/2 mb-2">
+                    <Label className="block text-sm font-medium leading-6">Select Other Nature Of Business</Label>
+
+                    <Popover
+                      open={openOtherNatureOfBusiness}
+                      onOpenChange={setOpenOtherNatureOfBusiness}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openOtherNatureOfBusiness}
+                          className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
+                        >
+                          {formData.NATURE_OF_BUSINESS2?.length > 0 ? formData.NATURE_OF_BUSINESS2.join(", ") : "Select other nature of business"}
+                          <ChevronsUpDown className="opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command className="w-full justify-start">
+                          <CommandInput
+                            placeholder="Search other nature of business"
+                            className="h-9"
+                          />
+                          <CommandList>
+                            <CommandEmpty>No other nature of business found.</CommandEmpty>
+                            <CommandGroup>
+                              {otherNatureOfBusiness.map((item, index) => (
+                                <CommandItem
+                                  key={index}
+                                  value={item}
+                                  onSelect={(currentValue) => {
+                                    setFormData((prev) => {
+                                      const currentSelections = prev.NATURE_OF_BUSINESS2 || [];
+                                      const updated = currentSelections.includes(currentValue)
+                                        ? currentSelections.filter((val) => val !== currentValue)
+                                        : [...currentSelections, currentValue];
+                                      return { ...prev, NATURE_OF_BUSINESS2: updated };
+                                    });
+
+                                    setError((prev) => ({
+                                      ...prev,
+                                      NATURE_OF_BUSINESS2: "",
+                                    }));
+                                  }}
+                                >
+                                  {item}
+                                  <Check className={cn("ml-auto", formData.NATURE_OF_BUSINESS2.includes(item) ? "opacity-100" : "opacity-0")} />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
                   <div>
                     <Button
                       disabled={loading}

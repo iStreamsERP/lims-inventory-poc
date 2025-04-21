@@ -107,7 +107,6 @@ const ProductListPage = () => {
     }
   };
 
-
   const handleDelete = async (product) => {
     window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
 

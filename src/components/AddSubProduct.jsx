@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { deleteDataModelService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,86 +24,135 @@ const AddSubProduct = ({ itemcode }) => {
     COST_CODE: "MXXXX",
     ITEM_SIZE: "",
     QTY: "",
-    img: "",
+    image_file: null,
   }
 
   const { userData } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, SetError] = useState({});
+  const [errors, setErrors] = useState({});
   const [isEnabled, setIsEnabled] = useState(false);
-  const fileInputRef = useRef(null);
 
-  const [subMaterialForm, setSubMaterialForm] = useState(initialFormData);
+  const [formData, setFormData] = useState(initialFormData);
   const [subMaterialProducts, setSubMaterialProducts] = useState([]);
+  const [previewUrl, setPreviewUrl] = useState("");
 
   useEffect(() => {
     if (itemcode !== "(NEW)") {
       setIsEnabled(true);
-      setSubMaterialForm((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         ITEM_CODE: itemcode,
       }));
-      fetchSubmaterialProduct();
+      fetchSubMaterialProduct();
+      fetchSubProductImage();
     }
   }, [itemcode]);
 
-  const fetchSubmaterialProduct = async () => {
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+
+  const validateSubMaterialForm = () => {
+    const newError = {};
+    if (!formData.ITEM_NAME?.trim()) {
+      newError.ITEM_NAME = "Item Name is required.";
+    }
+    if (!formData.ITEM_FINISH?.trim()) {
+      newError.ITEM_FINISH = "Color is required.";
+    }
+    if (!formData.ITEM_SIZE?.trim()) {
+      newError.ITEM_SIZE = "Size is required.";
+    }
+    if (!formData.QTY?.toString().trim()) {
+      newError.QTY = "Quantity is required.";
+    } else if (!/^\d+(\.\d{1,2})?$/.test(formData.QTY)) {
+      newError.QTY = "Quantity must be a valid number.";
+    }
+    if (!formData.image_file) {
+      newError.image_file = "Image is required.";
+    }
+    setErrors(newError);
+    return Object.keys(newError).length === 0;
+  };
+
+  const fetchSubMaterialProduct = async () => {
     try {
-      const submaterialPayload = {
+      const payload = {
         DataModelName: "INVT_SUBMATERIAL_MASTER",
         WhereCondition: `ITEM_CODE = '${itemcode}'`,
         Orderby: "",
       };
-      const subMaterialResponse = await getDataModelService(submaterialPayload, userData.currentUserLogin, userData.clientURL);
-      setSubMaterialProducts(subMaterialResponse);
-    } catch (error) {
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const updatedProducts = await Promise.all(
+        response.map(async (product) => {
+          const { file, previewUrl } = await fetchSubProductImage(product.ITEM_CODE, product.SUB_MATERIAL_NO);
+          return {
+            ...product,
+            image_file: file,
+            previewUrl,
+          };
+        })
+      );
+
+      setSubMaterialProducts(updatedProducts);
+    } catch (errors) {
       toast({
         variant: "destructive",
-        title: `Error Fetching Sub Product: ${error.message}`,
+        title: `Error Fetching Sub Product: ${errors.message}`,
       });
     }
   };
 
-  const validateSubMaterialForm = () => {
-    const newError = {};
-    if (!subMaterialForm.ITEM_NAME?.trim()) {
-      newError.ITEM_NAME = "Item Name is required.";
+  const fetchSubProductImage = async (itemcode, subMaterialNo) => {
+    try {
+      const response = await axios.get(
+        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
+        { responseType: "blob" }
+      );
+
+      const blob = response.data;
+      const mimeType = blob.type;
+      const extension = mimeType.split("/")[1] || "png";
+      const filename = `SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}.${extension}`;
+      const file = new File([blob], filename, { type: mimeType });
+      const previewUrl = URL.createObjectURL(file);
+
+      console.log(previewUrl);
+
+      return { file, previewUrl };
+    } catch (error) {
+      console.error(`Failed to fetch image for ${subMaterialNo}`, error);
+      return { file: null, previewUrl: null };
     }
-    if (!subMaterialForm.ITEM_FINISH?.trim()) {
-      newError.ITEM_FINISH = "Color is required.";
-    }
-    if (!subMaterialForm.ITEM_SIZE?.trim()) {
-      newError.ITEM_SIZE = "Size is required.";
-    }
-    if (!subMaterialForm.QTY?.toString().trim()) {
-      newError.QTY = "Quantity is required.";
-    } else if (!/^\d+(\.\d{1,2})?$/.test(subMaterialForm.QTY)) {
-      newError.QTY = "Quantity must be a valid number.";
-    }
-    if (!subMaterialForm.img) {
-      newError.img = "Image is required.";
-    }
-    SetError(newError);
-    return Object.keys(newError).length === 0;
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setSubMaterialForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    SetError((prev) => ({ ...prev, [name]: "" }));
-  };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setSubMaterialForm((prev) => ({ ...prev, img: imageUrl }));
-      SetError((prev) => ({ ...prev, img: "" }));
+  const handleChange = (e) => {
+    const { name, type, value, files } = e.target;
+    if (type === "file") {
+
+      const file = files[0] || null;
+      setFormData((prev) => ({ ...prev, [name]: file }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+
+      // generate preview URL
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        setPreviewUrl(null);
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -120,57 +170,153 @@ const AddSubProduct = ({ itemcode }) => {
         variant: "destructive",
         title: deleteDataModelServiceResponse,
       })
-      await fetchSubmaterialProduct();
-    } catch (error) {
+      await handleImageDelete(product.ITEM_CODE, product.SUB_MATERIAL_NO);
+      await fetchSubMaterialProduct();
+    } catch (errors) {
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: `Error fetching client: ${errors.message}`,
       });
     } finally {
       setLoading(false);
     }
   }
 
-  const handleProductDialogClose = () => {
-    setSubMaterialForm(initialFormData);
-    setIsDialogOpen(false);
-    fetchSubmaterialProduct();
+  const handleImageDelete = async (itemCode, subMaterialNo) => {
+    setLoading(true);
+
+    try {
+      const email = encodeURIComponent(userData.currentUserLogin);
+      const fileName = encodeURIComponent(`SUB_PRODUCT_IMAGE_${itemCode}_${subMaterialNo}`);
+      const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+
+      const response = await axios.delete(url);
+
+      if (response.status === 200) {
+        toast({
+          title: response.data.message,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: `Image delete failed with status: ${response.status}`,
+        });
+      }
+
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting image.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEdit = async (subMaterialproduct) => {
+  const handleEdit = async (subMaterialProduct) => {
     setIsDialogOpen(true)
-    setSubMaterialForm({
+    setFormData({
       ITEM_CODE: itemcode,
-      SUB_MATERIAL_NO: subMaterialproduct.SUB_MATERIAL_NO,
-      ITEM_FINISH: subMaterialproduct.ITEM_FINISH,
-      ITEM_NAME: subMaterialproduct.ITEM_NAME,
-      ITEM_SIZE: subMaterialproduct.ITEM_SIZE,
-      QTY: subMaterialproduct.QTY,
-      img: subMaterialproduct.img,
-    })
+      SUB_MATERIAL_NO: subMaterialProduct.SUB_MATERIAL_NO,
+      ITEM_FINISH: subMaterialProduct.ITEM_FINISH,
+      ITEM_NAME: subMaterialProduct.ITEM_NAME,
+      ITEM_SIZE: subMaterialProduct.ITEM_SIZE,
+      QTY: subMaterialProduct.QTY,
+      image_file: subMaterialProduct.image_file,
+    });
+    setPreviewUrl(subMaterialProduct.image_file);
   }
+
+  const handleProductDialogClose = () => {
+    setFormData(initialFormData);
+    setIsDialogOpen(false);
+    fetchSubMaterialProduct();
+  };
+
+  const handleUploadImage = async (serialNo) => {
+    console.log("Uploading image...", itemcode, serialNo);
+
+    setLoading(true);
+
+    const file = formData.image_file;
+    const payload = new FormData();
+    payload.append("file", file);
+    payload.append("email", userData.currentUserLogin);
+    payload.append("fileName", `SUB_PRODUCT_IMAGE_${itemcode}_${serialNo}`);
+
+    try {
+      const response = await axios.post(
+        "https://cloud.istreams-erp.com:4499/api/MaterialImage/upload",
+        payload,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      console.log(response);
+
+
+      if (response.status === 200) {
+        toast({
+          title: "Sub product saved and image uploaded!",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: `image upload failed with status: ${response.status}`,
+        });
+      }
+    } catch (errors) {
+      console.log(errors);
+
+      toast({
+        variant: "destructive",
+        title: "Error saving image.",
+        description:
+          errors?.response?.data?.message ||
+          errors?.message ||
+          "Unknown errors occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSumbit = async () => {
     const isValid = validateSubMaterialForm();
     if (!isValid) return;
+
     try {
       setLoading(true);
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", subMaterialForm);
-      const subMaterialPayload = {
+
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", formData);
+      const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
       }
-      console.log(subMaterialPayload);
-      const subMaterialSaveResponse = await saveDataService(subMaterialPayload, userData.currentUserLogin, userData.clientURL);
-      toast({
-        title: subMaterialSaveResponse,
-      })
-      await fetchSubmaterialProduct();
-      setSubMaterialForm(initialFormData)
-    } catch (error) {
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const serialNo = response.match(/\/(\d+)'/);
+
+      toast({ title: response })
+
+      if (serialNo) {
+        await handleUploadImage(serialNo[1]);
+      }
+
+      await fetchSubMaterialProduct();
+
+      setFormData(initialFormData)
+    } catch (errors) {
       toast({
         variant: "destructive",
-        title: "Error saving data. Please try again.", error,
+        title: "Error saving data. Please try again.", errors,
       })
     } finally {
       setIsDialogOpen(false);
@@ -194,7 +340,7 @@ const AddSubProduct = ({ itemcode }) => {
               <div className="flex justify-between  w-full">
                 <div className="flex w-full justify-start gap-2  text-start">
                   <img
-                    src={Submaterialproduct.img || "https://images.meesho.com/images/products/412300271/ib6hh_1200.jpg"}
+                    src={Submaterialproduct.previewUrl}
                     alt={Submaterialproduct.ITEM_NAME}
                     className="h-[50px] w-[50px] mt-1 rounded"
                   />
@@ -252,80 +398,85 @@ const AddSubProduct = ({ itemcode }) => {
                       type="text"
                       name="ITEM_NAME"
                       className="col-span-3"
-                      value={subMaterialForm?.ITEM_NAME}
-                      onChange={handleInputChange}
+                      value={formData?.ITEM_NAME}
+                      onChange={handleChange}
                       required
                     />
-                    {error.ITEM_NAME && <p className="text-xs  text-red-500">{error.ITEM_NAME}</p>}
+                    {errors.ITEM_NAME && <p className="text-xs  text-red-500">{errors.ITEM_NAME}</p>}
 
                   </div>
+
                   <div className="w-full">
-                    <Label htmlFor="color" className="text-right">
+                    <Label htmlFor="ITEM_FINISH" className="text-right">
                       Color
                     </Label>
                     <Input
-                      id="color"
+                      id="ITEM_FINISH"
                       type="text"
                       name="ITEM_FINISH"
                       className="col-span-3"
-                      value={subMaterialForm?.ITEM_FINISH}
-                      onChange={handleInputChange}
+                      value={formData?.ITEM_FINISH}
+                      onChange={handleChange}
                       required
                     />
-                    {error.ITEM_FINISH && <p className="text-xs text-red-500">{error.ITEM_FINISH}</p>}
+                    {errors.ITEM_FINISH && <p className="text-xs text-red-500">{errors.ITEM_FINISH}</p>}
                   </div>
+
                   <div className="w-full">
-                    <Label htmlFor="size" className="text-right">
+                    <Label htmlFor="ITEM_SIZE" className="text-right">
                       Size
                     </Label>
                     <Input
-                      id="size"
+                      id="ITEM_SIZE"
                       name="ITEM_SIZE"
                       type="text"
                       className="col-span-3"
-                      value={subMaterialForm?.ITEM_SIZE}
-                      onChange={handleInputChange}
+                      value={formData?.ITEM_SIZE}
+                      onChange={handleChange}
                       required
                     />
-                    {error.ITEM_SIZE && <p className="text-xs text-red-500">{error.ITEM_SIZE}</p>}
+                    {errors.ITEM_SIZE && <p className="text-xs text-red-500">{errors.ITEM_SIZE}</p>}
                   </div>
+
                   <div className="w-full">
-                    <Label htmlFor="quantity" className="text-right">
+                    <Label htmlFor="QTY" className="text-right">
                       Quantity
                     </Label>
                     <Input
-                      id="quantity"
+                      id="QTY"
                       name="QTY"
                       type="text"
                       className="col-span-3"
-                      value={subMaterialForm?.QTY}
-                      onChange={handleInputChange}
+                      value={formData?.QTY}
+                      onChange={handleChange}
                       required
                     />
-                    {error.QTY && <p className="text-xs text-red-500">{error.QTY}</p>}
+                    {errors.QTY && <p className="text-xs text-red-500">{errors.QTY}</p>}
                   </div>
                 </div>
+
                 <div className="mt-4 w-full space-y-2 text-left">
-                  <div
-                    className="flex h-[100%] w-[100%] aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {subMaterialForm.img ? (
-                      <img src={subMaterialForm.img} alt="preview" className="h-full object-cover" />
-                    ) : (
-                      <div className="text-center text-sm text-gray-500 dark:text-gray-400">Click to Upload</div>
-                    )}
+                  <div className="w-full">
+                    <label className="relative flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt={formData.ITEM_NAME} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="text-center text-xs text-gray-500 dark:text-gray-400">
+                          Click to Upload
+                        </div>
+                      )}
+                      <input
+                        id="image_file"
+                        name="image_file"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleChange}
+                        className="sr-only"
+                      />
+                    </label>
+
+                    {errors.image_file && <p className="text-xs text-red-500">{errors.image_file}</p>}
                   </div>
-                  <input
-                    name="employeeImage"
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    required
-                  />
-                  {error.img && <p className="text-xs text-red-500">{error.img}</p>}
                 </div>
               </div>
               <DialogFooter className={"mt-4"}>
