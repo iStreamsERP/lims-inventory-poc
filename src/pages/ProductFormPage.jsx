@@ -3,7 +3,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -11,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
@@ -31,8 +31,10 @@ export default function ProductFormPage() {
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false);
   const [uomList, setUomList] = useState([]);
-  const [openOtherNatureOfBusiness, setOpenOtherNatureOfBusiness] = useState(false);
-  const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState(["color", "size", "length", "width", "height", "weight", "volume", "capacity"]);
+  const [opened, setOpened] = useState(false);
+  const [openSubMaterialDetails, setopenSubMaterialDetails] = useState(false);
+  const [subMaterial, setsubMaterial] = useState(["color", "size", "variant"]);
+  const [hasSubProduct, setHasSubProduct] = useState(false);
 
   const initialFormData = {
     COMPANY_CODE: 1,
@@ -40,9 +42,9 @@ export default function ProductFormPage() {
     ITEM_CODE: "(NEW)",
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
+    UOM_SUBMATERIAL: "",
     ITEM_F_PUINISH: "NOS",
-
-    NATURE_OF_BUSINESS2: [],
+    SUB_MATERIAL_BASED_ON: [],
     GROUP_LEVEL1: "",
     GROUP_LEVEL2: "consumables",
     GROUP_LEVEL3: "consumables",
@@ -51,11 +53,47 @@ export default function ProductFormPage() {
     ITEM_GROUP: "PRODUCT",
     SUPPLIER_NAME: "",
     SALE_RATE: "",
+    SALE_UOM: "",
     SALE_MARGIN_PTG: "",
     QTY_IN_HAND: "",
     REMARKS: "",
+    SUB_MATERIALS_MODE: "",
     image_file: null,
   };
+
+  const uom = [
+    "PCS",
+    "UNIT",
+    "NOS",
+    "PKT",
+    "BOX",
+    "BAG",
+    "SET",
+    "PR",
+    "ROL",
+    "L",
+    "ML",
+    "KG",
+    "GM",
+    "MT",
+    "MTR",
+    "CM",
+    "MM",
+    "SQM",
+    "CUM",
+    "FT",
+    "IN",
+    "DOZ",
+    "CAN",
+    "BTL",
+    "TIN",
+    "JAR",
+    "DAY",
+    "HR",
+    "WK",
+    "MON",
+    "YR",
+  ];
 
   const [formData, setFormData] = useState(initialFormData);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -267,6 +305,7 @@ export default function ProductFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(formData);
     const validationErrors = validateInput();
     if (Object.keys(validationErrors).length > 0) {
       setError(validationErrors);
@@ -283,6 +322,7 @@ export default function ProductFormPage() {
       };
 
       const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      console.log("response", response);
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
 
@@ -308,6 +348,11 @@ export default function ProductFormPage() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    if (formData.SUB_MATERIALS_MODE === "T") {
+      setHasSubProduct(true);
+    }
+  }, [formData.SUB_MATERIALS_MODE]);
 
   return (
     <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-12">
@@ -372,19 +417,70 @@ export default function ProductFormPage() {
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                       </div>
-
-                      <div className="w-full">
-                        <Label htmlFor="SALE_RATE">Sales Price</Label>
-                        <Input
-                          name="SALE_RATE"
-                          id="SALE_RATE"
-                          type="text"
-                          placeholder="Type sales price"
-                          onChange={handleChange}
-                          value={formData.SALE_RATE}
-                          required
-                        />
-                        {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                      <div className="flex w-full flex-col gap-2 lg:flex-row">
+                        <div className="w-full">
+                          <Label htmlFor="SALE_RATE">Sales Price</Label>
+                          <Input
+                            name="SALE_RATE"
+                            id="SALE_RATE"
+                            type="text"
+                            placeholder="Type sales price"
+                            onChange={handleChange}
+                            value={formData.SALE_RATE}
+                            required
+                          />
+                          {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                        </div>
+                        <div className="w-full">
+                          <Label>UoM</Label>
+                          <Popover
+                            open={opened}
+                            onOpenChange={setOpened}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-full justify-between"
+                              >
+                                {formData.SALE_UOM ? uom.find((uom) => uom === formData.SALE_UOM) : "Select..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search uom..."
+                                  className="h-9"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No uom found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {uom.map((type) => (
+                                      <CommandItem
+                                        key={type}
+                                        value={type}
+                                        onSelect={(currentValue) => {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            SALE_UOM: currentValue,
+                                            UOM_SUBMATERIAL: currentValue,
+                                          }));
+                                          setOpened(false);
+                                        }}
+                                      >
+                                        {type}
+                                        <Check className={`ml-auto h-4 w-4 ${formData.SALE_UOM === type ? "opacity-100" : "opacity-0"}`} />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {error.SALE_UOM && <p className="text-sm text-red-500">{error.SALE_UOM}</p>}
+                        </div>
                       </div>
                     </div>
                     <div className="w-full">
@@ -445,7 +541,7 @@ export default function ProductFormPage() {
                       {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                     </div>
 
-                    <div className="w-full">
+                    <div className="mt-[14px] flex w-full flex-col gap-1">
                       <Label>Category</Label>
                       <Popover
                         open={openCategoryData}
@@ -456,7 +552,7 @@ export default function ProductFormPage() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={open}
-                            className="w-[200px] justify-between"
+                            className="w-full justify-between"
                           >
                             {formData.GROUP_LEVEL1
                               ? categoryData.find((item) => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
@@ -464,7 +560,7 @@ export default function ProductFormPage() {
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
+                        <PopoverContent className="w-full p-0">
                           <Command>
                             {/* Capture command input value */}
                             <CommandInput
@@ -755,74 +851,129 @@ export default function ProductFormPage() {
                   <CardDescription>Customize product settings such as options, variants, and default behaviors to suit your needs.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-2 flex space-x-2">
-                    <Checkbox id="terms" />
-                    <label
-                      htmlFor="terms"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      This Material Has SubProducts
-                    </label>
-                  </div>
+                  <div className="mb-3 space-y-4">
+                    <div className="flex space-x-2">
+                      <Checkbox
+                        checked={hasSubProduct}
+                        onCheckedChange={(checked) => {
+                          setHasSubProduct(checked);
+                          setFormData((prev) => ({
+                            ...prev,
+                            SUB_MATERIALS_MODE: checked ? "T" : "F",
+                          }));
+                        }}
+                        id="terms"
+                      />
+                      <label
+                        htmlFor="terms"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        This Material Has SubProducts
+                      </label>
+                    </div>
+                    {(hasSubProduct || formData.SUB_MATERIALS_MODE === "T") && (
+                      <>
+                        <div className="w-full">
+                          <Label className="block text-sm font-medium leading-6">Select SubMaterial Details</Label>
+                          <Popover
+                            open={openSubMaterialDetails}
+                            onOpenChange={setopenSubMaterialDetails}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openSubMaterialDetails}
+                                className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
+                           
+                              >
+                                {Array.isArray(formData.SUB_MATERIAL_BASED_ON) && formData.SUB_MATERIAL_BASED_ON.length > 0
+                                  ? formData.SUB_MATERIAL_BASED_ON.join(", ")
+                                  : "Select SubMaterial Details"}
+                                <ChevronsUpDown className="opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
 
-                  <div className="mt-3 w-full md:w-1/2 mb-2">
-                    <Label className="block text-sm font-medium leading-6">Select Other Nature Of Business</Label>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command className="w-full justify-start">
+                                <CommandInput
+                                  placeholder="Search submaterial based on"
+                                  className="h-9"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No results found</CommandEmpty>
+                                  <CommandGroup>
+                                    {subMaterial.map((item, index) => (
+                                      <CommandItem
+                                        key={index}
+                                        value={item}
+                                        onSelect={(currentValue) => {
+                                          setFormData((prev) => {
+                                            const currentSelections = Array.isArray(prev.SUB_MATERIAL_BASED_ON) ? prev.SUB_MATERIAL_BASED_ON : [];
+                                            const updated = currentSelections.includes(currentValue)
+                                              ? currentSelections.filter((val) => val !== currentValue)
+                                              : [...currentSelections, currentValue];
+                                            return { ...prev, SUB_MATERIAL_BASED_ON: updated };
+                                          });
 
-                    <Popover
-                      open={openOtherNatureOfBusiness}
-                      onOpenChange={setOpenOtherNatureOfBusiness}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openOtherNatureOfBusiness}
-                          className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
-                        >
-                          {formData.NATURE_OF_BUSINESS2?.length > 0 ? formData.NATURE_OF_BUSINESS2.join(", ") : "Select other nature of business"}
-                          <ChevronsUpDown className="opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command className="w-full justify-start">
-                          <CommandInput
-                            placeholder="Search other nature of business"
-                            className="h-9"
+                                          setError((prev) => ({
+                                            ...prev,
+                                            SUB_MATERIAL_BASED_ON: "",
+                                          }));
+                                        }}
+                                      >
+                                        {item}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto",
+                                            Array.isArray(formData.SUB_MATERIAL_BASED_ON) && formData.SUB_MATERIAL_BASED_ON.includes(item)
+                                              ? "opacity-100"
+                                              : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="w-full">
+                          <Label
+                            htmlFor="UOM_SUBMATERIAL"
+                            className="block text-sm font-medium leading-6"
+                          >
+                            UOM for SubMaterial
+                          </Label>
+                          <Input
+                            type="text"
+                            name="UOM_SUBMATERIAL"
+                            id="UOM_SUBMATERIAL"
+                            value={formData.UOM_SUBMATERIAL || "Not Selected"}
+                            onChange={handleChange}
+                            readOnly
                           />
-                          <CommandList>
-                            <CommandEmpty>No other nature of business found.</CommandEmpty>
-                            <CommandGroup>
-                              {otherNatureOfBusiness.map((item, index) => (
-                                <CommandItem
-                                  key={index}
-                                  value={item}
-                                  onSelect={(currentValue) => {
-                                    setFormData((prev) => {
-                                      const currentSelections = prev.NATURE_OF_BUSINESS2 || [];
-                                      const updated = currentSelections.includes(currentValue)
-                                        ? currentSelections.filter((val) => val !== currentValue)
-                                        : [...currentSelections, currentValue];
-                                      return { ...prev, NATURE_OF_BUSINESS2: updated };
-                                    });
-
-                                    setError((prev) => ({
-                                      ...prev,
-                                      NATURE_OF_BUSINESS2: "",
-                                    }));
-                                  }}
-                                >
-                                  {item}
-                                  <Check className={cn("ml-auto", formData.NATURE_OF_BUSINESS2.includes(item) ? "opacity-100" : "opacity-0")} />
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                        </div>
+                        <div className="w-full">
+                          <Label
+                            htmlFor="UOM_SUBMATERIAL"
+                            className="block text-sm font-medium leading-6"
+                          >
+                            Conversion Rate
+                          </Label>
+                          <Input
+                            type="text"
+                            name="SUBMATERIAL_CONVERSION"
+                            id="SUBMATERIAL_CONVERSION"
+                            value={formData.SUBMATERIAL_CONVERSION || 1}
+                            onChange={handleChange}
+                            readOnly
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
-
                   <div>
                     <Button
                       disabled={loading}
