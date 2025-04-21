@@ -46,8 +46,8 @@ export default function ProductFormPage() {
     ITEM_F_PUINISH: "NOS",
     SUB_MATERIAL_BASED_ON: [],
     GROUP_LEVEL1: "",
-    GROUP_LEVEL2: "consumables",
-    GROUP_LEVEL3: "consumables",
+    GROUP_LEVEL2: "Consumables",
+    GROUP_LEVEL3: "Consumables",
     COST_CODE: "MXXXX",
     ITEM_NAME: "",
     ITEM_GROUP: "PRODUCT",
@@ -55,11 +55,13 @@ export default function ProductFormPage() {
     SALE_RATE: "",
     SALE_UOM: "",
     SALE_MARGIN_PTG: "",
+    SUBMATERIAL_CONVRATE: 1,
     QTY_IN_HAND: "",
     REMARKS: "",
     SUB_MATERIALS_MODE: "",
     image_file: null,
   };
+
 
   const uom = [
     "PCS",
@@ -106,6 +108,12 @@ export default function ProductFormPage() {
     fetchCategoryUsingQuery();
     fetchUom();
   }, [id]);
+
+  useEffect(() => {
+    if (formData.SUB_MATERIALS_MODE === "T") {
+      setHasSubProduct(true);
+    }
+  }, [formData.SUB_MATERIALS_MODE]);
 
   const validateInput = () => {
     const newError = {};
@@ -348,11 +356,6 @@ export default function ProductFormPage() {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    if (formData.SUB_MATERIALS_MODE === "T") {
-      setHasSubProduct(true);
-    }
-  }, [formData.SUB_MATERIALS_MODE]);
 
   return (
     <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-12">
@@ -827,20 +830,6 @@ export default function ProductFormPage() {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-                  <div className="flex justify-center pt-5">
-                    <Button disabled={loading}>
-                      {loading ? (
-                        <BeatLoader
-                          color="#000"
-                          size={8}
-                        />
-                      ) : formData.ITEM_CODE === "(NEW)" ? (
-                        "Save Product"
-                      ) : (
-                        "Update Product"
-                      )}
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -885,7 +874,7 @@ export default function ProductFormPage() {
                                 role="combobox"
                                 aria-expanded={openSubMaterialDetails}
                                 className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
-                           
+
                               >
                                 {Array.isArray(formData.SUB_MATERIAL_BASED_ON) && formData.SUB_MATERIAL_BASED_ON.length > 0
                                   ? formData.SUB_MATERIAL_BASED_ON.join(", ")
@@ -957,16 +946,16 @@ export default function ProductFormPage() {
                         </div>
                         <div className="w-full">
                           <Label
-                            htmlFor="UOM_SUBMATERIAL"
+                            htmlFor="SUBMATERIAL_CONVRATE"
                             className="block text-sm font-medium leading-6"
                           >
                             Conversion Rate
                           </Label>
                           <Input
                             type="text"
-                            name="SUBMATERIAL_CONVERSION"
-                            id="SUBMATERIAL_CONVERSION"
-                            value={formData.SUBMATERIAL_CONVERSION || 1}
+                            name="SUBMATERIAL_CONVRATE"
+                            id="SUBMATERIAL_CONVRATE"
+                            value={formData.SUBMATERIAL_CONVRATE || 1}
                             onChange={handleChange}
                             readOnly
                           />
@@ -974,27 +963,24 @@ export default function ProductFormPage() {
                       </>
                     )}
                   </div>
-                  <div>
-                    <Button
-                      disabled={loading}
-                      type="submit"
-                    >
-                      {loading ? (
-                        <BeatLoader
-                          color="#000"
-                          size={8}
-                        />
-                      ) : formData.ITEM_CODE === "(NEW)" ? (
-                        "Save Product"
-                      ) : (
-                        "Update Product"
-                      )}
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
+          <div className="flex justify-center pt-5">
+            <Button disabled={loading} type="submit">
+              {loading ? (
+                <BeatLoader
+                  color="#000"
+                  size={8}
+                />
+              ) : formData.ITEM_CODE === "(NEW)" ? (
+                "Save Product"
+              ) : (
+                "Update Product"
+              )}
+            </Button>
+          </div>
         </form>
       </div>
       <div className="col-span-1 mt-5 h-fit w-full lg:col-span-5 lg:mt-24">
