@@ -56,12 +56,11 @@ export default function ProductFormPage() {
     SALE_UOM: "",
     SALE_MARGIN_PTG: "",
     SUBMATERIAL_CONVRATE: 1,
-    QTY_IN_HAND: "",
+    QTY_IN_HAND: 0,
     REMARKS: "",
     SUB_MATERIALS_MODE: "",
     image_file: null,
   };
-
 
   const uom = [
     "PCS",
@@ -118,8 +117,6 @@ export default function ProductFormPage() {
   const validateInput = () => {
     const newError = {};
     if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-    if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
-    else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
     if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
     else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
     if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
@@ -527,21 +524,6 @@ export default function ProductFormPage() {
                         required
                       />
                       {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
-                    </div>
-
-                    <div className="w-full">
-                      <Label htmlFor="QTY_IN_HAND">Quantity</Label>
-                      <Input
-                        name="QTY_IN_HAND"
-                        id="QTY_IN_HAND"
-                        type="text"
-                        placeholder="Type quantity"
-                        onChange={handleChange}
-                        value={formData.QTY_IN_HAND || 0}
-                        required
-                        readOnly
-                      />
-                      {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                     </div>
 
                     <div className="mt-[14px] flex w-full flex-col gap-1">
