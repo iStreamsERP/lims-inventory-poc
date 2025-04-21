@@ -47,6 +47,7 @@ const AddSubProduct = ({ itemcode }) => {
       fetchSubmaterialProduct();
     }
   }, [itemcode]);
+
   const fetchSubmaterialProduct = async () => {
     try {
       const submaterialPayload = {
@@ -63,6 +64,7 @@ const AddSubProduct = ({ itemcode }) => {
       });
     }
   };
+
   const validateSubMaterialForm = () => {
     const newError = {};
     if (!subMaterialForm.ITEM_NAME?.trim()) {
@@ -85,6 +87,7 @@ const AddSubProduct = ({ itemcode }) => {
     SetError(newError);
     return Object.keys(newError).length === 0;
   };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSubMaterialForm((prev) => ({
@@ -93,6 +96,7 @@ const AddSubProduct = ({ itemcode }) => {
     }));
     SetError((prev) => ({ ...prev, [name]: "" }));
   };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -101,6 +105,7 @@ const AddSubProduct = ({ itemcode }) => {
       SetError((prev) => ({ ...prev, img: "" }));
     }
   };
+
   const handleDelete = async (product) => {
     alert("Are you sure you want to delete this product? This action cannot be undone.")
     try {
@@ -125,11 +130,13 @@ const AddSubProduct = ({ itemcode }) => {
       setLoading(false);
     }
   }
+
   const handleProductDialogClose = () => {
     setSubMaterialForm(initialFormData);
     setIsDialogOpen(false);
     fetchSubmaterialProduct();
   };
+
   const handleEdit = async (subMaterialproduct) => {
     setIsDialogOpen(true)
     setSubMaterialForm({
@@ -142,6 +149,7 @@ const AddSubProduct = ({ itemcode }) => {
       img: subMaterialproduct.img,
     })
   }
+
   const handleSumbit = async () => {
     const isValid = validateSubMaterialForm();
     if (!isValid) return;
@@ -169,6 +177,7 @@ const AddSubProduct = ({ itemcode }) => {
       setLoading(false);
     }
   };
+
   return (
     <Card >
       <CardHeader>
@@ -179,7 +188,7 @@ const AddSubProduct = ({ itemcode }) => {
         <div className="h-[535px] overflow-y-scroll">
           {subMaterialProducts.map((Submaterialproduct, index) => (
             <Card
-              className="flex w-full mb-3  flex-col justify-center gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 dark:border-gray-700 w-full dark:bg-gray-800 dark:hover:bg-gray-700"
+              className="flex w-full mb-3  flex-col justify-center gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
               key={index}
             >
               <div className="flex justify-between  w-full">
@@ -232,7 +241,7 @@ const AddSubProduct = ({ itemcode }) => {
                   Enter the details of the sub-material you'd like to add. Click save to confirm.
                 </DialogDescription>
               </DialogHeader>
-              <div className="w-full h-full flex lg:flex-row w-[100%] h-[100%]  flex-col gap-2 overflow-y-scroll">
+              <div className="w-full h-full flex lg:flex-row flex-col gap-2 overflow-y-scroll">
                 <div className="grid grid-cols-1 w-full ">
                   <div className="w-full">
                     <Label htmlFor="itemname" className="text-right">

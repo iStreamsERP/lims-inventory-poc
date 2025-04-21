@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -40,10 +41,9 @@ const initialFormData = {
     SALE_UOM: "",
     SUPPLIER_NAME: "",
     SALE_MARGIN_PTG: "",
-    QTY_IN_HAND: "",
-    remarks: "",
+    REMARKS: "",
+    FEATURES: "",
     img: "",
-    features: "",
 };
 
 
@@ -61,20 +61,18 @@ export default function ServiceFormPage() {
     const { userData } = useAuth();
     const { toast } = useToast();
 
-    const timeperiod = ["Daily", "Weekly", "Monthly", "Yearly"];
+    const timePeriod = ["Daily", "Weekly", "Monthly", "Yearly"];
 
     const validateInput = () => {
         const newError = {};
         if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-        if (!formData.QTY_IN_HAND) newError.QTY_IN_HAND = "Quantity in hand is required.";
-        else if (!/^\d+$/.test(formData.QTY_IN_HAND)) newError.QTY_IN_HAND = "Quantity must be a number.";
         if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
         else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
         if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
         else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
         if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
         if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-        if (!formData.remarks) newError.remarks = "Remarks are required.";
+        if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
         return newError;
     };
 
@@ -95,10 +93,12 @@ export default function ServiceFormPage() {
                 Orderby: "",
             };
             const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+            const data = response?.[0] || {};
 
             setFormData((prev) => ({
                 ...prev,
-                ...(response?.[0] || {}),
+                ...data,
+                FEATURES: data.FEATURES ? data.FEATURES.split(",") : [],
             }));
 
         } catch (error) {
@@ -261,23 +261,6 @@ export default function ServiceFormPage() {
                                         {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
                                     </div>
 
-
-                                </div>
-
-                                <div className="flex flex-col gap-4 lg:flex-row">
-                                    <div className="flex-1">
-                                        <Label htmlFor="QTY_IN_HAND">Quantity</Label>
-                                        <Input
-                                            name="QTY_IN_HAND"
-                                            id="QTY_IN_HAND"
-                                            type="text"
-                                            placeholder="Type quantity"
-                                            onChange={handleChange}
-                                            value={formData.QTY_IN_HAND}
-                                            required
-                                        />
-                                        {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
-                                    </div>
                                     <div className="flex flex-col lg:w-[49%] justify-between gap-1 md:flex-row lg:flex-row">
                                         <div className="flex-1 ">
                                             <Label htmlFor="SALE_RATE">Sale Price</Label>
@@ -292,7 +275,7 @@ export default function ServiceFormPage() {
                                             />
                                             {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
                                         </div>
-                                        <div className="flex-1">
+                                        <div className="flex-1 ">
                                             <Label>UoM</Label>
                                             <Popover
                                                 open={opened}
@@ -306,7 +289,7 @@ export default function ServiceFormPage() {
                                                         className="w-full justify-between"
                                                         disabled={!formData.SALE_RATE}
                                                     >
-                                                        {formData.SALE_UOM ? timeperiod.find((period) => period === formData.SALE_UOM) : "Select..."}
+                                                        {formData.SALE_UOM ? timePeriod.find((period) => period === formData.SALE_UOM) : "Select..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -319,7 +302,7 @@ export default function ServiceFormPage() {
                                                         <CommandList>
                                                             <CommandEmpty>No uom found.</CommandEmpty>
                                                             <CommandGroup>
-                                                                {timeperiod.map((type) => (
+                                                                {timePeriod.map((type) => (
                                                                     <CommandItem
                                                                         key={type}
                                                                         value={type}
@@ -343,11 +326,10 @@ export default function ServiceFormPage() {
                                             {error.SALE_UOM && <p className="text-sm text-red-500">{error.SALE_UOM}</p>}
                                         </div>
                                     </div>
-
                                 </div>
 
-                                <div className="flex flex-col gap-4 lg:flex-row">
-                                    <div className="flex flex-col gap-1 flex-1">
+                                <div className="flex flex-col gap-4 w-full lg:flex-row">
+                                    <div className="flex flex-col gap-1 mt-[14px] w-full">
                                         <Label>Category</Label>
                                         <Popover open={openCategoryData} onOpenChange={setOpenCategoryData}>
                                             <PopoverTrigger asChild>
@@ -355,7 +337,7 @@ export default function ServiceFormPage() {
                                                     variant="outline"
                                                     role="combobox"
                                                     aria-expanded={open}
-                                                    className="w-[200px] justify-between"
+                                                    className=" w-full justify-between"
                                                 >
                                                     {formData.GROUP_LEVEL1
                                                         ? categoryData.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
@@ -375,31 +357,33 @@ export default function ServiceFormPage() {
                                                         <CommandEmpty>
                                                             <div className="flex items-center justify-between">
                                                                 <span>No category found.</span>
-                                                                {commandInputValue && (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={() => {
-                                                                            const newValue = capitalizeFirstLetter(commandInputValue.trim());
-                                                                            if (newValue) {
-                                                                                setCategoryData(prev => [
-                                                                                    ...prev,
-                                                                                    { GROUP_LEVEL1: newValue },
-                                                                                ]);
-                                                                                setFormData(prev => ({
-                                                                                    ...prev,
-                                                                                    GROUP_LEVEL1: newValue,
-                                                                                }));
-                                                                                setOpenCategoryData(false);
-                                                                                setError(prev => ({
-                                                                                    ...prev,
-                                                                                    GROUP_LEVEL1: "",
-                                                                                }));
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        Add “{commandInputValue}”
-                                                                    </Button>
-                                                                )}
+                                                                {
+                                                                    commandInputValue && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            onClick={() => {
+                                                                                const newValue = capitalizeFirstLetter(commandInputValue.trim());
+                                                                                if (newValue) {
+                                                                                    setCategoryData(prev => [
+                                                                                        ...prev,
+                                                                                        { GROUP_LEVEL1: newValue },
+                                                                                    ]);
+                                                                                    setFormData(prev => ({
+                                                                                        ...prev,
+                                                                                        GROUP_LEVEL1: newValue,
+                                                                                    }));
+                                                                                    setOpenCategoryData(false);
+                                                                                    setError(prev => ({
+                                                                                        ...prev,
+                                                                                        GROUP_LEVEL1: "",
+                                                                                    }));
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            Add “{commandInputValue}”
+                                                                        </Button>
+                                                                    )
+                                                                }
                                                             </div>
                                                         </CommandEmpty>
                                                         <CommandGroup>
@@ -432,13 +416,13 @@ export default function ServiceFormPage() {
                                         {error.GROUP_LEVEL1 && <p className="text-sm text-red-500">{error.GROUP_LEVEL1}</p>}
                                     </div>
 
-                                    <div className="flex-1">
-                                        <Label htmlFor="features">Features</Label>
+                                    <div className="w-full">
+                                        <Label htmlFor="FEATURES">Features</Label>
                                         <div className="flex gap-1">
                                             <Input
-                                                name="features"
-                                                id="features"
-                                                placeholder="Enter item features"
+                                                name="FEATURES"
+                                                id="FEATURES"
+                                                placeholder="Enter features"
                                                 value={featureInput}
                                                 onChange={(e) => setFeatureInput(e.target.value)}
                                                 className="mb-2 flex-1"
@@ -449,10 +433,10 @@ export default function ServiceFormPage() {
                                                 onClick={() => {
                                                     const trimmed = featureInput.trim();
                                                     if (trimmed !== "") {
-                                                        const updatedFeatures = [...(formData.features || []), trimmed];
+                                                        const updatedFeatures = [...(formData.FEATURES || []), trimmed];
                                                         setFormData((prev) => ({
                                                             ...prev,
-                                                            features: updatedFeatures,
+                                                            FEATURES: updatedFeatures,
                                                         }));
                                                         setFeatureInput("");
                                                     }
@@ -461,29 +445,32 @@ export default function ServiceFormPage() {
                                                 Add <PlusIcon className="ml-1 h-4 w-4" />
                                             </Button>
                                         </div>
-                                        {error.features && <p className="text-sm text-red-500">{error.features}</p>}
+                                        {error.FEATURES && <p className="text-sm text-red-500">{error.FEATURES}</p>}
                                         {/* Display features as removable chips */}
                                         <div className="mt-2 flex flex-wrap gap-2">
-                                            {(formData.features || []).map((feature, index) => (
-                                                <div
+                                            {(formData.FEATURES || []).map((feature, index) => (
+                                                <Badge
+                                                    variant={"outline"}
                                                     key={index}
-                                                    className="bg-gray-600 flex items-center gap-1 rounded-full  px-3 py-1 text-sm "
+                                                    className="flex items-center"
                                                 >
-                                                    {feature}
+                                                    <span>
+                                                        {feature}
+                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            const updated = formData.features.filter((_, i) => i !== index);
+                                                            const updated = formData.FEATURES.filter((_, i) => i !== index);
                                                             setFormData((prev) => ({
                                                                 ...prev,
-                                                                features: updated,
+                                                                FEATURES: updated,
                                                             }));
                                                         }}
-                                                        className="ml-1 text-red-500 hover:text-red-700"
+                                                        className="ml-1 text-red-500 hover:text-red-800"
                                                     >
-                                                        <XIcon className="h-3 w-3" />
+                                                        <XIcon className="h-4 w-4" />
                                                     </button>
-                                                </div>
+                                                </Badge>
                                             ))}
                                         </div>
 
@@ -491,18 +478,16 @@ export default function ServiceFormPage() {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="remarks">Remarks</Label>
+                                    <Label htmlFor="REMARKS">Remarks</Label>
                                     <Textarea
-                                        name="remarks"
-                                        id="remarks"
+                                        name="REMARKS"
+                                        id="REMARKS"
                                         placeholder="Enter Remarks"
                                         onChange={handleChange}
-                                        value={formData.remarks}
+                                        value={formData.REMARKS}
                                     />
-                                    {error.remarks && <p className="text-sm text-red-500">{error.remarks}</p>}
+                                    {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
                                 </div>
-
-
 
                                 <div className="flex justify-center pt-5">
                                     <Button disabled={loading}>

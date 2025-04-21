@@ -37,6 +37,7 @@ export default function ProductFormPage() {
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false)
   const [uomList, setUomList] = useState([]);
+  const [opened, setOpened] = useState(false);
 
   const initialFormData = {
     COMPANY_CODE: 1,
@@ -58,6 +59,40 @@ export default function ProductFormPage() {
     REMARKS: "",
     image_file: null,
   };
+
+  const uom = [
+    "PCS",
+    "UNIT",
+    "NOS",
+    "PKT",
+    "BOX",
+    "BAG",
+    "SET",
+    "PR",
+    "ROL",
+    "L",
+    "ML",
+    "KG",
+    "GM",
+    "MT",
+    "MTR",
+    "CM",
+    "MM",
+    "SQM",
+    "CUM",
+    "FT",
+    "IN",
+    "DOZ",
+    "CAN",
+    "BTL",
+    "TIN",
+    "JAR",
+    "DAY",
+    "HR",
+    "WK",
+    "MON",
+    "YR",
+  ];
 
   const [formData, setFormData] = useState(initialFormData);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -386,19 +421,70 @@ export default function ProductFormPage() {
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                       </div>
+                      <div className="flex flex-col lg:flex-row w-full gap-2">
+                        <div className="w-full">
+                          <Label htmlFor="SALE_RATE">Sales Price</Label>
+                          <Input
+                            name="SALE_RATE"
+                            id="SALE_RATE"
+                            type="text"
+                            placeholder="Type sales price"
+                            onChange={handleChange}
+                            value={formData.SALE_RATE}
+                            required
+                          />
+                          {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                        </div>
+                        <div className="w-full">
+                          <Label>UoM</Label>
+                          <Popover
+                            open={opened}
+                            onOpenChange={setOpened}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-full justify-between"
 
-                      <div className="w-full">
-                        <Label htmlFor="SALE_RATE">Sales Price</Label>
-                        <Input
-                          name="SALE_RATE"
-                          id="SALE_RATE"
-                          type="text"
-                          placeholder="Type sales price"
-                          onChange={handleChange}
-                          value={formData.SALE_RATE}
-                          required
-                        />
-                        {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                              >
+                                {formData.SALE_UOM ? uom.find((period) => period === formData.SALE_UOM) : "Select..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search uom..."
+                                  className="h-9"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No uom found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {uom.map((type) => (
+                                      <CommandItem
+                                        key={type}
+                                        value={type}
+                                        onSelect={(currentValue) => {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            SALE_UOM: currentValue,
+                                          }));
+                                          setOpened(false);
+                                        }}
+                                      >
+                                        {type}
+                                        <Check className={`ml-auto h-4 w-4 ${formData.SALE_UOM === type ? "opacity-100" : "opacity-0"}`} />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {error.SALE_UOM && <p className="text-sm text-red-500">{error.SALE_UOM}</p>}
+                        </div>
                       </div>
                     </div>
                     <div className="w-full">
@@ -458,23 +544,26 @@ export default function ProductFormPage() {
                       {error.QTY_IN_HAND && <p className="text-sm text-red-500">{error.QTY_IN_HAND}</p>}
                     </div>
 
-                    <div className="w-full">
+                    <div className="w-full flex flex-col gap-1 mt-[14px]">
                       <Label>Category</Label>
-                      <Popover open={openCategoryData} onOpenChange={setOpenCategoryData}>
+                      <Popover
+                        open={openCategoryData}
+                        onOpenChange={setOpenCategoryData}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
                             aria-expanded={open}
-                            className="w-[200px] justify-between"
+                            className="w-full justify-between"
                           >
                             {formData.GROUP_LEVEL1
-                              ? categoryData.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
+                              ? categoryData.find((item) => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
                               : "Select category..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
+                        <PopoverContent className="w-full p-0">
                           <Command>
                             {/* Capture command input value */}
                             <CommandInput
@@ -492,16 +581,13 @@ export default function ProductFormPage() {
                                       onClick={() => {
                                         const newValue = capitalizeFirstLetter(commandInputValue.trim());
                                         if (newValue) {
-                                          setCategoryData(prev => [
-                                            ...prev,
-                                            { GROUP_LEVEL1: newValue },
-                                          ]);
-                                          setFormData(prev => ({
+                                          setCategoryData((prev) => [...prev, { GROUP_LEVEL1: newValue }]);
+                                          setFormData((prev) => ({
                                             ...prev,
                                             GROUP_LEVEL1: newValue,
                                           }));
                                           setOpenCategoryData(false);
-                                          setError(prev => ({
+                                          setError((prev) => ({
                                             ...prev,
                                             GROUP_LEVEL1: "",
                                           }));
@@ -519,7 +605,7 @@ export default function ProductFormPage() {
                                     key={index}
                                     value={item.GROUP_LEVEL1}
                                     onSelect={(currentValue) => {
-                                      setFormData(prev => ({
+                                      setFormData((prev) => ({
                                         ...prev,
                                         GROUP_LEVEL1: currentValue,
                                       }));
@@ -528,10 +614,7 @@ export default function ProductFormPage() {
                                   >
                                     {item.GROUP_LEVEL1}
                                     <Check
-                                      className={cn(
-                                        "ml-auto h-4 w-4",
-                                        formData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0"
-                                      )}
+                                      className={cn("ml-auto h-4 w-4", formData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0")}
                                     />
                                   </CommandItem>
                                 ))}
@@ -772,7 +855,10 @@ export default function ProductFormPage() {
                 </CardHeader>
                 <CardContent className="flex justify-center space-y-2">
                   <div>
-                    <Button disabled={loading} type="submit">
+                    <Button
+                      disabled={loading}
+                      type="submit"
+                    >
                       {loading ? (
                         <BeatLoader
                           color="#000"

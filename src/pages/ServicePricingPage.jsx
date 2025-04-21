@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Check, CircleCheck } from "lucide-react";
+import { CircleCheck } from "lucide-react";
+import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,9 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from '@/components/ui/badge';
-import { getDataModelService } from '@/services/dataModelService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDataModelService } from '@/services/dataModelService';
 import { BarLoader } from 'react-spinners';
 
 const ServicePricingPage = () => {
@@ -33,8 +33,15 @@ const ServicePricingPage = () => {
         Orderby: ""
       };
       const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
-      setServiceData(response);
-      console.log("response", response[0]);
+
+      const updatedResponse = response.map(item => {
+        return {
+          ...item,
+          FEATURES: item.FEATURES ? item.FEATURES.split(",") : [],
+        };
+      });
+
+      setServiceData(updatedResponse);
     } catch (error) {
       setError(error?.message || "Something went wrong");
     } finally {
@@ -74,14 +81,25 @@ const ServicePricingPage = () => {
                       Start For Free
                     </Button>
                   </div>
-                  <div className="text-sm text-center pt-2 text-gray-400">
-                    Features
-                  </div>
-                  <div className='text-sm font-normal text-muted-foreground'>
-                    <p className='flex items-center gap-1'>
-                      <CircleCheck size={18} className="text-violet-500" />
-                      Transaction Insights
-                    </p>
+
+                  <div className='text-sm font-normal text-muted-foreground space-y-1'>
+                    <div className="text-sm pt-2 mb-2">
+                      Features
+                    </div>
+                    {
+                      item.FEATURES.length > 0 ? (
+                        item.FEATURES.map((feature, index) => (
+                          <p key={index} className='flex items-center gap-1'>
+                            <CircleCheck size={18} className="text-violet-500" />
+                            {feature}
+                          </p>
+                        ))
+                      ) : (
+                        <p className='flex items-center gap-1'>
+                          No Features Available
+                        </p>
+                      )
+                    }
                   </div>
                 </CardContent>
               </Card>

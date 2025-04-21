@@ -135,7 +135,7 @@ const ServiceListPage = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            Item Code
+            Service Code
             <ArrowUpDown />
           </Button>
         )
@@ -146,7 +146,7 @@ const ServiceListPage = () => {
     },
     {
       accessorKey: "ITEM_NAME",
-      header: "Item Name",
+      header: "Service Name",
       cell: ({ row }) => (
         <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
       ),
@@ -160,7 +160,7 @@ const ServiceListPage = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0 "
           >
-            Item Rate
+            Sale Price
             <ArrowUpDown />
           </Button>
         )
@@ -169,13 +169,8 @@ const ServiceListPage = () => {
     },
     {
       accessorKey: "SUPPLIER_NAME",
-      header: () => <div>SupplierRef</div>,
+      header: () => <div>Supplier</div>,
       cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
-    },
-    {
-      accessorKey: "QTY_IN_HAND",
-      header: () => <div>Quantity</div>,
-      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
       accessorKey: "action",

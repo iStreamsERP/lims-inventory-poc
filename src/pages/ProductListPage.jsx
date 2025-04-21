@@ -174,7 +174,7 @@ const ProductListPage = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0"
           >
-            Item Code
+            Product Code
             <ArrowUpDown />
           </Button>
         )
@@ -185,7 +185,7 @@ const ProductListPage = () => {
     },
     {
       accessorKey: "ITEM_NAME",
-      header: "Item Name",
+      header: "Product Name",
       cell: ({ row }) => (
         <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
       ),
@@ -206,7 +206,7 @@ const ProductListPage = () => {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="p-0 "
           >
-            Item Rate
+            Sale Price
             <ArrowUpDown />
           </Button>
         )
@@ -215,7 +215,7 @@ const ProductListPage = () => {
     },
     {
       accessorKey: "QTY_IN_HAND",
-      header: () => <div>Quantity</div>,
+      header: () => <div>Qty</div>,
       cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
