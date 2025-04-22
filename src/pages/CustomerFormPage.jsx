@@ -60,8 +60,6 @@ const CustomerFormPage = () => {
   const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState([]);
   const [locationData, setLocationData] = useState([]);
 
-  console.table(customerFormData);
-
   useEffect(() => {
     if (clientIDParams) {
       fetchClientData();
@@ -199,6 +197,7 @@ const CustomerFormPage = () => {
     try {
       setLoading(true);
       const convertedDataModel = convertDataModelToStringData("CLIENT_MASTER", customerFormData);
+
       const clientMasterPayload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
@@ -289,7 +288,7 @@ const CustomerFormPage = () => {
                       <CommandInput
                         placeholder="Search nature of business"
                         className="h-9"
-                        onValueChange={(value) => setCommandInputValue(value)}
+                        onValueChange={setCommandInputValue}
                       />
                       <CommandList>
                         <CommandEmpty>

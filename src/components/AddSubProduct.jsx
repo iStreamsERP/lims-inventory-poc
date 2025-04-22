@@ -9,46 +9,52 @@ import { deleteDataModelService, getDataModelService, saveDataService } from "@/
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-const AddSubProduct = ({ itemcode }) => {
-  const initialFormData = {
+const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
+  const { ITEM_CODE, ITEM_NAME } = formDataProps;
+
+  const initialFormData = useMemo(() => ({
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
-    ITEM_CODE: itemcode,
+    ITEM_TYPE: "",
+    ITEM_CODE,
     SUB_MATERIAL_NO: -1,
     ITEM_FINISH: "",
-    ITEM_NAME: "",
+    ITEM_NAME,
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
     COST_CODE: "MXXXX",
     ITEM_SIZE: "",
     QTY: "",
     image_file: null,
-  }
+  }), [ITEM_CODE, ITEM_NAME]);
 
   const { userData } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [isEnabled, setIsEnabled] = useState(false);
 
-  const [formData, setFormData] = useState(initialFormData);
-  const [subMaterialProducts, setSubMaterialProducts] = useState([]);
+  const [subProductFormData, setSubProductFormData] = useState(initialFormData);
+  const [productFormData, setProductFormData] = useState(null);
+  const [subProductList, setSubProductList] = useState([]);
   const [previewUrl, setPreviewUrl] = useState("");
 
+  console.log(subProductList);
+
   useEffect(() => {
-    if (itemcode !== "(NEW)") {
-      setIsEnabled(true);
-      setFormData((prev) => ({
-        ...prev,
-        ITEM_CODE: itemcode,
-      }));
-      fetchSubMaterialProduct();
-      fetchSubProductImage();
-    }
-  }, [itemcode]);
+    setSubProductFormData(f => ({ ...f, ITEM_CODE, ITEM_NAME }));
+
+    // now load fresh data based on the new code
+    fetchProductData();
+    fetchSubProductData();
+  }, [onSubmitTrigger, ITEM_CODE]);
+
+  useEffect(() => {
+    if (!productFormData) return;
+    setIsEnabled(productFormData.SUB_MATERIALS_MODE === "T");
+  }, [productFormData?.SUB_MATERIALS_MODE]);
 
   useEffect(() => {
     return () => {
@@ -58,37 +64,40 @@ const AddSubProduct = ({ itemcode }) => {
     };
   }, [previewUrl]);
 
+  const fetchProductData = async () => {
+    try {
+      const payload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: `ITEM_CODE = '${ITEM_CODE}'`,
+        Orderby: "",
+      };
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
 
-  const validateSubMaterialForm = () => {
-    const newError = {};
-    if (!formData.ITEM_NAME?.trim()) {
-      newError.ITEM_NAME = "Item Name is required.";
+      const client = response?.[0] || {};
+
+      setProductFormData((prev) => ({
+        ...prev,
+        ...client,
+        SUB_MATERIAL_BASED_ON: client.SUB_MATERIAL_BASED_ON
+          ? client.SUB_MATERIAL_BASED_ON.split(',').map((item) => item.trim())
+          : [],
+      }));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
     }
-    if (!formData.ITEM_FINISH?.trim()) {
-      newError.ITEM_FINISH = "Color is required.";
-    }
-    if (!formData.ITEM_SIZE?.trim()) {
-      newError.ITEM_SIZE = "Size is required.";
-    }
-    if (!formData.QTY?.toString().trim()) {
-      newError.QTY = "Quantity is required.";
-    } else if (!/^\d+(\.\d{1,2})?$/.test(formData.QTY)) {
-      newError.QTY = "Quantity must be a valid number.";
-    }
-    if (!formData.image_file) {
-      newError.image_file = "Image is required.";
-    }
-    setErrors(newError);
-    return Object.keys(newError).length === 0;
   };
 
-  const fetchSubMaterialProduct = async () => {
+  const fetchSubProductData = async () => {
     try {
       const payload = {
         DataModelName: "INVT_SUBMATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${itemcode}'`,
+        WhereCondition: `ITEM_CODE = '${ITEM_CODE}'`,
         Orderby: "",
       };
+
       const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
 
       const updatedProducts = await Promise.all(
@@ -102,7 +111,7 @@ const AddSubProduct = ({ itemcode }) => {
         })
       );
 
-      setSubMaterialProducts(updatedProducts);
+      setSubProductList(updatedProducts);
     } catch (errors) {
       toast({
         variant: "destructive",
@@ -118,14 +127,14 @@ const AddSubProduct = ({ itemcode }) => {
         { responseType: "blob" }
       );
 
+      console.log(response);
+
       const blob = response.data;
       const mimeType = blob.type;
       const extension = mimeType.split("/")[1] || "png";
       const filename = `SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}.${extension}`;
       const file = new File([blob], filename, { type: mimeType });
       const previewUrl = URL.createObjectURL(file);
-
-      console.log(previewUrl);
 
       return { file, previewUrl };
     } catch (error) {
@@ -134,13 +143,12 @@ const AddSubProduct = ({ itemcode }) => {
     }
   };
 
-
   const handleChange = (e) => {
     const { name, type, value, files } = e.target;
     if (type === "file") {
 
       const file = files[0] || null;
-      setFormData((prev) => ({ ...prev, [name]: file }));
+      setSubProductFormData((prev) => ({ ...prev, [name]: file }));
       setErrors((prev) => ({ ...prev, [name]: "" }));
 
       // generate preview URL
@@ -151,7 +159,7 @@ const AddSubProduct = ({ itemcode }) => {
         setPreviewUrl(null);
       }
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setSubProductFormData((prev) => ({ ...prev, [name]: value }));
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
@@ -159,11 +167,10 @@ const AddSubProduct = ({ itemcode }) => {
   const handleDelete = async (product) => {
     alert("Are you sure you want to delete this product? This action cannot be undone.")
     try {
-      setLoading(true);
       const deleteDataModelServicePayload = {
         UserName: userData.currentUserLogin,
         DataModelName: "INVT_SUBMATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${itemcode}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
+        WhereCondition: `ITEM_CODE = '${formDataProps?.ITEM_CODE}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
       }
       const deleteDataModelServiceResponse = await deleteDataModelService(deleteDataModelServicePayload, userData.currentUserLogin, userData.clientURL);
       toast({
@@ -171,20 +178,16 @@ const AddSubProduct = ({ itemcode }) => {
         title: deleteDataModelServiceResponse,
       })
       await handleImageDelete(product.ITEM_CODE, product.SUB_MATERIAL_NO);
-      await fetchSubMaterialProduct();
+      await fetchSubProductData();
     } catch (errors) {
       toast({
         variant: "destructive",
         title: `Error fetching client: ${errors.message}`,
       });
-    } finally {
-      setLoading(false);
     }
   }
 
   const handleImageDelete = async (itemCode, subMaterialNo) => {
-    setLoading(true);
-
     try {
       const email = encodeURIComponent(userData.currentUserLogin);
       const fileName = encodeURIComponent(`SUB_PRODUCT_IMAGE_${itemCode}_${subMaterialNo}`);
@@ -212,41 +215,26 @@ const AddSubProduct = ({ itemcode }) => {
           error?.message ||
           "Unknown error occurred.",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleEdit = async (subMaterialProduct) => {
     setIsDialogOpen(true)
-    setFormData({
-      ITEM_CODE: itemcode,
-      SUB_MATERIAL_NO: subMaterialProduct.SUB_MATERIAL_NO,
-      ITEM_FINISH: subMaterialProduct.ITEM_FINISH,
-      ITEM_NAME: subMaterialProduct.ITEM_NAME,
-      ITEM_SIZE: subMaterialProduct.ITEM_SIZE,
-      QTY: subMaterialProduct.QTY,
-      image_file: subMaterialProduct.image_file,
-    });
-    setPreviewUrl(subMaterialProduct.image_file);
+    setSubProductFormData(initialFormData);
   }
 
   const handleProductDialogClose = () => {
-    setFormData(initialFormData);
+    setSubProductFormData(initialFormData);
     setIsDialogOpen(false);
-    fetchSubMaterialProduct();
+    fetchSubProductData();
   };
 
   const handleUploadImage = async (serialNo) => {
-    console.log("Uploading image...", itemcode, serialNo);
-
-    setLoading(true);
-
-    const file = formData.image_file;
+    const file = subProductFormData.image_file;
     const payload = new FormData();
     payload.append("file", file);
     payload.append("email", userData.currentUserLogin);
-    payload.append("fileName", `SUB_PRODUCT_IMAGE_${itemcode}_${serialNo}`);
+    payload.append("fileName", `SUB_PRODUCT_IMAGE_${ITEM_CODE}_${serialNo}`);
 
     try {
       const response = await axios.post(
@@ -261,7 +249,6 @@ const AddSubProduct = ({ itemcode }) => {
 
       console.log(response);
 
-
       if (response.status === 200) {
         toast({
           title: "Sub product saved and image uploaded!",
@@ -273,8 +260,6 @@ const AddSubProduct = ({ itemcode }) => {
         });
       }
     } catch (errors) {
-      console.log(errors);
-
       toast({
         variant: "destructive",
         title: "Error saving image.",
@@ -283,19 +268,12 @@ const AddSubProduct = ({ itemcode }) => {
           errors?.message ||
           "Unknown errors occurred.",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSumbit = async () => {
-    const isValid = validateSubMaterialForm();
-    if (!isValid) return;
-
     try {
-      setLoading(true);
-
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", formData);
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", subProductFormData);
       const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
@@ -310,9 +288,9 @@ const AddSubProduct = ({ itemcode }) => {
         await handleUploadImage(serialNo[1]);
       }
 
-      await fetchSubMaterialProduct();
+      await fetchSubProductData();
 
-      setFormData(initialFormData)
+      setSubProductFormData(initialFormData)
     } catch (errors) {
       toast({
         variant: "destructive",
@@ -320,8 +298,31 @@ const AddSubProduct = ({ itemcode }) => {
       })
     } finally {
       setIsDialogOpen(false);
-      setLoading(false);
     }
+  };
+
+  const dynamicFields = {
+    Color: {
+      label: "Color",
+      id: "ITEM_FINISH",
+      name: "ITEM_FINISH",
+      valueKey: "ITEM_FINISH",
+      errorKey: "ITEM_FINISH",
+    },
+    Size: {
+      label: "Size",
+      id: "ITEM_SIZE",
+      name: "ITEM_SIZE",
+      valueKey: "ITEM_SIZE",
+      errorKey: "ITEM_SIZE",
+    },
+    Variant: {
+      label: "Variant",
+      id: "ITEM_TYPE",
+      name: "ITEM_TYPE",
+      valueKey: "ITEM_TYPE",
+      errorKey: "ITEM_TYPE",
+    },
   };
 
   return (
@@ -332,7 +333,7 @@ const AddSubProduct = ({ itemcode }) => {
       </CardHeader>
       <CardContent>
         <div className="h-[535px] overflow-y-scroll">
-          {subMaterialProducts.map((Submaterialproduct, index) => (
+          {subProductList.map((item, index) => (
             <Card
               className="flex w-full mb-3  flex-col justify-center gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
               key={index}
@@ -340,19 +341,19 @@ const AddSubProduct = ({ itemcode }) => {
               <div className="flex justify-between  w-full">
                 <div className="flex w-full justify-start gap-2  text-start">
                   <img
-                    src={Submaterialproduct.previewUrl}
-                    alt={Submaterialproduct.ITEM_NAME}
+                    src={item.previewUrl}
+                    alt={item.ITEM_NAME}
                     className="h-[50px] w-[50px] mt-1 rounded"
                   />
                   <div className="flex w-full flex-col items-start">
-                    <p className="text-sm font-bold mb-1">{Submaterialproduct.ITEM_NAME}</p>
-                    <p className="me-1 text-xs font-semibold text-gray-400">{Submaterialproduct.ITEM_CODE}</p>
+                    <p className="text-sm font-bold mb-1">{item.ITEM_NAME}</p>
+                    <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_CODE}</p>
                     <div className="flex items-center">
                       <span
-                        style={{ backgroundColor: Submaterialproduct.ITEM_FINISH }}
+                        style={{ backgroundColor: item.ITEM_FINISH }}
                         className="mr-1 mt-1 rounded-full p-1"
                       ></span>
-                      <p className="text-xs text-gray-400">{Submaterialproduct.ITEM_FINISH}</p>
+                      <p className="text-xs text-gray-400">{item.ITEM_FINISH}</p>
                     </div>
                   </div>
                 </div>
@@ -360,12 +361,12 @@ const AddSubProduct = ({ itemcode }) => {
                   <SquarePen
                     size={14}
                     className="cursor-pointer text-blue-700"
-                    onClick={() => handleEdit(Submaterialproduct)}
+                    onClick={() => handleEdit(item)}
                   />
                   <Trash2
                     size={14}
                     className="cursor-pointer text-red-700"
-                    onClick={() => handleDelete(Submaterialproduct)}
+                    onClick={() => handleDelete(item)}
                   />
                 </div>
               </div>
@@ -387,79 +388,64 @@ const AddSubProduct = ({ itemcode }) => {
                   Enter the details of the sub-material you'd like to add. Click save to confirm.
                 </DialogDescription>
               </DialogHeader>
-              <div className="w-full h-full flex lg:flex-row flex-col gap-2 overflow-y-scroll">
-                <div className="grid grid-cols-1 w-full ">
+              <div className="w-full h-full flex lg:flex-row flex-col gap-2 overflow-y-scroll p-1">
+                <div className="grid grid-cols-1 w-full">
                   <div className="w-full">
                     <Label htmlFor="itemname" className="text-right">
                       Item Name
                     </Label>
                     <Input
-                      id="itemname"
-                      type="text"
+                      id="ITEM_NAME"
                       name="ITEM_NAME"
-                      className="col-span-3"
-                      value={formData?.ITEM_NAME}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.ITEM_NAME && <p className="text-xs  text-red-500">{errors.ITEM_NAME}</p>}
-
-                  </div>
-
-                  <div className="w-full">
-                    <Label htmlFor="ITEM_FINISH" className="text-right">
-                      Color
-                    </Label>
-                    <Input
-                      id="ITEM_FINISH"
-                      type="text"
-                      name="ITEM_FINISH"
-                      className="col-span-3"
-                      value={formData?.ITEM_FINISH}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.ITEM_FINISH && <p className="text-xs text-red-500">{errors.ITEM_FINISH}</p>}
-                  </div>
-
-                  <div className="w-full">
-                    <Label htmlFor="ITEM_SIZE" className="text-right">
-                      Size
-                    </Label>
-                    <Input
-                      id="ITEM_SIZE"
-                      name="ITEM_SIZE"
                       type="text"
                       className="col-span-3"
-                      value={formData?.ITEM_SIZE}
+                      value={[
+                        subProductFormData.ITEM_NAME,
+                        subProductFormData.ITEM_FINISH,
+                        subProductFormData.ITEM_SIZE,
+                        subProductFormData.ITEM_TYPE,
+                      ]
+                        .filter(Boolean)
+                        .join(" - ")}
                       onChange={handleChange}
                       required
+                      readOnly={true}
                     />
-                    {errors.ITEM_SIZE && <p className="text-xs text-red-500">{errors.ITEM_SIZE}</p>}
+                    {errors.ITEM_NAME && <p className="text-xs text-red-500">{errors.ITEM_NAME}</p>}
                   </div>
 
-                  <div className="w-full">
-                    <Label htmlFor="QTY" className="text-right">
-                      Quantity
-                    </Label>
-                    <Input
-                      id="QTY"
-                      name="QTY"
-                      type="text"
-                      className="col-span-3"
-                      value={formData?.QTY}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.QTY && <p className="text-xs text-red-500">{errors.QTY}</p>}
-                  </div>
+                  {productFormData?.SUB_MATERIAL_BASED_ON?.map((field) => {
+                    const fieldData = dynamicFields[field];
+                    if (!fieldData) return null;
+
+                    return (
+                      <div className="w-full" key={field}>
+                        <Label htmlFor={fieldData.id} className="text-right">
+                          {fieldData.label}
+                        </Label>
+                        <Input
+                          id={fieldData.id}
+                          name={fieldData.name}
+                          type="text"
+                          className="col-span-3"
+                          value={subProductFormData?.[fieldData.valueKey] || ""}
+                          onChange={handleChange}
+                          required
+                        />
+                        {errors?.[fieldData.errorKey] && (
+                          <p className="text-xs text-red-500">{errors[fieldData.errorKey]}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+
 
                 <div className="mt-4 w-full space-y-2 text-left">
                   <div className="w-full">
-                    <label className="relative flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
+                    <label className="relative flex aspect-square h-[220px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
                       {previewUrl ? (
-                        <img src={previewUrl} alt={formData.ITEM_NAME} className="h-full w-full object-cover" />
+                        <img src={previewUrl} alt={subProductFormData.ITEM_NAME} className="h-full w-full object-cover" />
                       ) : (
                         <div className="text-center text-xs text-gray-500 dark:text-gray-400">
                           Click to Upload
@@ -488,16 +474,29 @@ const AddSubProduct = ({ itemcode }) => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full mt-7"
-                onClick={() => setIsDialogOpen(true)}
-                disabled={!isEnabled}
-              >
-                Add SubMaterial <Plus />
-              </Button>
-            </DialogTrigger>
+
+            {
+              isEnabled ? (
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full mt-7"
+                    onClick={() => setIsDialogOpen(true)}
+                  >
+                    Add Sub Product <Plus />
+                  </Button>
+                </DialogTrigger>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full mt-7"
+                  onClick={() => window.alert("Please enable sub product in the main product configuration.")}
+                >
+                  Add Sub Product <Plus />
+                </Button>
+              )
+            }
+
           </Dialog>
         </CardFooter>
       </CardContent>
