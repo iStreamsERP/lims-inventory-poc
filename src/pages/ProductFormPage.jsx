@@ -33,7 +33,7 @@ export default function ProductFormPage() {
   const [uomList, setUomList] = useState([]);
   const [opened, setOpened] = useState(false);
   const [openSubMaterialDetails, setOpenSubMaterialDetails] = useState(false);
-  const [hasSubProduct, setHasSubProduct] = useState(false);
+  const [subProductCount, setSubProductCount] = useState(0);
   const [submitCount, setSubmitCount] = useState(0);
 
   const initialFormData = {
@@ -105,6 +105,8 @@ export default function ProductFormPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  console.log(formData.SUB_MATERIALS_MODE);
+
   useEffect(() => {
     if (id) {
       fetchProductData();
@@ -115,10 +117,10 @@ export default function ProductFormPage() {
   }, [id]);
 
   useEffect(() => {
-    if (formData.SUB_MATERIALS_MODE === "T") {
-      setHasSubProduct(true);
+    if (formData.ITEM_CODE !== "(NEW)") {
+      fetchSubProductCount();
     }
-  }, [formData.SUB_MATERIALS_MODE]);
+  }, [formData.ITEM_CODE]);
 
   const validateInput = () => {
     const newError = {};
@@ -209,6 +211,31 @@ export default function ProductFormPage() {
       });
     }
   };
+
+  const fetchSubProductCount = async () => {
+    try {
+      const payload = {
+        SQLQuery:
+          `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
+      };
+
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      setSubProductCount(response[0]?.count || 0);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching sub product count",
+        description: err?.message || "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const fetchUom = async () => {
     try {
@@ -494,6 +521,7 @@ export default function ProductFormPage() {
                         </div>
                       </div>
                     </div>
+
                     <div className="w-full">
                       <div className="mt-8 w-full text-left">
                         <label
@@ -837,15 +865,15 @@ export default function ProductFormPage() {
                   <div className="mb-3 space-y-4">
                     <div className="flex space-x-2">
                       <Checkbox
-                        checked={hasSubProduct}
+                        checked={formData?.SUB_MATERIALS_MODE === "T"}
                         onCheckedChange={(checked) => {
-                          setHasSubProduct(checked);
                           setFormData((prev) => ({
                             ...prev,
                             SUB_MATERIALS_MODE: checked ? "T" : "F",
                           }));
                         }}
                         id="terms"
+                        disabled={subProductCount > 0}
                       />
                       <label
                         htmlFor="terms"
@@ -856,7 +884,7 @@ export default function ProductFormPage() {
                     </div>
 
                     {
-                      (hasSubProduct || formData.SUB_MATERIALS_MODE === "T") && (
+                      (formData?.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
                         <>
                           <div className="mt-3 w-full">
                             <Label className="block text-sm font-medium">

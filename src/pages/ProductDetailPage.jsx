@@ -159,7 +159,7 @@ const ProductDetailPage = () => {
                                     {productList.length > 0 && productList[0].SUB_MATERIALS_MODE === "T" && (
                                         <>
                                             {/* Color Selection */}
-                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("color") && (
+                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Color") && (
                                                 <div className="mb-4">
                                                     {subProductList.length > 0 && (
                                                         <Label className="text-sm font-medium">Select Color</Label>
@@ -193,7 +193,7 @@ const ProductDetailPage = () => {
                                             )}
 
                                             {/* Size Selection */}
-                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("size") && (
+                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Size") && (
                                                 <div className="mb-4">
                                                     {subProductList.length > 0 && (
                                                         <Label className="text-sm font-medium">Select Size</Label>
@@ -210,6 +210,31 @@ const ProductDetailPage = () => {
                                                                     />
                                                                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
                                                                         {subItem.ITEM_SIZE}
+                                                                    </span>
+                                                                </label>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Variant Selection */}
+                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Variant") && (
+                                                <div className="mb-4">
+                                                    {subProductList.length > 0 && (
+                                                        <Label className="text-sm font-medium">Select Variant</Label>
+                                                    )}
+                                                    <div className="mt-2 flex flex-wrap gap-3">
+                                                        {subProductList.length > 0 &&
+                                                            subProductList.map((subItem, index) => (
+                                                                <label key={index} className="cursor-pointer">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="ITEM_TYPE"
+                                                                        value={subItem.ITEM_TYPE}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <span className="flex h-6 w-6 px-6 items-center justify-center bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
+                                                                        {subItem.ITEM_TYPE}
                                                                     </span>
                                                                 </label>
                                                             ))}

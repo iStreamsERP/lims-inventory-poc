@@ -41,8 +41,6 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const [subProductList, setSubProductList] = useState([]);
   const [previewUrl, setPreviewUrl] = useState("");
 
-  console.log(subProductList);
-
   useEffect(() => {
     setSubProductFormData(f => ({ ...f, ITEM_CODE, ITEM_NAME }));
 
@@ -126,8 +124,6 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
         `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
         { responseType: "blob" }
       );
-
-      console.log(response);
 
       const blob = response.data;
       const mimeType = blob.type;
@@ -220,7 +216,16 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
   const handleEdit = async (subMaterialProduct) => {
     setIsDialogOpen(true)
-    setSubProductFormData(initialFormData);
+    setSubProductFormData({
+      ITEM_CODE: subMaterialProduct.ITEM_CODE,
+      SUB_MATERIAL_NO: subMaterialProduct.SUB_MATERIAL_NO,
+      ITEM_FINISH: subMaterialProduct.ITEM_FINISH,
+      ITEM_NAME: subMaterialProduct.ITEM_NAME,
+      ITEM_SIZE: subMaterialProduct.ITEM_SIZE,
+      ITEM_TYPE: subMaterialProduct.ITEM_TYPE,
+      image_file: subMaterialProduct.image_file,
+    });
+    setPreviewUrl(subMaterialProduct.previewUrl);
   }
 
   const handleProductDialogClose = () => {
@@ -271,9 +276,28 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     }
   };
 
+  const formatFullItemName = (subProductFormData) => {
+    return [subProductFormData.ITEM_NAME, subProductFormData.ITEM_TYPE, subProductFormData.ITEM_FINISH, subProductFormData.ITEM_SIZE]
+      .filter(Boolean)
+      .map((val) => val.trim().toLowerCase())
+      .join("-");
+  };
+
+  useEffect(() => {
+    setSubProductFormData((prev) => ({
+      ...prev,
+      ITEM_NAME: formatFullItemName(prev),
+    }));
+  }, []);
+
   const handleSumbit = async () => {
     try {
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", subProductFormData);
+      const updatedFormData = {
+        ...subProductFormData,
+        ITEM_NAME: formatFullItemName(subProductFormData),
+      }
+
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
       const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
@@ -399,14 +423,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                       name="ITEM_NAME"
                       type="text"
                       className="col-span-3"
-                      value={[
-                        subProductFormData.ITEM_NAME,
-                        subProductFormData.ITEM_FINISH,
-                        subProductFormData.ITEM_SIZE,
-                        subProductFormData.ITEM_TYPE,
-                      ]
-                        .filter(Boolean)
-                        .join(" - ")}
+                      value={formatFullItemName(subProductFormData)}
                       onChange={handleChange}
                       required
                       readOnly={true}
