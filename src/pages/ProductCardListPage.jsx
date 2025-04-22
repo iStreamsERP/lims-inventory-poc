@@ -103,9 +103,9 @@ export default function ProductCardListPage() {
                       )}
                     </div>
                     <CardContent className="p-4">
-                      <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">
+                      {/* <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">
                         +1 other colour/pattern
-                      </p>
+                      </p> */}
                       <div className="flex flex-col h-full justify-between">
                         <h2 className="mb-2 line-clamp-2 text-sm leading-snug group-hover:underline truncate">
                           {product.ITEM_NAME}

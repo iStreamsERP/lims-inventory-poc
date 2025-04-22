@@ -152,6 +152,11 @@ const ServiceListPage = () => {
       ),
     },
     {
+      accessorKey: "GROUP_LEVEL1",
+      header: () => <div>Category</div>,
+      cell: ({ row }) => <div>{row.getValue("GROUP_LEVEL1") || "-"}</div>,
+    },
+    {
       accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (
@@ -168,9 +173,9 @@ const ServiceListPage = () => {
       cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
     {
-      accessorKey: "SUPPLIER_NAME",
-      header: () => <div>Supplier</div>,
-      cell: ({ row }) => <div>{row.getValue("SUPPLIER_NAME") || "-"}</div>,
+      accessorKey: "SALE_UOM",
+      header: () => <div>Range</div>,
+      cell: ({ row }) => <div>{row.getValue("SALE_UOM") || "-"}</div>,
     },
     {
       accessorKey: "action",

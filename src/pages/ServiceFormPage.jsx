@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { capitalizeFirstLetter } from "@/utils/stringUtils";
 import { Check, ChevronsUpDown, PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -54,7 +55,7 @@ export default function ServiceFormPage() {
     const [open, setOpen] = useState(false);
     const [opened, setOpened] = useState(false);
     const [featureInput, setFeatureInput] = useState("");
-    const [categoryData, setCategoryData] = useState([]);
+    const [categoryList, setCategoryList] = useState([]);
     const [openCategoryData, setOpenCategoryData] = useState(false);
     const [commandInputValue, setCommandInputValue] = useState("");
     const { id } = useParams();
@@ -121,7 +122,7 @@ export default function ServiceFormPage() {
                 userData.currentUserLogin,
                 userData.clientURL
             );
-            setCategoryData(response);
+            setCategoryList(response);
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -336,12 +337,12 @@ export default function ServiceFormPage() {
                                                 <Button
                                                     variant="outline"
                                                     role="combobox"
-                                                    aria-expanded={open}
+                                                    aria-expanded={openCategoryData}
                                                     className=" w-full justify-between"
                                                 >
                                                     {formData.GROUP_LEVEL1
-                                                        ? categoryData.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
-                                                        : "Select category..."}
+                                                        ? categoryList.find(item => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
+                                                        : "Select a category..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
@@ -364,7 +365,7 @@ export default function ServiceFormPage() {
                                                                             onClick={() => {
                                                                                 const newValue = capitalizeFirstLetter(commandInputValue.trim());
                                                                                 if (newValue) {
-                                                                                    setCategoryData(prev => [
+                                                                                    setCategoryList(prev => [
                                                                                         ...prev,
                                                                                         { GROUP_LEVEL1: newValue },
                                                                                     ]);
@@ -387,7 +388,7 @@ export default function ServiceFormPage() {
                                                             </div>
                                                         </CommandEmpty>
                                                         <CommandGroup>
-                                                            {categoryData.map((item, index) => (
+                                                            {categoryList.map((item, index) => (
                                                                 <CommandItem
                                                                     key={index}
                                                                     value={item.GROUP_LEVEL1}

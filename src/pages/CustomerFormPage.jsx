@@ -289,7 +289,7 @@ const CustomerFormPage = () => {
                       <CommandInput
                         placeholder="Search nature of business"
                         className="h-9"
-                        onValueChange={setCommandInputValue}
+                        onValueChange={(value) => setCommandInputValue(value)}
                       />
                       <CommandList>
                         <CommandEmpty>

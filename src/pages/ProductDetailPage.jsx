@@ -17,18 +17,29 @@ const ProductDetailPage = () => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [productList, setProductList] = useState([]);
+    const [subProductList, setSubProductList] = useState([]);
 
-    const colorMap = {
-        red: "bg-red-500 peer-checked:ring-red-500 dark:peer-checked:ring-red-400",
-        blue: "bg-blue-500 peer-checked:ring-blue-500 dark:peer-checked:ring-blue-400",
-        green: "bg-green-500 peer-checked:ring-green-500 dark:peer-checked:ring-green-400",
-        purple: "bg-purple-500 peer-checked:ring-purple-500 dark:peer-checked:ring-purple-400",
-        pink: "bg-pink-500 peer-checked:ring-pink-500 dark:peer-checked:ring-pink-400",
+    const colorClassMap = {
+        white: "bg-white border border-gray-300",
+        yellow: "bg-yellow-200",
+        red: "bg-red-200",
+        green: "bg-green-200",
+        blue: "bg-blue-200",
+        black: "bg-black",
+        gray: "bg-gray-300",
+        // Add more if needed
     };
+
 
     useEffect(() => {
         fetchProductList();
     }, [id]);
+
+    useEffect(() => {
+        if (productList.length > 0 && productList[0].SUB_MATERIALS_MODE === "T") {
+            fetchSubProductList();
+        }
+    }, [productList]);
 
     const fetchProductList = async () => {
         setLoading(true);
@@ -52,7 +63,6 @@ const ProductDetailPage = () => {
                     return { ...item, imageUrl };
                 })
             );
-            console.log(updatedList);
 
             setProductList(updatedList);
 
@@ -81,8 +91,31 @@ const ProductDetailPage = () => {
         }
     };
 
+    const fetchSubProductList = async () => {
+        setLoading(true);
+        try {
+            const payload = {
+                DataModelName: "INVT_SUBMATERIAL_MASTER",
+                WhereCondition: `iTEM_CODE = '${id}'`,
+                Orderby: "",
+            };
 
-    console.log(productList);
+            const response = await getDataModelService(
+                payload,
+                userData.currentUserLogin,
+                userData.clientURL
+            );
+
+            setSubProductList(response);
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: `Error fetching sub product list: ${error?.message || "An error occurred"}`,
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
 
 
     return loading ? (
@@ -123,61 +156,76 @@ const ProductDetailPage = () => {
                                         </Badge>
                                     </div>
 
-                                    {/* Color Selection */}
-                                    <div className="mb-4">
-                                        <Label className="text-sm font-medium">Select Color</Label>
-                                        <div className="mt-2 flex flex-wrap gap-3">
-                                            {Object.keys(colorMap).map((color) => (
-                                                <label
-                                                    key={color}
-                                                    className="flex cursor-pointer items-center gap-2"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="color"
-                                                        value={color}
-                                                        className="peer sr-only"
-                                                    />
-                                                    <span
-                                                        className={`h-6 w-6 rounded-full ring-2 ring-transparent ring-offset-1 transition dark:ring-offset-gray-800 ${colorMap[color]}`}
-                                                    />
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    {productList.length > 0 && productList[0].SUB_MATERIALS_MODE === "T" && (
+                                        <>
+                                            {/* Color Selection */}
+                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("color") && (
+                                                <div className="mb-4">
+                                                    {subProductList.length > 0 && (
+                                                        <Label className="text-sm font-medium">Select Color</Label>
+                                                    )}
+                                                    <div className="mt-2 flex flex-wrap gap-3">
+                                                        {subProductList.map((subItem, subIndex) => {
+                                                            const color = subItem.ITEM_FINISH?.toLowerCase();
+                                                            const colorClass = colorClassMap[color] || "bg-gray-200"; // fallback
 
-                                    {/* Size Selection */}
-                                    <div className="mb-4">
-                                        <Label className="text-sm font-medium">Select Size</Label>
-                                        <div className="mt-2 flex flex-wrap gap-3">
-                                            {["S", "M", "L", "XL"].map((size) => (
-                                                <label
-                                                    key={size}
-                                                    className="cursor-pointer"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="size"
-                                                        value={size}
-                                                        className="peer sr-only"
-                                                    />
-                                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
-                                                        {size}
-                                                    </span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
+                                                            return (
+                                                                color && (
+                                                                    <label
+                                                                        key={subIndex}
+                                                                        className="flex cursor-pointer items-center gap-2"
+                                                                    >
+                                                                        <input
+                                                                            type="radio"
+                                                                            name="color"
+                                                                            value={color}
+                                                                            className="peer sr-only"
+                                                                        />
+                                                                        <span
+                                                                            className={`h-6 w-6 rounded-full ring-2 peer-checked:ring-black dark:peer-checked:ring-white ring-transparent ring-offset-2 transition dark:ring-offset-gray-800 ${colorClass}`}
+                                                                        />
+                                                                    </label>
+                                                                )
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Size Selection */}
+                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("size") && (
+                                                <div className="mb-4">
+                                                    {subProductList.length > 0 && (
+                                                        <Label className="text-sm font-medium">Select Size</Label>
+                                                    )}
+                                                    <div className="mt-2 flex flex-wrap gap-3">
+                                                        {subProductList.length > 0 &&
+                                                            subProductList.map((subItem, index) => (
+                                                                <label key={index} className="cursor-pointer">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="size"
+                                                                        value={subItem.ITEM_SIZE}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
+                                                                        {subItem.ITEM_SIZE}
+                                                                    </span>
+                                                                </label>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
 
                                     {/* Pricing */}
                                     <div className="mb-4">
-                                        <div className="text-sm font-semibold">Special price</div>
+                                        <div className="text-sm font-semibold">Sale Price</div>
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <div className="text-2xl font-bold">
-                                                ₹{item.SALE_RATE} <span className="text-sm font-semibold text-gray-400 line-through">₹{item.SALE_RATE * 2}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 text-xs font-semibold text-green-700">
-                                                33% off <InfoIcon className="h-4 w-4 text-gray-500" />
+                                            <div className="text-4xl font-bold">
+                                                ₹{item.SALE_RATE}
                                             </div>
                                         </div>
                                     </div>
@@ -197,7 +245,7 @@ const ProductDetailPage = () => {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
+            </div >
         ))
     ) : (
         <p className="mt-4 text-center">No product details found.</p>

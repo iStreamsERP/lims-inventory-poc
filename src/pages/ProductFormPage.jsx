@@ -58,7 +58,7 @@ export default function ProductFormPage() {
     SUBMATERIAL_CONVRATE: 1,
     QTY_IN_HAND: 0,
     REMARKS: "",
-    SUB_MATERIALS_MODE: "",
+    SUB_MATERIALS_MODE: "f",
     image_file: null,
   };
 
@@ -174,7 +174,6 @@ export default function ProductFormPage() {
           responseType: "blob",
         },
       );
-
       const blob = response.data;
 
       const mimeType = blob.type;
