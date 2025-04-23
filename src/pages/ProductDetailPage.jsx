@@ -182,7 +182,7 @@ const ProductDetailPage = () => {
                                                                             className="peer sr-only"
                                                                         />
                                                                         <span
-                                                                            className={`h-6 w-6 rounded-full ring-2 peer-checked:ring-black dark:peer-checked:ring-white ring-transparent ring-offset-2 transition dark:ring-offset-gray-800 ${colorClass}`}
+                                                                            className={`h-6 w-6 px-6 ring-2 rounded-sm peer-checked:ring-black dark:peer-checked:ring-white ring-transparent ring-offset-2 transition dark:ring-offset-gray-800 ${colorClass}`}
                                                                         />
                                                                     </label>
                                                                 )
@@ -208,7 +208,7 @@ const ProductDetailPage = () => {
                                                                         value={subItem.ITEM_SIZE}
                                                                         className="peer sr-only"
                                                                     />
-                                                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
+                                                                    <span className="flex h-6 w-fit px-3 items-center justify-center rounded-sm bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
                                                                         {subItem.ITEM_SIZE}
                                                                     </span>
                                                                 </label>
@@ -233,7 +233,7 @@ const ProductDetailPage = () => {
                                                                         value={subItem.ITEM_TYPE}
                                                                         className="peer sr-only"
                                                                     />
-                                                                    <span className="flex h-6 w-6 px-6 items-center justify-center bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
+                                                                    <span className="flex h-6 w-fit px-3 rounded-sm items-center justify-center bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
                                                                         {subItem.ITEM_TYPE}
                                                                     </span>
                                                                 </label>

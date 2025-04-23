@@ -10,10 +10,17 @@ import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox"
 
 const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const { ITEM_CODE, ITEM_NAME } = formDataProps;
 
+  const { userData } = useAuth();
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [isSalePriceChecked, setIsSalePriceChecked] = useState(false);
   const initialFormData = useMemo(() => ({
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
@@ -26,20 +33,27 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     UOM_PURCHASE: "NOS",
     COST_CODE: "MXXXX",
     ITEM_SIZE: "",
-    QTY: "",
     image_file: null,
-  }), [ITEM_CODE, ITEM_NAME]);
-
-  const { userData } = useAuth();
-  const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isEnabled, setIsEnabled] = useState(false);
+  }), [ITEM_CODE, ITEM_NAME, isSalePriceChecked]);
 
   const [subProductFormData, setSubProductFormData] = useState(initialFormData);
   const [productFormData, setProductFormData] = useState(null);
   const [subProductList, setSubProductList] = useState([]);
   const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    setSubProductFormData((prev) => {
+      const updated = { ...prev }
+
+      if (isSalePriceChecked) {
+        updated.SALE_RATE = prev.SALE_RATE !== undefined ? prev.SALE_RATE : 0;
+      } else {
+        delete updated.SALE_RATE
+      }
+
+      return updated
+    })
+  }, [isSalePriceChecked])
 
   useEffect(() => {
     setSubProductFormData(f => ({ ...f, ITEM_CODE, ITEM_NAME }));
@@ -161,7 +175,11 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   };
 
   const handleDelete = async (product) => {
-    alert("Are you sure you want to delete this product? This action cannot be undone.")
+    const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.")
+
+    if (!result) {
+      return
+    }
     try {
       const deleteDataModelServicePayload = {
         UserName: userData.currentUserLogin,
@@ -216,52 +234,60 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
   const handleEdit = async (subMaterialProduct) => {
     setIsDialogOpen(true)
+    const hasSaleRate = typeof subMaterialProduct.SALE_RATE !== 'undefined' && subMaterialProduct.SALE_RATE !== null;
+
+    setIsSalePriceChecked(hasSaleRate);
+    const cleanItemName = subMaterialProduct.ITEM_NAME.replace(/[-–—].*$/, '').trim();
+
     setSubProductFormData({
-      ITEM_CODE: subMaterialProduct.ITEM_CODE,
-      SUB_MATERIAL_NO: subMaterialProduct.SUB_MATERIAL_NO,
-      ITEM_FINISH: subMaterialProduct.ITEM_FINISH,
-      ITEM_NAME: subMaterialProduct.ITEM_NAME,
-      ITEM_SIZE: subMaterialProduct.ITEM_SIZE,
-      ITEM_TYPE: subMaterialProduct.ITEM_TYPE,
-      image_file: subMaterialProduct.image_file,
+      ...subMaterialProduct,
+      ITEM_NAME: subMaterialProduct.ITEM_NAME.replace(/[-–—].*$/, '').trim(),
+      SALE_RATE: hasSaleRate ? subMaterialProduct.SALE_RATE : undefined,
     });
     setPreviewUrl(subMaterialProduct.previewUrl);
   }
 
-  const handleProductDialogClose = () => {
+  const handleDialogClose = () => {
     setSubProductFormData(initialFormData);
+    setIsSalePriceChecked(false);
     setIsDialogOpen(false);
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
+    }
     fetchSubProductData();
   };
 
-  const handleUploadImage = async (serialNo) => {
+  const handleUploadImage = async (serialNo, isNew) => {
     const file = subProductFormData.image_file;
+
+    if (!file) return;
+
     const payload = new FormData();
     payload.append("file", file);
     payload.append("email", userData.currentUserLogin);
-    payload.append("fileName", `SUB_PRODUCT_IMAGE_${ITEM_CODE}_${serialNo}`);
+    const filename = `SUB_PRODUCT_IMAGE_${ITEM_CODE}_${serialNo}`;
+    payload.append("fileName", filename);
 
     try {
-      const response = await axios.post(
-        "https://cloud.istreams-erp.com:4499/api/MaterialImage/upload",
-        payload,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const config = {
+        headers: { "Content-Type": "multipart/form-data" },
+      };
 
-      console.log(response);
+      const response = isNew
+        ? await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
+        : await axios.put(`https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.currentUserLogin}&fileName=${filename}`, payload, config);
 
       if (response.status === 200) {
         toast({
-          title: "Sub product saved and image uploaded!",
+          title: `Image ${isNew ? 'uploaded' : 'updated'} successfully!`,
         });
       } else {
         toast({
           variant: "destructive",
-          title: `image upload failed with status: ${response.status}`,
+          title: `Error ${isNew ? 'uploading' : 'updating'} image.`,
+          description: errors?.response?.data?.message || errors?.message,
         });
       }
     } catch (errors) {
@@ -277,7 +303,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   };
 
   const formatFullItemName = (subProductFormData) => {
-    return [subProductFormData.ITEM_NAME, subProductFormData.ITEM_TYPE, subProductFormData.ITEM_FINISH, subProductFormData.ITEM_SIZE]
+    return [subProductFormData.ITEM_NAME, subProductFormData.ITEM_FINISH, subProductFormData.ITEM_SIZE, subProductFormData.ITEM_TYPE]
       .filter(Boolean)
       .map((val) => val.trim().toLowerCase())
       .join("-");
@@ -290,40 +316,13 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     }));
   }, []);
 
-  const handleSumbit = async () => {
-    try {
-      const updatedFormData = {
-        ...subProductFormData,
-        ITEM_NAME: formatFullItemName(subProductFormData),
-      }
+  const desiredOrder = ["Color", "Size", "Variant"];
 
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
-      const payload = {
-        UserName: userData.currentUserLogin,
-        DModelData: convertedDataModel,
-      }
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
-
-      const serialNo = response.match(/\/(\d+)'/);
-
-      toast({ title: response })
-
-      if (serialNo) {
-        await handleUploadImage(serialNo[1]);
-      }
-
-      await fetchSubProductData();
-
-      setSubProductFormData(initialFormData)
-    } catch (errors) {
-      toast({
-        variant: "destructive",
-        title: "Error saving data. Please try again.", errors,
-      })
-    } finally {
-      setIsDialogOpen(false);
-    }
-  };
+  const sortedFields = (productFormData?.SUB_MATERIAL_BASED_ON || [])
+    .slice()                                 // copy so you don’t mutate original
+    .sort((a, b) =>
+      desiredOrder.indexOf(a) - desiredOrder.indexOf(b)
+    );
 
   const dynamicFields = {
     Color: {
@@ -349,6 +348,44 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     },
   };
 
+  const handleSumbit = async () => {
+    try {
+      const isNewProduct = subProductFormData.SUB_MATERIAL_NO === -1;
+      const updatedFormData = {
+        ...subProductFormData,
+        ITEM_NAME: formatFullItemName(subProductFormData),
+      }
+
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
+      const payload = {
+        UserName: userData.currentUserLogin,
+        DModelData: convertedDataModel,
+      }
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+
+      // Extract serial number from response
+      const serialNoMatch = response.match(/\/(\d+)'/);
+      const serialNo = serialNoMatch?.[1];
+
+      toast({ title: response })
+
+      if (serialNo) {
+        await handleUploadImage(serialNo, isNewProduct);
+      }
+
+      await fetchSubProductData();
+
+      setSubProductFormData(initialFormData)
+    } catch (errors) {
+      toast({
+        variant: "destructive",
+        title: "Error saving data. Please try again.", errors,
+      })
+    } finally {
+      setIsDialogOpen(false);
+    }
+  };
+
   return (
     <Card >
       <CardHeader>
@@ -356,39 +393,36 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
         <CardDescription>Add and configure sub-products under your main product.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[535px] overflow-y-scroll">
+        <div className="h-[535px] overflow-y-scroll space-y-2">
           {subProductList.map((item, index) => (
             <Card
-              className="flex w-full mb-3  flex-col justify-center gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              className="p-3"
               key={index}
             >
-              <div className="flex justify-between  w-full">
+              <div className="flex justify-between items-start w-full">
                 <div className="flex w-full justify-start gap-2  text-start">
                   <img
                     src={item.previewUrl}
                     alt={item.ITEM_NAME}
-                    className="h-[50px] w-[50px] mt-1 rounded"
+                    className="h-[50px] w-[50px] mt-1 rounded object-cover"
                   />
                   <div className="flex w-full flex-col items-start">
-                    <p className="text-sm font-bold mb-1">{item.ITEM_NAME}</p>
-                    <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_CODE}</p>
-                    <div className="flex items-center">
-                      <span
-                        style={{ backgroundColor: item.ITEM_FINISH }}
-                        className="mr-1 mt-1 rounded-full p-1"
-                      ></span>
+                    <p className="text-lg font-bold mb-1">{item.ITEM_NAME}</p>
+                    <div className="flex flex-row">
+                      <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_TYPE} |</p>
+                      <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_SIZE} |</p>
                       <p className="text-xs text-gray-400">{item.ITEM_FINISH}</p>
                     </div>
                   </div>
                 </div>
-                <div className="flex  flex-row gap-2">
+                <div className="flex flex-row gap-2">
                   <SquarePen
-                    size={14}
-                    className="cursor-pointer text-blue-700"
+                    size={16}
+                    className="cursor-pointer hover:text-blue-700"
                     onClick={() => handleEdit(item)}
                   />
                   <Trash2
-                    size={14}
+                    size={16}
                     className="cursor-pointer text-red-700"
                     onClick={() => handleDelete(item)}
                   />
@@ -401,19 +435,43 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
-              if (!open) handleProductDialogClose();
+              if (!open) handleDialogClose();
               setIsDialogOpen(open);
             }}
           >
-            <DialogContent className="lg:w-[40%]  xl:w-[40%] 2xl:w-[30%] md:h-[450px] w-[90%] h-[400px] md:w-[400px] z-[100] overflow-y-scroll overflow-x-scroll " >
+            <DialogContent className="w-[80%] md:w-[100%] h-[400px] md:h-[80%] z-[100] overflow-y-scroll overflow-x-scroll " >
               <DialogHeader>
                 <DialogTitle>Add SubMaterial</DialogTitle>
                 <DialogDescription>
                   Enter the details of the sub-material you'd like to add. Click save to confirm.
                 </DialogDescription>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="SALE_RATE"
+                    checked={isSalePriceChecked}
+                    onCheckedChange={(checked) => {
+                      setIsSalePriceChecked(!!checked);
+                      if (!checked) {
+                        setSubProductFormData(prev => {
+                          const newData = { ...prev };
+                          delete newData.SALE_RATE;
+                          return newData;
+                        });
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="SALE_RATE"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Custom sale price
+                  </label>
+                </div>
+
               </DialogHeader>
               <div className="w-full h-full flex lg:flex-row flex-col gap-2 overflow-y-scroll p-1">
-                <div className="grid grid-cols-1 w-full">
+                <div className="grid grid-cols-1 w-full h-fit gap-2">
                   <div className="w-full">
                     <Label htmlFor="itemname" className="text-right">
                       Item Name
@@ -431,32 +489,53 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                     {errors.ITEM_NAME && <p className="text-xs text-red-500">{errors.ITEM_NAME}</p>}
                   </div>
 
-                  {productFormData?.SUB_MATERIAL_BASED_ON?.map((field) => {
+                  {sortedFields.map((field) => {
                     const fieldData = dynamicFields[field];
                     if (!fieldData) return null;
 
                     return (
-                      <div className="w-full" key={field}>
-                        <Label htmlFor={fieldData.id} className="text-right">
-                          {fieldData.label}
-                        </Label>
-                        <Input
-                          id={fieldData.id}
-                          name={fieldData.name}
-                          type="text"
-                          className="col-span-3"
-                          value={subProductFormData?.[fieldData.valueKey] || ""}
-                          onChange={handleChange}
-                          required
-                        />
-                        {errors?.[fieldData.errorKey] && (
-                          <p className="text-xs text-red-500">{errors[fieldData.errorKey]}</p>
-                        )}
-                      </div>
+                      <>
+                        <div className="w-full" key={field}>
+                          <Label htmlFor={fieldData.id} className="text-right">
+                            {fieldData.label}
+                          </Label>
+                          <Input
+                            id={fieldData.id}
+                            name={fieldData.name}
+                            type="text"
+                            className="col-span-3"
+                            value={subProductFormData?.[fieldData.valueKey] || ""}
+                            onChange={handleChange}
+                            required
+                          />
+                          {errors?.[fieldData.errorKey] && (
+                            <p className="text-xs text-red-500">{errors[fieldData.errorKey]}</p>
+                          )}
+                        </div>
+                      </>
+
                     );
                   })}
-                </div>
 
+                  {
+                    isSalePriceChecked && (
+                      <div className="w-full">
+                        <Label htmlFor="SALE_RATE" className="text-right">
+                          Sale Price
+                        </Label>
+                        <Input
+                          id="SALE_RATE"
+                          name="SALE_RATE"
+                          type="number"
+                          className="col-span-3"
+                          value={subProductFormData?.SALE_RATE || ""}
+                          onChange={handleChange}
+                        />
+                        {errors.SALE_RATE && <p className="text-xs text-red-500">{errors.SALE_RATE}</p>}
+                      </div>
+                    )
+                  }
+                </div>
 
                 <div className="mt-4 w-full space-y-2 text-left">
                   <div className="w-full">
@@ -482,7 +561,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                   </div>
                 </div>
               </div>
-              <DialogFooter className={"mt-4"}>
+              <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
@@ -491,7 +570,6 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-
             {
               isEnabled ? (
                 <DialogTrigger asChild>
@@ -513,11 +591,11 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                 </Button>
               )
             }
-
           </Dialog>
         </CardFooter>
       </CardContent>
     </Card>
   );
 }
+
 export default AddSubProduct

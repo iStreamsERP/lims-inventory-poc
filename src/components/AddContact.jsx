@@ -73,13 +73,18 @@ const AddContact = ({ clientId }) => {
 
     const handleDelete = async (contact) => {
         setLoading(true);
-        alert("Are you sure you want to delete this contact? This action cannot be undone.")
+        const result = window.confirm("Are you sure you want to delete this contact? This action cannot be undone.")
+
+        if (!result) {
+            setLoading(false);
+            return;
+        }
 
         try {
             const deleteDataModelServicePayload = {
-                userName: userData.currentUserLogin,
-                dataModelName: "CLIENT_CONTACTS",
-                whereCondition: `CLIENT_ID = ${clientId} AND SERIAL_NO = ${contact.SERIAL_NO}`,
+                UserName: userData.currentUserLogin,
+                DataModelName: "CLIENT_CONTACTS",
+                WhereCondition: `CLIENT_ID = ${clientId} AND SERIAL_NO = ${contact.SERIAL_NO}`,
             }
             const deleteDataModelServiceResponse = await deleteDataModelService(deleteDataModelServicePayload, userData.currentUserLogin, userData.clientURL);
 
@@ -126,7 +131,6 @@ const AddContact = ({ clientId }) => {
     const handleSumbit = async () => {
         try {
             setLoading(true);
-            console.log(contactFormData);
 
             const convertedDataModel = convertDataModelToStringData("CLIENT_CONTACTS", contactFormData);
             console.log(convertedDataModel);

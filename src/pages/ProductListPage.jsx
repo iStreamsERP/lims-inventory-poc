@@ -203,7 +203,7 @@ const ProductListPage = () => {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0 "
+            className="p-0"
           >
             Sale Price
             <ArrowUpDown />
@@ -211,11 +211,6 @@ const ProductListPage = () => {
         )
       },
       cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
-    },
-    {
-      accessorKey: "QTY_IN_HAND",
-      header: () => <div>Qty</div>,
-      cell: ({ row }) => <div>{row.getValue("QTY_IN_HAND") || "-"}</div>,
     },
     {
       accessorKey: "action",

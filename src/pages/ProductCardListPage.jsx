@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelService } from "@/services/dataModelService";
+import { getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -13,7 +13,7 @@ export default function ProductCardListPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [productList, setProductList] = useState([]);
-
+  const [subProductCount, setSubProductCount] = useState(0);
 
   useEffect(() => {
     fetchProductList();
@@ -27,6 +27,7 @@ export default function ProductCardListPage() {
           responseType: "blob",
         }
       );
+
       return response.data;
     } catch (error) {
       console.warn(`Error fetching image for ${itemCode}`, error);
@@ -55,12 +56,15 @@ export default function ProductCardListPage() {
         response.map(async (item) => {
           const imageBlob = await fetchProductImage(item.ITEM_CODE);
           const imageUrl = URL.createObjectURL(imageBlob);
-          return { ...item, imageUrl };
+          const subProductCount = await fetchSubProductCount(item.ITEM_CODE);
+          return { ...item, imageUrl, subProductCount };
         })
       );
 
-      setProductList(updatedList);
+      // console.log(updatedList);
 
+
+      setProductList(updatedList);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -71,6 +75,30 @@ export default function ProductCardListPage() {
     }
   };
 
+  const fetchSubProductCount = async (itemCode) => {
+    try {
+      const payload = {
+        SQLQuery:
+          `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${itemCode}'`,
+      };
+
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      return response[0]?.count || 0;
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching sub product count",
+        description: err?.message || "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-y-4">
@@ -82,7 +110,7 @@ export default function ProductCardListPage() {
           <div className="w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {productList.map((product, index) => (
-                <Link key={product.id || index} to={`/product-detail/${product.ITEM_CODE}`}>
+                <Link key={index} to={`/product-detail/${product.ITEM_CODE}`}>
                   <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">
                     <div className="relative flex items-center justify-center bg-neutral-300 dark:bg-gray-800 h-36 overflow-hidden">
                       {product?.imageUrl ? (
@@ -103,9 +131,13 @@ export default function ProductCardListPage() {
                       )}
                     </div>
                     <CardContent className="p-4">
-                      {/* <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">
-                        +1 other colour/pattern
-                      </p> */}
+                      {
+                        product.subProductCount > 0 && (
+                          <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">
+                            +{product.subProductCount} other colour/pattern
+                          </p>
+                        )
+                      }
                       <div className="flex flex-col h-full justify-between">
                         <h2 className="mb-2 line-clamp-2 text-sm leading-snug group-hover:underline truncate">
                           {product.ITEM_NAME}

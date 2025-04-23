@@ -73,9 +73,6 @@ const ServicePricingPage = () => {
                   <div className="mb-4 text-4xl font-semibold">
                     ₹{item.SALE_RATE}<span className='text-sm text-gray-400'>/{item.SALE_UOM || "null"}</span>
                   </div>
-                  <div className="text-gray-400 text-sm">
-                    Great for trying out Finament and for small teams
-                  </div>
                   <div>
                     <Button className="w-full bg-gradient-to-tr from-violet-600 via-violet-600 to-indigo-600">
                       Start For Free
@@ -83,7 +80,7 @@ const ServicePricingPage = () => {
                   </div>
 
                   <div className='text-sm font-normal text-muted-foreground space-y-1'>
-                    <div className="text-sm pt-2 mb-2">
+                    <div className="text-sm mb-2 font-semibold">
                       Features
                     </div>
                     {

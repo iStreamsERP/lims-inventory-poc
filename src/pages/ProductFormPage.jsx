@@ -105,8 +105,6 @@ export default function ProductFormPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  console.log(formData.SUB_MATERIALS_MODE);
-
   useEffect(() => {
     if (id) {
       fetchProductData();
@@ -872,11 +870,11 @@ export default function ProductFormPage() {
                             SUB_MATERIALS_MODE: checked ? "T" : "F",
                           }));
                         }}
-                        id="terms"
+                        id="subProductMode"
                         disabled={subProductCount > 0}
                       />
                       <label
-                        htmlFor="terms"
+                        htmlFor="subProductMode"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         Is Product has sub products?
