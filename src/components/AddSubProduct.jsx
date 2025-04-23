@@ -441,9 +441,9 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
           >
             <DialogContent className="w-[80%] md:w-[100%] h-[400px] md:h-[80%] z-[100] overflow-y-scroll overflow-x-scroll " >
               <DialogHeader>
-                <DialogTitle>Add SubMaterial</DialogTitle>
+                <DialogTitle>Add Sub Product</DialogTitle>
                 <DialogDescription>
-                  Enter the details of the sub-material you'd like to add. Click save to confirm.
+                  Enter the details of the sub-product you'd like to add. Click save to confirm.
                 </DialogDescription>
 
                 <div className="flex items-center space-x-2">
@@ -566,7 +566,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                   Cancel
                 </Button>
                 <Button type="button" onClick={handleSumbit}>
-                  Save changes
+                  Add Product
                 </Button>
               </DialogFooter>
             </DialogContent>

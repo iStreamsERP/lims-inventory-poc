@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService";
+import { formatPrice } from "@/utils/formatPrice";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -111,7 +112,7 @@ export default function ProductCardListPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {productList.map((product, index) => (
                 <Link key={index} to={`/product-detail/${product.ITEM_CODE}`}>
-                  <Card className="group relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">
+                  <Card className="relative h-full overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 group">
                     <div className="relative flex items-center justify-center bg-neutral-300 dark:bg-gray-800 h-36 overflow-hidden">
                       {product?.imageUrl ? (
                         <img
@@ -134,7 +135,7 @@ export default function ProductCardListPage() {
                       {
                         product.subProductCount > 0 && (
                           <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">
-                            +{product.subProductCount} other colour/pattern
+                            +{product.subProductCount} other color/pattern
                           </p>
                         )
                       }
@@ -143,7 +144,7 @@ export default function ProductCardListPage() {
                           {product.ITEM_NAME}
                         </h2>
                         <span className="text-lg font-semibold">
-                          <span className="text-sm">₹</span> {product.SALE_RATE}
+                          {formatPrice(product.SALE_RATE)}
                         </span>
                       </div>
                     </CardContent>

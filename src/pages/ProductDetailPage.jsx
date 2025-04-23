@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getDataModelService } from '@/services/dataModelService';
+import { formatPrice } from '@/utils/formatPrice';
 import axios from 'axios';
 import { InfoIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -250,7 +251,7 @@ const ProductDetailPage = () => {
                                         <div className="text-sm font-semibold">Sale Price</div>
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="text-4xl font-bold">
-                                                ₹{item.SALE_RATE}
+                                                {formatPrice(item.SALE_RATE)}
                                             </div>
                                         </div>
                                     </div>
