@@ -29,81 +29,124 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
-import { deleteUser, getAllUsersList } from "@/services/userManagementService"
+import { useToast } from "@/hooks/use-toast"
+import { deleteDataModelService, getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService"
+import axios from "axios"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
-import { useToast } from "@/hooks/use-toast"
-
 
 const OrderList = () => {
-    const [userTableData, setUserTableData] = useState([]);
+    const [tableList, setTableList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [sorting, setSorting] = useState([])
     const [columnFilters, setColumnFilters] = useState([])
     const [columnVisibility, setColumnVisibility] = useState({})
     const [rowSelection, setRowSelection] = useState({})
+    const [globalFilter, setGlobalFilter] = useState("")
     const { userData } = useAuth();
     const { toast } = useToast()
     const navigate = useNavigate();
 
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-
     useEffect(() => {
-        fetchAllUsersData();
+        fetchClientList();
     }, [])
 
-    const fetchAllUsersData = async () => {
+
+    const fetchClientList = async () => {
         setLoading(true);
-        setError(null);
         try {
-            const data = await getAllUsersList(userData.currentUserLogin, userData.clientURL)
-            setUserTableData(data);
+            const payload = {
+                SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE OTHER_REF1 = 'MXXXX'`,
+            };
+            const response = await getDataModelFromQueryService(
+                payload,
+                userData.currentUserLogin,
+                userData.clientURL
+            );
+
+            console.log(response);
+
+            setTableList(response || []);
         } catch (error) {
-            setError(error.message);
+            toast({
+                variant: "destructive",
+                title: `Error fetching client list: ${error.message}`,
+            });
         } finally {
             setLoading(false);
         }
-    }
+    };
 
-    const handleDeleteUser = async (user) => {
-        alert("Are you sure you want to delete this user? This action cannot be undone.")
-        // throw new Error("User deletion is not implemented yet.");
+    const handleImageDelete = async (newItemCode) => {
+        setLoading(true);
 
         try {
-            const deleteUserPayload = {
-                fqUserName: user.EMAIL_ADDRESS,
-                userNameOnly: user.USER_NAME,
+            const email = encodeURIComponent(userData.currentUserLogin);
+            const fileName = encodeURIComponent(`PRODUCT_IMAGE_${newItemCode}`);
+            const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+
+            const response = await axios.delete(url);
+
+            if (response.status === 200) {
+                toast({
+                    title: response.data.message,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: `Image delete failed with status: ${response.status}`,
+                });
             }
-            const deleteUserResponse = await deleteUser(deleteUserPayload, userData.currentUserLogin, userData.clientURL);
-
-            fetchAllUsersData();
-
-            toast({
-                title: deleteUserResponse,
-            })
 
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: error?.message || "Unknown error occurred.",
-            })
+                title: "Error deleting image.",
+                description:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Unknown error occurred.",
+            });
+        } finally {
+            setLoading(false);
         }
-    }
-
-    const handleEditUser = (user) => {
-        setSelectedUser(user);
-        setIsDialogOpen(true);
-    }
-
-    const handleUserDialogClose = () => {
-        setSelectedUser(null);
-        setIsDialogOpen(false);
-        fetchAllUsersData();
     };
 
+    const handleDelete = async (product) => {
+        window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
+
+        try {
+            const deleteProductPayload = {
+                UserName: userData.currentUserLogin,
+                DataModelName: "INVT_MATERIAL_MASTER",
+                WhereCondition: `ITEM_CODE = '${product.ITEM_CODE}'`,
+            };
+
+            const deleteProductResponse = await deleteDataModelService(
+                deleteProductPayload,
+                userData.currentUserLogin,
+                userData.clientURL
+            );
+
+            toast({
+                variant: "destructive",
+                title: deleteProductResponse,
+            })
+
+            await handleImageDelete(product.ITEM_CODE);
+
+            fetchAllProductsData();
+        } catch (error) {
+            console.error("Error deleting product:", error);
+
+            toast({
+                variant: "destructive",
+                title: error?.message || "Unknown error occurred.",
+            });
+        }
+    };
 
     const columns = [
         {
@@ -129,14 +172,7 @@ const OrderList = () => {
             enableHiding: false,
         },
         {
-            accessorKey: "id",
-            header: "S.No",
-            cell: ({ row }) => (
-                <div className="capitalize">{row.getValue("id")}</div>
-            ),
-        },
-        {
-            accessorKey: "USER_NAME",
+            accessorKey: "SALES_ORDER_SERIAL_NO",
             header: ({ column }) => {
                 return (
                     <Button
@@ -144,31 +180,31 @@ const OrderList = () => {
                         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                         className="p-0"
                     >
-                        User Name
+                        Sales Order
                         <ArrowUpDown />
                     </Button>
                 )
             },
             cell: ({ row }) => (
-                <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
+                <div className="capitalize">{row.getValue("SALES_ORDER_SERIAL_NO") || "-"}</div>
             ),
         },
         {
-            accessorKey: "FULL_NAME",
-            header: "Full Name",
+            accessorKey: "ORDER_NO",
+            header: "Order No",
             cell: ({ row }) => (
-                <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
+                <div className="capitalize">{row.getValue("ORDER_NO") || "-"}</div>
             ),
         },
         {
-            accessorKey: "USER_TYPE",
-            header: "User Type",
+            accessorKey: "CLIENT_NAME",
+            header: "Cateogry",
             cell: ({ row }) => (
-                <div className="capitalize">{row.getValue("USER_TYPE")}</div>
+                <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
             ),
         },
         {
-            accessorKey: "EMAIL_ADDRESS",
+            accessorKey: "ORDER_DATE",
             header: ({ column }) => {
                 return (
                     <Button
@@ -176,22 +212,12 @@ const OrderList = () => {
                         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                         className="p-0"
                     >
-                        Email
+                        Order Date
                         <ArrowUpDown />
                     </Button>
                 )
             },
-            cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
-        },
-        {
-            accessorKey: "MOBILE_NO",
-            header: () => <div>Mobile No</div>,
-            cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
-        },
-        {
-            accessorKey: "EMP_NO",
-            header: () => <div>Employee No</div>,
-            cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
+            cell: ({ row }) => <div>{row.getValue("ORDER_DATE") || "-"}</div>,
         },
         {
             accessorKey: "action",
@@ -199,7 +225,7 @@ const OrderList = () => {
             id: "actions",
             // enableHiding: false,
             cell: ({ row }) => {
-                const user = row.original
+                const product = row.original
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -211,8 +237,8 @@ const OrderList = () => {
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleEditUser(user)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteUser(user)}> <Trash2 /> Delete</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(product)}> <Trash2 /> Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
@@ -222,12 +248,12 @@ const OrderList = () => {
     ]
 
     const fuzzyFilter = (row, columnId, filterValue) => {
-        return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
+        const value = row.getValue(columnId);
+        return String(value || "").toLowerCase().includes(filterValue.toLowerCase());
     };
 
-
     const table = useReactTable({
-        data: userTableData,
+        data: tableList,
         columns,
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
@@ -237,12 +263,14 @@ const OrderList = () => {
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: fuzzyFilter,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
+            globalFilter,
         },
     })
 
@@ -286,7 +314,7 @@ const OrderList = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        <Button onClick={() => navigate("/new-order")}>Create <Plus /></Button>
+                        <Button onClick={() => navigate("/new-order")}>Create<Plus /></Button>
 
                     </div>
                 </div>
@@ -311,7 +339,7 @@ const OrderList = () => {
                             ))}
                         </TableHeader>
                         <TableBody>
-                            {true ? (
+                            {loading ? (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
                                         <PacmanLoader color="#6366f1" />
@@ -336,7 +364,7 @@ const OrderList = () => {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                                        No results.
+                                        No products found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -369,7 +397,7 @@ const OrderList = () => {
                 </div>
             </div>
         </div>
-    )
+    );
 };
 
 export default OrderList;

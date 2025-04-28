@@ -1,134 +1,70 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { deleteDataModelService, getDataModelService, saveDataService } from "@/services/dataModelService";
-import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { deleteDataModelService, getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox"
+import { useEffect, useState } from "react";
+import AddSubProductDialog from "./dialog/AddSubProductDialog";
+import { BarLoader } from "react-spinners";
 
 const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
-  const { ITEM_CODE, ITEM_NAME } = formDataProps;
-
   const { userData } = useAuth();
   const { toast } = useToast();
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [isSalePriceChecked, setIsSalePriceChecked] = useState(false);
-  const initialFormData = useMemo(() => ({
-    COMPANY_CODE: 1,
-    BRANCH_CODE: 1,
-    ITEM_TYPE: "",
-    ITEM_CODE,
-    SUB_MATERIAL_NO: -1,
-    ITEM_FINISH: "",
-    ITEM_NAME,
-    UOM_STOCK: "NOS",
-    UOM_PURCHASE: "NOS",
-    COST_CODE: "MXXXX",
-    ITEM_SIZE: "",
-    image_file: null,
-  }), [ITEM_CODE, ITEM_NAME, isSalePriceChecked]);
-
-  const [subProductFormData, setSubProductFormData] = useState(initialFormData);
-  const [productFormData, setProductFormData] = useState(null);
   const [subProductList, setSubProductList] = useState([]);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [mainProductConfig, setMainProductConfig] = useState({});
+  const [selectedSubProduct, setSelectedSubProduct] = useState({
+    ITEM_CODE: formDataProps?.ITEM_CODE,
+    ITEM_NAME: formDataProps?.ITEM_NAME
+  });
 
   useEffect(() => {
-    setSubProductFormData((prev) => {
-      const updated = { ...prev }
+    setSelectedSubProduct(prev => ({
+      ...prev,
+      ITEM_CODE: formDataProps?.ITEM_CODE,
+      ITEM_NAME: formDataProps?.ITEM_NAME,
+    }));
 
-      if (isSalePriceChecked) {
-        updated.SALE_RATE = prev.SALE_RATE !== undefined ? prev.SALE_RATE : 0;
-      } else {
-        delete updated.SALE_RATE
-      }
-
-      return updated
-    })
-  }, [isSalePriceChecked])
-
-  useEffect(() => {
-    setSubProductFormData(f => ({ ...f, ITEM_CODE, ITEM_NAME }));
-
-    // now load fresh data based on the new code
-    fetchProductData();
     fetchSubProductData();
-  }, [onSubmitTrigger, ITEM_CODE]);
-
-  useEffect(() => {
-    if (!productFormData) return;
-    setIsEnabled(productFormData.SUB_MATERIALS_MODE === "T");
-  }, [productFormData?.SUB_MATERIALS_MODE]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const fetchProductData = async () => {
-    try {
-      const payload = {
-        DataModelName: "INVT_MATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${ITEM_CODE}'`,
-        Orderby: "",
-      };
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
-
-      const client = response?.[0] || {};
-
-      setProductFormData((prev) => ({
-        ...prev,
-        ...client,
-        SUB_MATERIAL_BASED_ON: client.SUB_MATERIAL_BASED_ON
-          ? client.SUB_MATERIAL_BASED_ON.split(',').map((item) => item.trim())
-          : [],
-      }));
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
-      });
-    }
-  };
+    fetchMainProductData();
+  }, [onSubmitTrigger, formDataProps])
 
   const fetchSubProductData = async () => {
+    setIsLoading(true);
     try {
       const payload = {
         DataModelName: "INVT_SUBMATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${ITEM_CODE}'`,
+        WhereCondition: `ITEM_CODE = '${formDataProps?.ITEM_CODE}'`,
         Orderby: "",
       };
 
       const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
 
-      const updatedProducts = await Promise.all(
+      const updated = await Promise.all(
         response.map(async (product) => {
           const { file, previewUrl } = await fetchSubProductImage(product.ITEM_CODE, product.SUB_MATERIAL_NO);
           return {
             ...product,
-            image_file: file,
+            rawImage: file,
             previewUrl,
           };
         })
       );
 
-      setSubProductList(updatedProducts);
+      setSubProductList(updated);
     } catch (errors) {
       toast({
         variant: "destructive",
         title: `Error Fetching Sub Product: ${errors.message}`,
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -153,24 +89,23 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, type, value, files } = e.target;
-    if (type === "file") {
+  const fetchMainProductData = async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT ITEM_NAME AS itemName, SUB_MATERIAL_BASED_ON AS subMaterialBasedOn, SUB_MATERIALS_MODE AS isSubMaterialEnabled FROM INVT_MATERIAL_MASTER WHERE ITEM_CODE = '${formDataProps?.ITEM_CODE}'`,
+      };
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
 
-      const file = files[0] || null;
-      setSubProductFormData((prev) => ({ ...prev, [name]: file }));
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-
-      // generate preview URL
-      if (file) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } else {
-        setPreviewUrl(null);
-      }
-    } else {
-      setSubProductFormData((prev) => ({ ...prev, [name]: value }));
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+      setMainProductConfig(response?.[0]);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
     }
   };
 
@@ -232,158 +167,23 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     }
   };
 
-  const handleEdit = async (subMaterialProduct) => {
-    setIsDialogOpen(true)
-    const hasSaleRate = typeof subMaterialProduct.SALE_RATE !== 'undefined' && subMaterialProduct.SALE_RATE !== null;
-
-    setIsSalePriceChecked(hasSaleRate);
-    const cleanItemName = subMaterialProduct.ITEM_NAME.replace(/[-–—].*$/, '').trim();
-
-    setSubProductFormData({
-      ...subMaterialProduct,
-      ITEM_NAME: subMaterialProduct.ITEM_NAME.replace(/[-–—].*$/, '').trim(),
-      SALE_RATE: hasSaleRate ? subMaterialProduct.SALE_RATE : undefined,
-    });
-    setPreviewUrl(subMaterialProduct.previewUrl);
-  }
+  const handleEdit = async (subProduct) => {
+    setIsEditMode(true);
+    setSelectedSubProduct((prev) => ({
+      ...prev,
+      ...subProduct,
+    }));
+    setIsDialogOpen(true);
+  };
 
   const handleDialogClose = () => {
-    setSubProductFormData(initialFormData);
-    setIsSalePriceChecked(false);
     setIsDialogOpen(false);
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl("");
-    }
+    setIsEditMode(false);
+    setSelectedSubProduct({
+      ITEM_CODE: formDataProps?.ITEM_CODE,
+      ITEM_NAME: formDataProps?.ITEM_NAME
+    });
     fetchSubProductData();
-  };
-
-  const handleUploadImage = async (serialNo, isNew) => {
-    const file = subProductFormData.image_file;
-
-    if (!file) return;
-
-    const payload = new FormData();
-    payload.append("file", file);
-    payload.append("email", userData.currentUserLogin);
-    const filename = `SUB_PRODUCT_IMAGE_${ITEM_CODE}_${serialNo}`;
-    payload.append("fileName", filename);
-
-    try {
-      const config = {
-        headers: { "Content-Type": "multipart/form-data" },
-      };
-
-      const response = isNew
-        ? await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
-        : await axios.put(`https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.currentUserLogin}&fileName=${filename}`, payload, config);
-
-      if (response.status === 200) {
-        toast({
-          title: `Image ${isNew ? 'uploaded' : 'updated'} successfully!`,
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `Error ${isNew ? 'uploading' : 'updating'} image.`,
-          description: errors?.response?.data?.message || errors?.message,
-        });
-      }
-    } catch (errors) {
-      toast({
-        variant: "destructive",
-        title: "Error saving image.",
-        description:
-          errors?.response?.data?.message ||
-          errors?.message ||
-          "Unknown errors occurred.",
-      });
-    }
-  };
-
-  const formatFullItemName = (subProductFormData) => {
-    return [subProductFormData.ITEM_NAME, subProductFormData.ITEM_FINISH, subProductFormData.ITEM_SIZE, subProductFormData.ITEM_TYPE]
-      .filter(Boolean)
-      .map((val) => val.trim().toLowerCase())
-      .join("-");
-  };
-
-  useEffect(() => {
-    setSubProductFormData((prev) => ({
-      ...prev,
-      ITEM_NAME: formatFullItemName(prev),
-    }));
-  }, []);
-
-  const desiredOrder = ["Color", "Size", "Variant"];
-
-  const sortedFields = (productFormData?.SUB_MATERIAL_BASED_ON || [])
-    .slice()                                 // copy so you don’t mutate original
-    .sort((a, b) =>
-      desiredOrder.indexOf(a) - desiredOrder.indexOf(b)
-    );
-
-  const dynamicFields = {
-    Color: {
-      label: "Color",
-      id: "ITEM_FINISH",
-      name: "ITEM_FINISH",
-      valueKey: "ITEM_FINISH",
-      errorKey: "ITEM_FINISH",
-    },
-    Size: {
-      label: "Size",
-      id: "ITEM_SIZE",
-      name: "ITEM_SIZE",
-      valueKey: "ITEM_SIZE",
-      errorKey: "ITEM_SIZE",
-    },
-    Variant: {
-      label: "Variant",
-      id: "ITEM_TYPE",
-      name: "ITEM_TYPE",
-      valueKey: "ITEM_TYPE",
-      errorKey: "ITEM_TYPE",
-    },
-  };
-
-  const handleSumbit = async () => {
-    try {
-      const isNewProduct = subProductFormData.SUB_MATERIAL_NO === -1;
-      const updatedFormData = {
-        ...subProductFormData,
-        ITEM_NAME: formatFullItemName(subProductFormData),
-      }
-
-      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
-      const payload = {
-        UserName: userData.currentUserLogin,
-        DModelData: convertedDataModel,
-      }
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
-
-      // Extract serial number from response
-      const serialNoMatch = response.match(/\/(\d+)'/);
-      const serialNo = serialNoMatch?.[1];
-
-      toast({ title: response })
-
-      if (serialNo) {
-        await handleUploadImage(serialNo, isNewProduct);
-      }
-
-      await fetchSubProductData();
-
-      setSubProductFormData(initialFormData)
-    } catch (errors) {
-      toast({
-        variant: "destructive",
-        title: "Error saving data. Please try again.", errors,
-      })
-    } finally {
-      setIsDialogOpen(false);
-    }
   };
 
   return (
@@ -394,44 +194,50 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
       </CardHeader>
       <CardContent>
         <div className="h-[535px] overflow-y-scroll space-y-2">
-          {subProductList.map((item, index) => (
-            <Card
-              className="p-3"
-              key={index}
-            >
-              <div className="flex justify-between items-start w-full">
-                <div className="flex w-full justify-start gap-2  text-start">
-                  <img
-                    src={item.previewUrl}
-                    alt={item.ITEM_NAME}
-                    className="h-[50px] w-[50px] mt-1 rounded object-cover"
-                  />
-                  <div className="flex w-full flex-col items-start">
-                    <p className="text-lg font-bold mb-1">{item.ITEM_NAME}</p>
-                    <div className="flex flex-row">
-                      <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_TYPE} |</p>
-                      <p className="me-1 text-xs font-semibold text-gray-400">{item.ITEM_SIZE} |</p>
-                      <p className="text-xs text-gray-400">{item.ITEM_FINISH}</p>
+          {isLoading ? (
+            <BarLoader color="#36d399" height={2} width="100%" />
+          ) : (
+            subProductList.map((item, index) => (
+              <Card
+                className="p-3"
+                key={index}
+              >
+                <div className="flex justify-between items-start w-full">
+                  <div className="flex w-full justify-start gap-2  text-start">
+                    <img
+                      src={item.previewUrl}
+                      alt={item.ITEM_NAME}
+                      className="h-[50px] w-[50px] mt-1 rounded object-cover"
+                    />
+                    <div className="flex w-full flex-col items-start">
+                      <p className="text-lg font-bold mb-1">{item.ITEM_NAME}</p>
+                      <div className="flex gap-1">
+                        {item.ITEM_FINISH && <p className="text-xs text-gray-400">{item.ITEM_FINISH} |</p>}
+                        {item.ITEM_SIZE && <p className="me-1 text-xs text-gray-400">{item.ITEM_SIZE} |</p>}
+                        {item.ITEM_TYPE && <p className="me-1 text-xs text-gray-400">{item.ITEM_TYPE}</p>}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-row gap-2">
+                    <SquarePen
+                      size={16}
+                      className="cursor-pointer hover:text-blue-700"
+                      onClick={() => handleEdit(item)}
+                    />
+                    <Trash2
+                      size={16}
+                      className="cursor-pointer text-red-700"
+                      onClick={() => handleDelete(item)}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-row gap-2">
-                  <SquarePen
-                    size={16}
-                    className="cursor-pointer hover:text-blue-700"
-                    onClick={() => handleEdit(item)}
-                  />
-                  <Trash2
-                    size={16}
-                    className="cursor-pointer text-red-700"
-                    onClick={() => handleDelete(item)}
-                  />
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )
+          }
         </div>
-        <CardFooter className="flex w-full h-full overflow-y-scroll items-center justify-center" id="addSubMaterial">
+
+        <div className="flex justify-center">
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -439,160 +245,34 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
               setIsDialogOpen(open);
             }}
           >
-            <DialogContent className="w-[80%] md:w-[100%] h-[400px] md:h-[80%] z-[100] overflow-y-scroll overflow-x-scroll " >
-              <DialogHeader>
-                <DialogTitle>Add Sub Product</DialogTitle>
-                <DialogDescription>
-                  Enter the details of the sub-product you'd like to add. Click save to confirm.
-                </DialogDescription>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="SALE_RATE"
-                    checked={isSalePriceChecked}
-                    onCheckedChange={(checked) => {
-                      setIsSalePriceChecked(!!checked);
-                      if (!checked) {
-                        setSubProductFormData(prev => {
-                          const newData = { ...prev };
-                          delete newData.SALE_RATE;
-                          return newData;
-                        });
-                      }
-                    }}
-                  />
-                  <label
-                    htmlFor="SALE_RATE"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Custom sale price
-                  </label>
-                </div>
-
-              </DialogHeader>
-              <div className="w-full h-full flex lg:flex-row flex-col gap-2 overflow-y-scroll p-1">
-                <div className="grid grid-cols-1 w-full h-fit gap-2">
-                  <div className="w-full">
-                    <Label htmlFor="itemname" className="text-right">
-                      Item Name
-                    </Label>
-                    <Input
-                      id="ITEM_NAME"
-                      name="ITEM_NAME"
-                      type="text"
-                      className="col-span-3"
-                      value={formatFullItemName(subProductFormData)}
-                      onChange={handleChange}
-                      required
-                      readOnly={true}
-                    />
-                    {errors.ITEM_NAME && <p className="text-xs text-red-500">{errors.ITEM_NAME}</p>}
-                  </div>
-
-                  {sortedFields.map((field) => {
-                    const fieldData = dynamicFields[field];
-                    if (!fieldData) return null;
-
-                    return (
-                      <>
-                        <div className="w-full" key={field}>
-                          <Label htmlFor={fieldData.id} className="text-right">
-                            {fieldData.label}
-                          </Label>
-                          <Input
-                            id={fieldData.id}
-                            name={fieldData.name}
-                            type="text"
-                            className="col-span-3"
-                            value={subProductFormData?.[fieldData.valueKey] || ""}
-                            onChange={handleChange}
-                            required
-                          />
-                          {errors?.[fieldData.errorKey] && (
-                            <p className="text-xs text-red-500">{errors[fieldData.errorKey]}</p>
-                          )}
-                        </div>
-                      </>
-
-                    );
-                  })}
-
-                  {
-                    isSalePriceChecked && (
-                      <div className="w-full">
-                        <Label htmlFor="SALE_RATE" className="text-right">
-                          Sale Price
-                        </Label>
-                        <Input
-                          id="SALE_RATE"
-                          name="SALE_RATE"
-                          type="number"
-                          className="col-span-3"
-                          value={subProductFormData?.SALE_RATE || ""}
-                          onChange={handleChange}
-                        />
-                        {errors.SALE_RATE && <p className="text-xs text-red-500">{errors.SALE_RATE}</p>}
-                      </div>
-                    )
-                  }
-                </div>
-
-                <div className="mt-4 w-full space-y-2 text-left">
-                  <div className="w-full">
-                    <label className="relative flex aspect-square h-[220px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
-                      {previewUrl ? (
-                        <img src={previewUrl} alt={subProductFormData.ITEM_NAME} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-                          Click to Upload
-                        </div>
-                      )}
-                      <input
-                        id="image_file"
-                        name="image_file"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleChange}
-                        className="sr-only"
-                      />
-                    </label>
-
-                    {errors.image_file && <p className="text-xs text-red-500">{errors.image_file}</p>}
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleSumbit}>
-                  Add Product
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-            {
-              isEnabled ? (
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full mt-7"
-                    onClick={() => setIsDialogOpen(true)}
-                  >
-                    Add Sub Product <Plus />
-                  </Button>
-                </DialogTrigger>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full mt-7"
-                  onClick={() => window.alert("Please enable sub product in the main product configuration.")}
-                >
+            {mainProductConfig?.isSubMaterialEnabled === "T" ? (
+              <DialogTrigger asChild>
+                <Button variant="outline"
+                  onClick={() => setIsDialogOpen(true)}>
                   Add Sub Product <Plus />
                 </Button>
-              )
-            }
+              </DialogTrigger>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full mt-7"
+                onClick={() =>
+                  window.alert("Please enable sub product in the main product configuration.")
+                }
+              >
+                Add Sub Product <Plus className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+
+            <AddSubProductDialog
+              open={isDialogOpen}
+              onClose={handleDialogClose}
+              subProduct={selectedSubProduct}
+              config={mainProductConfig?.subMaterialBasedOn}
+              isEditMode={isEditMode}
+            />
           </Dialog>
-        </CardFooter>
+        </div>
       </CardContent>
     </Card>
   );

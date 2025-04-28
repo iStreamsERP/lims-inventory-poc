@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import {
   CloudMoon,
   CloudSun,
@@ -32,6 +33,8 @@ import { Link, useNavigate } from "react-router-dom";
 export const Header = ({ collapsed, setCollapsed }) => {
   const { userData, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { cart } = useCart();
+
   const navigate = useNavigate();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -98,8 +101,16 @@ export const Header = ({ collapsed, setCollapsed }) => {
           <Button
             variant="ghost"
             onClick={() => navigate("/cart-page")}
+            className="relative"
           >
-            <ShoppingCart />
+            <ShoppingCart className="h-6 w-6" />
+
+            {/* Badge */}
+            {cart.length > 0 && (
+              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-800 rounded-full">
+                {cart.length}
+              </span>
+            )}
           </Button>
 
           <DropdownMenu >

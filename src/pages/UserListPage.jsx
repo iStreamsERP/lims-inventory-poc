@@ -138,7 +138,7 @@ const UserListPage = () => {
     setIsDialogOpen(true);
   }
 
-  const handleUserDialogClose = () => {
+  const handleDialogClose = () => {
     setSelectedUser(null);
     setIsDialogOpen(false);
     fetchAllUsersData();
@@ -318,16 +318,20 @@ const UserListPage = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              if (!open) handleUserDialogClose();
-              setIsDialogOpen(open);
-            }} className="z-50">
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                if (!open) handleDialogClose();
+                setIsDialogOpen(open);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button onClick={() => setIsDialogOpen(true)}>Create <Plus /></Button>
               </DialogTrigger>
+
               <UserDialog
                 open={isDialogOpen}
-                onClose={handleUserDialogClose}
+                onClose={handleDialogClose}
                 user={selectedUser} />
             </Dialog>
           </div>

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { capitalizeFirstLetter } from "@/utils/stringUtils";
+import { capitalizeFirstLetter, toTitleCase } from "@/utils/stringUtils";
 import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -40,26 +40,28 @@ export default function ProductFormPage() {
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
     ITEM_CODE: "(NEW)",
+    ITEM_NAME: "",
+    ITEM_FINISH: "",
+    ITEM_SIZE: "",
+    ITEM_TYPE: "",
+    GROUP_LEVEL1: "",
+    SUB_MATERIAL_BASED_ON: "",
+    SUPPLIER_NAME: "",
+    SALE_RATE: "",
+    SALE_MARGIN_PTG: "",
+    SUBMATERIAL_CONVRATE: 1,
+    SALE_UOM: "",
+    REMARKS: "",
+    SUB_MATERIALS_MODE: "F",
+    image_file: null,
+    COST_CODE: "MXXXX",
+    ITEM_GROUP: "PRODUCT",
     UOM_STOCK: "NOS",
     UOM_PURCHASE: "NOS",
     UOM_SUBMATERIAL: "",
     ITEM_F_PUINISH: "NOS",
-    SUB_MATERIAL_BASED_ON: "",
-    GROUP_LEVEL1: "",
     GROUP_LEVEL2: "Consumables",
     GROUP_LEVEL3: "Consumables",
-    COST_CODE: "MXXXX",
-    ITEM_NAME: "",
-    ITEM_GROUP: "PRODUCT",
-    SUPPLIER_NAME: "",
-    SALE_RATE: "",
-    SALE_UOM: "",
-    SALE_MARGIN_PTG: "",
-    SUBMATERIAL_CONVRATE: 1,
-    QTY_IN_HAND: 0,
-    REMARKS: "",
-    SUB_MATERIALS_MODE: "F",
-    image_file: null,
   };
 
   const [subMaterialBasedOnList, setSubMaterialBasedOnList] = useState([
@@ -123,13 +125,15 @@ export default function ProductFormPage() {
   const validateInput = () => {
     const newError = {};
     if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
+    // if (!formData.ITEM_FINISH) newError.ITEM_FINISH = "Item color is required in specification.";
+    // if (!formData.ITEM_SIZE) newError.ITEM_SIZE = "Item size is required in specification.";
+    // if (!formData.ITEM_TYPE) newError.ITEM_TYPE = "Item variant is required in specification.";
     if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
     else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
     if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
     else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
     if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
     if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-    if (!formData.REMARKS) newError.REMARKS = "Remarks are required.";
     if (!formData.image_file) {
       newError.image_file = "Image is required.";
     }
@@ -354,18 +358,30 @@ export default function ProductFormPage() {
     }
     try {
       setLoading(true);
-      const convertedDataModel = convertDataModelToStringData("INVT_MATERIAL_MASTER", formData);
+
+      const normalizedData = {
+        ...formData,
+        ITEM_NAME: toTitleCase(formData.ITEM_NAME),
+        ITEM_FINISH: toTitleCase(formData.ITEM_FINISH),
+        ITEM_SIZE: toTitleCase(formData.ITEM_SIZE),
+        ITEM_TYPE: toTitleCase(formData.ITEM_TYPE),
+        SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
+        // if you persist SUB_MATERIAL_BASED_ON as CSV:
+        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
+          ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
+          : toTitleCase(formData.SUB_MATERIAL_BASED_ON),
+      };
 
       const payload = {
         UserName: userData.currentUserLogin,
-        DModelData: convertedDataModel,
+        DModelData: convertDataModelToStringData("INVT_MATERIAL_MASTER", normalizedData),
       };
 
       const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
 
-      handleImage(newItemCode);
+      await handleImage(newItemCode);
 
       if (newItemCode !== "(NEW)") {
         setFormData((prev) => ({
@@ -677,54 +693,33 @@ export default function ProductFormPage() {
                               onChange={handleChange}
                               value={formData.ITEM_SIZE}
                             />
+                            {error.ITEM_SIZE && <p className="text-sm text-red-500">{error.ITEM_SIZE}</p>}
                           </div>
                           <div className="w-full">
-                            <Label htmlFor="ITEM_LENGTH">Length</Label>
+                            <Label htmlFor="ITEM_FINISH">Color</Label>
                             <Input
-                              name="ITEM_LENGTH"
-                              id="ITEM_LENGTH"
+                              name="ITEM_FINISH"
+                              id="ITEM_FINISH"
                               type="text"
-                              placeholder="Type length"
+                              placeholder="Type color"
                               onChange={handleChange}
-                              value={formData.ITEM_LENGTH}
+                              value={formData.ITEM_FINISH}
                             />
+                            {error.ITEM_FINISH && <p className="text-sm text-red-500">{error.ITEM_FINISH}</p>}
                           </div>
                         </div>
                         <div className="mb-3 flex flex-col gap-3 md:flex-row">
                           <div className="w-full">
-                            <Label htmlFor="ITEM_WIDTH">Width</Label>
+                            <Label htmlFor="ITEM_TYPE">Variant</Label>
                             <Input
-                              name="ITEM_WIDTH"
-                              id="ITEM_WIDTH"
+                              name="ITEM_TYPE"
+                              id="ITEM_TYPE"
                               type="text"
                               placeholder="Type width"
                               onChange={handleChange}
-                              value={formData.ITEM_WIDTH}
+                              value={formData.ITEM_TYPE}
                             />
-                          </div>
-                          <div className="w-full">
-                            <Label htmlFor="ITEM_THICKNESS">Thickness</Label>
-                            <Input
-                              name="ITEM_THICKNESS"
-                              id="ITEM_THICKNESS"
-                              type="text"
-                              placeholder="Type thickness"
-                              onChange={handleChange}
-                              value={formData.ITEM_THICKNESS}
-                            />
-                          </div>
-                        </div>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-1/2">
-                            <Label htmlFor="ITEM_VOLUME">Volume</Label>
-                            <Input
-                              name="ITEM_VOLUME"
-                              id="ITEM_VOLUME"
-                              type="text"
-                              placeholder="Type volume"
-                              onChange={handleChange}
-                              value={formData.ITEM_VOLUME}
-                            />
+                            {error.ITEM_TYPE && <p className="text-sm text-red-500">{error.ITEM_TYPE}</p>}
                           </div>
                         </div>
                       </AccordionContent>
@@ -877,7 +872,7 @@ export default function ProductFormPage() {
                         htmlFor="subProductMode"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Is Product has sub products?
+                        This Product has sub products?
                       </label>
                     </div>
 

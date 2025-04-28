@@ -1,173 +1,311 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/hooks/use-toast';
+import { getDataModelFromQueryService, saveDataService } from '@/services/dataModelService';
+import { formatPrice } from '@/utils/formatPrice';
+import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Card,
-  CardTitle
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CircleHelp, Minus, Plus, ShoppingCart, X } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { convertDataModelToStringData } from '@/utils/dataModelConverter';
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Sony PlayStation 5 Pro",
-      category: "PlayStation consoles",
-      price: 499.99,
-      quantity: 1,
-      image:
-        "https://t3.ftcdn.net/jpg/04/83/25/50/360_F_483255019_m1r1ujM8EOkr8PamCHF85tQ0rHG3Fiqz.jpg",
-    },
-    {
-      id: 2,
-      name: "Sony PlayStation 5 Pro",
-      category: "PlayStation consoles",
-      price: 499.99,
-      quantity: 1,
-      image:
-        "https://t3.ftcdn.net/jpg/04/83/25/50/360_F_483255019_m1r1ujM8EOkr8PamCHF85tQ0rHG3Fiqz.jpg",
-    },
-  ]);
+  const { userData } = useAuth();
+  const { toast } = useToast();
+  const { cart, removeItem, updateItemQuantity } = useCart();
 
-  const taxRate = 0.018; // 1.8% tax
+  const [clientData, setClientData] = useState([]);
+  const [value, setValue] = useState("");
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [openCustomer, setOpenCustomer] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const updateQuantity = (id, change) => {
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-
+  // Cart totals
+  const taxRate = 0.018;
+  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
+  const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
+
+  const [formData, setFormData] = useState({
+    COMPANY_CODE: 1,
+    BRANCH_CODE: 1,
+    SALES_ORDER_SERIAL_NO: 0,
+    ORDER_NO: "123",
+    CLIENT_ID: selectedClient?.CLIENT_ID,
+    CLIENT_NAME: selectedClient?.CLIENT_NAME,
+    TOTAL_VALUE: 0,
+    DISCOUNT_VALUE: 0,
+    USER_NAME: userData.currentUserLogin,
+    ENT_DATE: "",
+    OTHER_REF1: "MXXXX"
+  });
+
+  useEffect(() => {
+    setFormData(fd => ({
+      ...fd,
+      CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
+      CLIENT_NAME: selectedClient?.CLIENT_NAME ?? '',
+      TOTAL_VALUE: subtotal,
+      DISCOUNT_VALUE: 0
+    }));
+  }, [selectedClient, subtotal]);
+
+  // Filter list based on dropdown input value
+  const filteredClients = clientData.filter(client =>
+    client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase())
+  );
+
+  const handleSelectClient = (clientName) => {
+    const client = clientData.find(c => c.CLIENT_NAME === clientName);
+    setValue(clientName);
+    setSelectedClient(client || null);
+    setOpenCustomer(false);
+  };
+
+  useEffect(() => {
+    fetchClientData();
+  }, []);
+
+  const fetchClientData = async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO from CLIENT_MASTER`,
+      };
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+      setClientData(response || []);
+    } catch (error) {
+      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
+    }
+  };
+
+  const handleSaveOrder = async () => {
+    if (selectedClient === null) {
+      return toast({ variant: "destructive", title: "Please select a client." });
+    }
+
+    try {
+      setLoading(true);
+
+      const payloadModel = {
+        ...formData,
+        TOTAL_VALUE: subtotal,
+        CLIENT_ID: selectedClient.CLIENT_ID,
+        CLIENT_NAME: selectedClient.CLIENT_NAME
+      };
+
+      const convertedDataModel = convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel);
+
+      console.log(convertedDataModel);
+
+
+      const payload = {
+        UserName: userData.currentUserLogin,
+        DModelData: convertedDataModel,
+      };
+
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+
+      console.log(response);
+
+      toast({
+        title: "Order Saved Successfully",
+        description: response, // Optional: you can show the response here
+      });
+
+    } catch (error) {
+      console.error(error); // Good practice to log it
+      toast({
+        variant: "destructive",
+        title: "Error saving data. Please try again.",
+        description: error?.message || "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-y-4">
-      <h1 className="title">Shopping Cart</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="col-span-2 flex flex-col space-y-4">
-          {cartItems.map((item) => (
-            <Card key={item.id} className="p-4 flex items-start gap-4 relative w-full">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-white"
-                onClick={() => removeItem(item.id)}
-              >
-                <X size={18} />
-              </button>
+    <main className="container mx-auto px-4">
+      <div className="grid gap-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Shopping Cart</h1>
+            <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
+          </div>
+          <Button variant="link" onClick={() => navigate(-1)}>
+            Continue Shopping <MoveRight />
+          </Button>
+        </div>
 
-              <div className="h-full w-32 rounded-lg bg-slate-900 p-2">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Cart Items */}
+          <div className="col-span-2 space-y-6">
+            {cart.length === 0 ? (
+              <p className="text-center text-gray-400">Your cart is empty.</p>
+            ) : (
+              cart.map((item, idx) => (
+                <div key={idx} className="space-y-4">
+                  <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={item.image}
+                        alt={item.itemName}
+                        width={80}
+                        height={80}
+                        className="rounded-md object-cover"
+                        style={{ aspectRatio: '1/1' }}
+                      />
+                      <div>
+                        <h3 className="font-medium">{item.itemName}</h3>
+                        {item.itemColor && <p className="text-xs text-gray-500">Color: {item.itemColor}</p>}
+                        {item.itemSize && <p className="text-xs text-gray-500">Size: {item.itemSize}</p>}
+                        {item.itemVariant && <p className="text-xs text-gray-500">Variant: {item.itemVariant}</p>}
+                      </div>
+                    </div>
 
-              <div className="flex-1">
-                <p className="text-lg font-semibold">{item.name}</p>
-                <p className="text-sm text-gray-400">{item.category}</p>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-8"
+                        onClick={() => updateItemQuantity(item.subProductNo, item.itemQty - 1)}
+                      >
+                        <Minus size={14} />
+                      </Button>
+                      <span>{item.itemQty}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-8"
+                        onClick={() => updateItemQuantity(item.subProductNo, item.itemQty + 1)}
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    </div>
 
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={`h-6 w-8 ${item.quantity === 1 ? "hidden" : "flex"}`}
-                      onClick={() => updateQuantity(item.id, -1)}
-                    >
-                      <Minus size={16} />
-                    </Button>
-                    <p className="text-lg">{item.quantity}</p>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-6 w-8"
-                      onClick={() => updateQuantity(item.id, 1)}
-                    >
-                      <Plus size={16} />
-                    </Button>
+                    <div className="text-right font-semibold">
+                      {formatPrice(item.finalSaleRate * item.itemQty)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-2"
+                        onClick={() => removeItem(item.subProductNo)}
+                      >
+                        <X className="h-5 w-5" />
+                        <span className="sr-only">Remove</span>
+                      </Button>
+                    </div>
                   </div>
-
-                  <p className="text-3xl font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                  <Separator />
                 </div>
+              ))
+            )}
+          </div>
+
+          {/* Customer & Summary */}
+          <div className="space-y-6">
+            {/* Customer Selector */}
+            <Card className="p-6 space-y-2">
+              <h2 className="text-lg font-semibold">Select Customer</h2>
+
+              <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCustomer}
+                    className="w-full flex justify-between"
+                  >
+                    {value || 'Select customer...'}
+                    <ChevronsUpDown className="opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search customer..."
+                      value={value}
+                      onValueChange={setValue}
+                      className="h-9 px-3"
+                    />
+                    <CommandList>
+                      <CommandEmpty>No customers found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredClients.map(client => (
+                          <CommandItem
+                            key={client.CLIENT_ID}
+                            value={client.CLIENT_NAME}
+                            onSelect={handleSelectClient}
+                          >
+                            {client.CLIENT_NAME}
+                            <Check className={`ml-auto ${value === client.CLIENT_NAME ? 'opacity-100' : 'opacity-0'}`} />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {selectedClient && (
+                <div className="text-sm space-y-1 pt-2">
+                  <p><span className="font-semibold">City:</span> {selectedClient.CITY_NAME}</p>
+                  <p><span className="font-semibold">Country:</span> {selectedClient.COUNTRY}</p>
+                  <p><span className="font-semibold">Phone:</span> {selectedClient.TELEPHONE_NO}</p>
+                </div>
+              )}
+            </Card>
+
+            {/* Order Summary */}
+            <Card className="p-6 space-y-4">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Total Items</span>
+                <span>{totalItem}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Tax (1.8%)</span>
+                <span>{formatPrice(tax)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span>{formatPrice(total)}</span>
+              </div>
+              <div className="space-y-3 pt-4">
+                <Button variant="outline" className="w-full" onClick={handleSaveOrder}>Save my order</Button>
+                <Button className="w-full">Proceed to Checkout</Button>
               </div>
             </Card>
-          ))}
-        </div>
-
-        <div className="col-span-1 space-y-4">
-          <Card className="p-4 flex flex-col w-full gap-4">
-            <CardTitle>Order Summary</CardTitle>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between w-full">
-                <p className="text-sm">Subtotal</p>
-                <p className="text-sm font-medium">₹{subtotal.toFixed(2)}</p>
-              </div>
-
-              <div className="flex items-center justify-between w-full">
-                <p className="text-sm">Discount</p>
-                <p className="text-sm text-green-600 font-medium">-₹{subtotal.toFixed(2)}</p>
-              </div>
-
-              <div className="flex items-center justify-between w-full">
-                <div className="text-sm flex items-center gap-1 text-gray-400">
-                  <p className="text-sm">Tax</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <CircleHelp size={14} />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Tax calculated at {taxRate * 100}%</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-sm text-gray-400">₹{tax.toFixed(2)}</p>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between w-full">
-                <p className="text-lg font-semibold">Total</p>
-                <p className="text-lg font-semibold">₹{total.toFixed(2)}</p>
-              </div>
-            </div>
-
-
-            <div className="flex flex-col gap-2 mt-6">
-              <Button variant="outline">
-                Save my order
-              </Button>
-              <Button onClick={() => navigate("proceed-to-check")}>
-                Proceed to checkout
-                <ShoppingCart />
-              </Button>
-            </div>
-          </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

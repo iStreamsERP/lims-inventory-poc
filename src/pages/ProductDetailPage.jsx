@@ -1,14 +1,17 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { getDataModelService } from '@/services/dataModelService';
+import { getDataModelFromQueryService } from '@/services/dataModelService';
 import { formatPrice } from '@/utils/formatPrice';
 import axios from 'axios';
-import { InfoIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { set } from 'date-fns';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { BarLoader } from 'react-spinners';
 
@@ -16,265 +19,290 @@ const ProductDetailPage = () => {
     const { id } = useParams();
     const { userData } = useAuth();
     const { toast } = useToast();
+    const { addItem } = useCart()
+
     const [loading, setLoading] = useState(false);
-    const [productList, setProductList] = useState([]);
-    const [subProductList, setSubProductList] = useState([]);
-
-    const colorClassMap = {
-        white: "bg-white border border-gray-300",
-        yellow: "bg-yellow-200",
-        red: "bg-red-200",
-        green: "bg-green-200",
-        blue: "bg-blue-200",
-        black: "bg-black",
-        gray: "bg-gray-300",
-        // Add more if needed
-    };
-
+    const [variants, setVariants] = useState([]);
+    const [selectedColor, setSelectedColor] = useState('');
+    const [selectedSize, setSelectedSize] = useState('');
+    const [selectedVariant, setSelectedVariant] = useState('');
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        fetchProductList();
+        fetchProductVariants();
     }, [id]);
 
-    useEffect(() => {
-        if (productList.length > 0 && productList[0].SUB_MATERIALS_MODE === "T") {
-            fetchSubProductList();
-        }
-    }, [productList]);
-
-    const fetchProductList = async () => {
+    const fetchProductVariants = async () => {
         setLoading(true);
         try {
             const payload = {
-                DataModelName: "INVT_MATERIAL_MASTER",
-                WhereCondition: `iTEM_CODE = '${id}' AND COST_CODE = 'MXXXX'`,
-                Orderby: "",
+                SQLQuery: `SELECT 
+                            m.ITEM_CODE AS itemCode, 
+                            m.ITEM_NAME AS itemName, 
+                            m.SALE_RATE AS mainSaleRate,
+                            m.ITEM_BRAND AS itemBrand,
+                            m.GROUP_LEVEL1 AS category,
+                            -- Determine if the main product has sub-products
+                            CASE
+                                WHEN EXISTS (
+                                    SELECT 1 
+                                    FROM INVT_SUBMATERIAL_MASTER s 
+                                    WHERE s.ITEM_CODE = m.ITEM_CODE
+                                ) THEN 1  -- 1 indicates it has sub-products
+                                ELSE 0  -- 0 indicates no sub-products
+                            END AS hasSubProduct,
+                            
+                            -- Collect sub-products if available, using FOR JSON PATH
+                            (
+                                SELECT 
+                                    s.ITEM_CODE As itemCode,
+                                    s.ITEM_NAME AS itemName, 
+                                    s.SUB_MATERIAL_NO AS subProductNo,
+                                    s.ITEM_FINISH AS itemColor, 
+                                    s.ITEM_SIZE AS itemSize, 
+                                    s.ITEM_TYPE AS itemVariant,
+                                    COALESCE(s.SALE_RATE, m.SALE_RATE) AS finalSaleRate
+                                FROM INVT_SUBMATERIAL_MASTER s
+                                WHERE s.ITEM_CODE = m.ITEM_CODE
+                                FOR JSON PATH
+                            ) AS subProducts
+                        FROM INVT_MATERIAL_MASTER m
+                        WHERE m.ITEM_CODE = '${id}'
+                        `
             };
 
-            const response = await getDataModelService(
-                payload,
-                userData.currentUserLogin,
-                userData.clientURL
-            );
+            const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
 
-            const updatedList = await Promise.all(
-                response.map(async (item) => {
-                    const imageBlob = await fetchProductImage(item.ITEM_CODE);
-                    const imageUrl = URL.createObjectURL(imageBlob);
-                    return { ...item, imageUrl };
+            const updatedResponse = [...response];
+
+            const product = updatedResponse[0];
+
+            const updated = await Promise.all(
+                updatedResponse.map(async (item) => {
+                    const parsedSubProducts =
+                        item.subProducts && typeof item.subProducts === "string"
+                            ? JSON.parse(item.subProducts)
+                            : [];
+
+                    const subProductsWithImages = await Promise.all(
+                        parsedSubProducts.map(async (sub) => ({
+                            ...sub,
+                            image: await fetchSubProductImage(sub.itemCode, sub.subProductNo),
+                        }))
+                    );
+
+                    return {
+                        ...item,
+                        image: await fetchProductImage(item.itemCode),
+                        subProducts: subProductsWithImages,
+                    }
                 })
-            );
+            )
 
-            setProductList(updatedList);
-
+            setVariants(updated);
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: `Error fetching product list: ${error?.message || "An error occurred"}`,
+                title: `Error fetching product: ${error.message}`,
             });
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchProductImage = async (itemCode) => {
+    const fetchProductImage = async (code) => {
         try {
-            const response = await axios.get(
-                `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${itemCode}`,
-                {
-                    responseType: "blob",
-                }
+            const { data } = await axios.get(
+                `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
+                    userData.currentUserLogin
+                )}&fileName=PRODUCT_IMAGE_${code}`,
+                { responseType: 'blob' }
             );
-            return response.data;
-        } catch (error) {
-            console.error(`Error fetching image for ${itemCode}`, error);
-            return null; // Handle missing images gracefully
+            return URL.createObjectURL(data);
+        } catch {
+            return null;
         }
     };
 
-    const fetchSubProductList = async () => {
-        setLoading(true);
+    const fetchSubProductImage = async (code, no) => {
         try {
-            const payload = {
-                DataModelName: "INVT_SUBMATERIAL_MASTER",
-                WhereCondition: `iTEM_CODE = '${id}'`,
-                Orderby: "",
-            };
-
-            const response = await getDataModelService(
-                payload,
-                userData.currentUserLogin,
-                userData.clientURL
+            const { data } = await axios.get(
+                `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
+                    userData.currentUserLogin
+                )}&fileName=SUB_PRODUCT_IMAGE_${code}_${no}`,
+                { responseType: 'blob' }
             );
-
-            setSubProductList(response);
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: `Error fetching sub product list: ${error?.message || "An error occurred"}`,
-            });
-        } finally {
-            setLoading(false);
+            return URL.createObjectURL(data);
+        } catch {
+            return null;
         }
-    }
+    };
 
+    if (!variants.length) return <p className="mt-4 text-center">No product found.</p>;
 
-    return loading ? (
-        <BarLoader color="#36d399" height={2} width="100%" />
-    ) : productList?.length > 0 ? (
-        productList.map((item, index) => (
-            <div
-                key={index}
-                className="w-full"
-            >
-                <Card className="mx-auto w-full">
-                    <CardContent className="p-4 md:p-4">
-                        <div className="flex flex-col gap-6 md:flex-row">
-                            {/* Image Section */}
-                            <div className="h-[290px] w-full overflow-hidden rounded-lg bg-neutral-300 dark:bg-gray-800 sm:h-[390px] md:w-1/2">
-                                <img
-                                    className="h-full w-full object-contain"
-                                    src={item.imageUrl}
-                                    alt={item.ITEM_NAME}
-                                />
-                            </div>
+    return (
+        <>
+            {variants.map((item) => {
+                const subs = item.subProducts || [];
 
-                            {/* Details Section */}
-                            <div className="flex w-full flex-col justify-between gap-4 md:w-1/2">
-                                <div>
-                                    <p className="text-xl font-semibold">{item.ITEM_NAME}</p>
-                                    <p className="text-muted-foreground mb-3 text-sm">
-                                        {item.ITEM_BRAND || "Brand not available"}, <span>{item.GROUP_LEVEL1 || "Fashion"}</span>
-                                    </p>
+                const allColors = Array.from(new Set(subs.map((s) => s.itemColor))).filter(Boolean);
+                const allSizes = Array.from(new Set(subs.map((s) => s.itemSize))).filter(Boolean);
+                const allVariants = Array.from(new Set(subs.map((s) => s.itemVariant))).filter(Boolean);
 
-                                    {/* Rating */}
-                                    <div className="mb-3 flex flex-wrap gap-2">
-                                        <Badge
-                                            variant="outline"
-                                            className="w-fit"
-                                        >
-                                            4.3 ★
-                                        </Badge>
+                const availableColors = allColors.filter((c) =>
+                    subs.some((s) => s.itemColor === c && (!selectedSize || s.itemSize === selectedSize) && (!selectedVariant || s.itemVariant === selectedVariant))
+                );
+
+                const availableSizes = allSizes.filter((sz) =>
+                    subs.some((s) => s.itemSize === sz && (!selectedColor || s.itemColor === selectedColor) && (!selectedVariant || s.itemVariant === selectedVariant))
+                );
+
+                const availableVariants = allVariants.filter((v) =>
+                    subs.some((s) => s.itemVariant === v && (!selectedColor || s.itemColor === selectedColor) && (!selectedSize || s.itemSize === selectedSize))
+                );
+
+                const chosen = subs.find(
+                    (s) => s.itemColor === selectedColor && s.itemSize === selectedSize && s.itemVariant === selectedVariant
+                );
+
+                const handleClick = (dim, value, availableSet) => {
+                    setError('');
+                    if (!availableSet.includes(value)) {
+                        setError(`${dim} '${value}' not available`);
+                        return;
+                    }
+                    if (dim === 'color') {
+                        setSelectedColor(value);
+                        setSelectedSize('');
+                        setSelectedVariant('');
+                    } else if (dim === 'size') {
+                        setSelectedSize(value);
+                        setSelectedVariant('');
+                    } else if (dim === 'variant') {
+                        setSelectedVariant(value);
+                    }
+                };
+
+                const handleReset = () => {
+                    setSelectedColor('');
+                    setSelectedSize('');
+                    setSelectedVariant('');
+                    setError('');
+                };
+
+                const handleAddToCart = () => {
+                    if (!chosen) {
+                        setError('Please select a valid combination');
+                        return;
+                    }
+                    // Use your cart context or API to add
+                    addItem({
+                        ...chosen,
+                        itemQty: 1,
+                    });
+
+                    toast({ title: 'Added to cart' });
+                };
+
+                return loading ?
+                    <BarLoader color="#36d399" height={2} width="100%" /> :
+                    (!variants.length) ? <p className="mt-4 text-center">No product found.</p> :
+                        (
+                            <Card key={item.itemCode} className="mx-auto w-full p-6">
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Image Section */}
+                                    <div className="w-full md:w-1/2">
+                                        <div className="h-96 w-full overflow-hidden rounded-lg bg-neutral-300">
+                                            <img src={item.image || undefined} alt={item.itemName} className="h-full w-full object-contain" />
+                                        </div>
+                                        <Separator />
                                     </div>
 
-                                    {productList.length > 0 && productList[0].SUB_MATERIALS_MODE === "T" && (
-                                        <>
-                                            {/* Color Selection */}
-                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Color") && (
-                                                <div className="mb-4">
-                                                    {subProductList.length > 0 && (
-                                                        <Label className="text-sm font-medium">Select Color</Label>
-                                                    )}
-                                                    <div className="mt-2 flex flex-wrap gap-3">
-                                                        {subProductList.map((subItem, subIndex) => {
-                                                            const color = subItem.ITEM_FINISH?.toLowerCase();
-                                                            const colorClass = colorClassMap[color] || "bg-gray-200"; // fallback
+                                    {/* Details Section */}
+                                    <div className="flex-1">
+                                        <p className="text-xl font-semibold">{item.itemName}</p>
+                                        <p className="text-muted-foreground mb-3 text-sm">
+                                            {item.itemBrand || "Brand not available"}, <span>{item.category}</span>
+                                        </p>
+                                        <Badge variant="outline">4.3 ★</Badge>
 
-                                                            return (
-                                                                color && (
-                                                                    <label
-                                                                        key={subIndex}
-                                                                        className="flex cursor-pointer items-center gap-2"
-                                                                    >
-                                                                        <input
-                                                                            type="radio"
-                                                                            name="color"
-                                                                            value={color}
-                                                                            className="peer sr-only"
-                                                                        />
-                                                                        <span
-                                                                            className={`h-6 w-6 px-6 ring-2 rounded-sm peer-checked:ring-black dark:peer-checked:ring-white ring-transparent ring-offset-2 transition dark:ring-offset-gray-800 ${colorClass}`}
-                                                                        />
-                                                                    </label>
-                                                                )
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
+                                        {/* Color */}
+                                        {allColors.length > 0 && (
+                                            <div>
+                                                <Label>Select Color</Label>
+                                                <ToggleGroup type="single" value={selectedColor} onValueChange={val => handleClick('color', val, availableColors)} className="flex justify-start flex-wrap gap-2">
+                                                    {allColors.map(c => (
+                                                        <ToggleGroupItem key={c} value={c} aria-label={c} disabled={!availableColors.includes(c)}>
+                                                            {c}
+                                                        </ToggleGroupItem>
+                                                    ))}
+                                                </ToggleGroup>
+                                            </div>
+                                        )}
 
-                                            {/* Size Selection */}
-                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Size") && (
-                                                <div className="mb-4">
-                                                    {subProductList.length > 0 && (
-                                                        <Label className="text-sm font-medium">Select Size</Label>
-                                                    )}
-                                                    <div className="mt-2 flex flex-wrap gap-3">
-                                                        {subProductList.length > 0 &&
-                                                            subProductList.map((subItem, index) => (
-                                                                <label key={index} className="cursor-pointer">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="size"
-                                                                        value={subItem.ITEM_SIZE}
-                                                                        className="peer sr-only"
-                                                                    />
-                                                                    <span className="flex h-6 w-fit px-3 items-center justify-center rounded-sm bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
-                                                                        {subItem.ITEM_SIZE}
-                                                                    </span>
-                                                                </label>
-                                                            ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                        {/* Size */}
+                                        {allSizes.length > 0 && (
+                                            <div>
+                                                <Label>Select Size</Label>
+                                                <ToggleGroup type="single" value={selectedSize} onValueChange={val => handleClick('size', val, availableSizes)} className="flex justify-start flex-wrap gap-2">
+                                                    {allSizes.map(sz => (
+                                                        <ToggleGroupItem key={sz} value={sz} aria-label={sz} disabled={!availableSizes.includes(sz)}>
+                                                            {sz}
+                                                        </ToggleGroupItem>
+                                                    ))}
+                                                </ToggleGroup>
+                                            </div>
+                                        )}
 
-                                            {/* Variant Selection */}
-                                            {productList[0].SUB_MATERIAL_BASED_ON?.includes("Variant") && (
-                                                <div className="mb-4">
-                                                    {subProductList.length > 0 && (
-                                                        <Label className="text-sm font-medium">Select Variant</Label>
-                                                    )}
-                                                    <div className="mt-2 flex flex-wrap gap-3">
-                                                        {subProductList.length > 0 &&
-                                                            subProductList.map((subItem, index) => (
-                                                                <label key={index} className="cursor-pointer">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="ITEM_TYPE"
-                                                                        value={subItem.ITEM_TYPE}
-                                                                        className="peer sr-only"
-                                                                    />
-                                                                    <span className="flex h-6 w-fit px-3 rounded-sm items-center justify-center bg-gray-100 text-xs font-semibold peer-checked:text-blue-500 peer-checked:ring-2 peer-checked:ring-blue-500 dark:bg-gray-900">
-                                                                        {subItem.ITEM_TYPE}
-                                                                    </span>
-                                                                </label>
-                                                            ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
+                                        {/* Variant */}
+                                        {allVariants.length > 0 && (
+                                            <div>
+                                                <Label>Select Variant</Label>
+                                                <ToggleGroup type="single" value={selectedVariant} onValueChange={val => handleClick('variant', val, availableVariants)} className="flex justify-start flex-wrap gap-2">
+                                                    {allVariants.map(v => (
+                                                        <ToggleGroupItem key={v} value={v} aria-label={v} disabled={!availableVariants.includes(v)}>
+                                                            {v}
+                                                        </ToggleGroupItem>
+                                                    ))}
+                                                </ToggleGroup>
+                                            </div>
+                                        )}
 
+                                        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
 
-                                    {/* Pricing */}
-                                    <div className="mb-4">
-                                        <div className="text-sm font-semibold">Sale Price</div>
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <div className="text-4xl font-bold">
-                                                {formatPrice(item.SALE_RATE)}
+                                        <div className="flex w-fit gap-2 mt-4">
+                                            <Button variant="outline" disabled={!chosen} onClick={handleReset} className="flex-1">
+                                                Reset
+                                            </Button>
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <p className="text-2xl font-bold">
+                                                {formatPrice(chosen?.finalSaleRate || item.mainSaleRate)}
+                                            </p>
+                                            <div className="flex gap-4 mt-4">
+                                                <Button variant="outline" className="flex-1" onClick={handleAddToCart}>
+                                                    Add to Cart
+                                                </Button>
+                                                <Button
+                                                    className="flex-1"
+                                                    onClick={() => {
+                                                        if (!chosen) setError('Please select a valid combination');
+                                                        else {
+                                                            // buy now logic
+                                                        }
+                                                    }}
+                                                >
+                                                    Buy Now
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-col gap-3 sm:flex-row">
-                                    <Button
-                                        variant="outline"
-                                        className="w-full sm:w-1/2"
-                                    >
-                                        Add to Cart
-                                    </Button>
-                                    <Button className="w-full sm:w-1/2">Buy Now</Button>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div >
-        ))
-    ) : (
-        <p className="mt-4 text-center">No product details found.</p>
+                            </Card>
+                        );
+            })}
+        </>
     );
 };
 
