@@ -66,7 +66,7 @@ export default function ServiceFormPage() {
 
     const validateInput = () => {
         const newError = {};
-        if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
+        if (!formData.ITEM_NAME) newError.ITEM_NAME = "Service name is required.";
         if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
         else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
         if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
@@ -205,12 +205,12 @@ export default function ServiceFormPage() {
 
                                 <div className="flex flex-col gap-4 lg:flex-row">
                                     <div className="flex-1">
-                                        <Label htmlFor="itemcode">Item Code</Label>
+                                        <Label htmlFor="itemcode">Service Code</Label>
                                         <Input
                                             name="ITEM_CODE"
                                             id="ITEM_CODE"
                                             type="text"
-                                            placeholder="Type item code (New)"
+                                            placeholder="Type service code (New)"
                                             value={formData.ITEM_CODE === "(NEW)" ? "New" : formData.ITEM_CODE}
                                             onChange={handleChange}
                                             readOnly
@@ -218,12 +218,12 @@ export default function ServiceFormPage() {
                                         {error.ITEM_CODE && <p className="text-xs text-red-500">{error.ITEM_CODE}</p>}
                                     </div>
                                     <div className="flex-1">
-                                        <Label htmlFor="itemname">Item Name</Label>
+                                        <Label htmlFor="itemname">Service Name</Label>
                                         <Input
                                             name="ITEM_NAME"
                                             id="ITEM_NAME"
                                             type="text"
-                                            placeholder="Type item name"
+                                            placeholder="Type service name"
                                             onChange={handleChange}
                                             value={formData.ITEM_NAME}
                                             required

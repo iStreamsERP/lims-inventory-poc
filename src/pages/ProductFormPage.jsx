@@ -25,6 +25,7 @@ export default function ProductFormPage() {
   const { id } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState({});
   const [commandInputValue, setCommandInputValue] = useState("");
@@ -56,10 +57,9 @@ export default function ProductFormPage() {
     image_file: null,
     COST_CODE: "MXXXX",
     ITEM_GROUP: "PRODUCT",
-    UOM_STOCK: "NOS",
-    UOM_PURCHASE: "NOS",
+    UOM_STOCK: "",
+    UOM_PURCHASE: "",
     UOM_SUBMATERIAL: "",
-    ITEM_F_PUINISH: "NOS",
     GROUP_LEVEL2: "Consumables",
     GROUP_LEVEL3: "Consumables",
   };
@@ -174,10 +174,11 @@ export default function ProductFormPage() {
           ? client.SUB_MATERIAL_BASED_ON.split(',').map((item) => item.trim())
           : [],
       }));
-    } catch (error) {
+
+    } catch (err) {
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: `Error fetching main product: ${err.message}`,
       });
     }
   };
@@ -469,6 +470,7 @@ export default function ProductFormPage() {
                         />
                         {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
                       </div>
+
                       <div className="flex w-full flex-col gap-2 lg:flex-row">
                         <div className="w-full">
                           <Label htmlFor="SALE_RATE">Sales Price</Label>
@@ -517,6 +519,7 @@ export default function ProductFormPage() {
                                           setFormData((prev) => ({
                                             ...prev,
                                             SALE_UOM: currentValue,
+                                            UOM_STOCK: currentValue,
                                             UOM_SUBMATERIAL: currentValue,
                                           }));
                                           setOpened(false);

@@ -26,6 +26,7 @@ import UserListPage from "./pages/UserListPage";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import UserRole from "./pages/UserRole";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -74,6 +75,7 @@ const App = () => {
             { path: "enquiry-form", element: <EnquiryForm /> },
 
             { path: "users", element: <UserListPage /> },
+            { path: "user-role", element: <UserRole /> },
 
 
             { path: "user-preferences", element: <UserPreferences /> },

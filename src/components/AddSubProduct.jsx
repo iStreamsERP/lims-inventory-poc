@@ -33,7 +33,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
     fetchSubProductData();
     fetchMainProductData();
-  }, [onSubmitTrigger, formDataProps])
+  }, [onSubmitTrigger, formDataProps.ITEM_CODE])
 
   const fetchSubProductData = async () => {
     setIsLoading(true);

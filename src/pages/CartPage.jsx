@@ -1,14 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
-import { useToast } from '@/hooks/use-toast';
-import { getDataModelFromQueryService, saveDataService } from '@/services/dataModelService';
-import { formatPrice } from '@/utils/formatPrice';
-import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Command,
   CommandEmpty,
@@ -22,13 +13,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/hooks/use-toast';
+import { getDataModelFromQueryService, saveDataService } from '@/services/dataModelService';
 import { convertDataModelToStringData } from '@/utils/dataModelConverter';
+import { formatPrice } from '@/utils/formatPrice';
+import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toWords } from 'number-to-words';
+import { sub } from 'date-fns';
 
 const CartPage = () => {
   const navigate = useNavigate();
   const { userData } = useAuth();
   const { toast } = useToast();
-  const { cart, removeItem, updateItemQuantity } = useCart();
+  const { cart, removeItem, updateItemQuantity, clearCart } = useCart();
 
   const [clientData, setClientData] = useState([]);
   const [value, setValue] = useState("");
@@ -43,22 +45,68 @@ const CartPage = () => {
   const total = subtotal + tax;
   const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
 
-  const [formData, setFormData] = useState({
+  const [masterFormData, setMasterFormData] = useState({
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
-    SALES_ORDER_SERIAL_NO: 0,
-    ORDER_NO: "123",
+    SALES_ORDER_SERIAL_NO: -1,
+    ORDER_NO: '',
+    ORDER_DATE: new Date().toISOString().split('T')[0],
     CLIENT_ID: selectedClient?.CLIENT_ID,
     CLIENT_NAME: selectedClient?.CLIENT_NAME,
     TOTAL_VALUE: 0,
     DISCOUNT_VALUE: 0,
+    NET_VALUE: 0,
+    AMOUNT_IN_WORDS: "",
+    CURRENCY_NAME: "Rupees",
+    NO_OF_DECIMALS: 0,
+    EXCHANGE_RATE: 0,
+    ORDER_VALUE_IN_LC: 0,
+    MODE_OF_PAYMENT: "Static",
+    CREDIT_DAYS: 0,
+    ADVANCE_AMOUNT: 0,
+    MODE_OF_TRANSPORT: "",
+    DELIVERY_DATE: "",
+    DELIVERY_ADDRESS: "",
+    TERMS_AND_CONDITIONS: "",
+    DELETED_STATUS: "F",
+    DELETED_DATE: "",
+    DELETED_USER: "",
+    DELETED_USER: "",
     USER_NAME: userData.currentUserLogin,
     ENT_DATE: "",
-    OTHER_REF1: "MXXXX"
+  });
+
+  const [detailsFormData, setDetailsFormData] = useState({
+    COMPANY_CODE: 1,
+    BRANCH_CODE: 1,
+    SALES_ORDER_SERIAL_NO: masterFormData.SALES_ORDER_SERIAL_NO,
+    ORDER_NO: '',
+    ORDER_DATE: new Date().toISOString().split('T')[0],
+    SERIAL_NO: -1,
+    ITEM_CODE: '',
+    SUB_MATERIAL_NO: '',
+    DESCRIPTION: '',
+    UOM_SALES: '',
+    UOM_STOCK: '',
+    CONVERSION_RATE: 1,
+    QTY: 0,
+    QTY_STOCK: 0,
+    CONVRATE_TO_MASTER: 0,
+    QTY_TO_MASTER: 0,
+    RATE: 0,
+    VALUE: 0,
+    DISCOUNT_VALUE: 0,
+    DISCOUNT_RATE: 0,
+    NET_VALUE: 0,
+    VALUE_IN_LC: 0,
+    DELETED_STATUS: 0,
+    USER_NAME: userData.currentUserLogin,
+    ENT_DATE: "",
+    TRANSPORT_CHARGE: "",
   });
 
   useEffect(() => {
-    setFormData(fd => ({
+    setMasterFormData(fd => ({
       ...fd,
       CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
       CLIENT_NAME: selectedClient?.CLIENT_NAME ?? '',
@@ -108,31 +156,85 @@ const CartPage = () => {
       setLoading(true);
 
       const payloadModel = {
-        ...formData,
+        ...masterFormData,
         TOTAL_VALUE: subtotal,
         CLIENT_ID: selectedClient.CLIENT_ID,
-        CLIENT_NAME: selectedClient.CLIENT_NAME
+        CLIENT_NAME: selectedClient.CLIENT_NAME,
+        NET_VALUE: subtotal,
+        AMOUNT_IN_WORDS: toWords(Number(subtotal)),
       };
 
-      const convertedDataModel = convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel);
-
-      console.log(convertedDataModel);
 
 
       const payload = {
         UserName: userData.currentUserLogin,
-        DModelData: convertedDataModel,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel),
       };
 
       const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
 
-      console.log(response);
+      const m = response.match(/Serial No\s*'(\d+)'/);
+      const newSerialNo = m ? parseInt(m[1], 10) : null;
+
+      if (typeof response === "string" && response.trim().startsWith("Error")) {
+        throw new Error(response);
+      }
+
+      if (!newSerialNo) {
+        throw new Error("Could not parse new order serial number from response");
+      }
+
+      const itemsToSend = cart;
+
+      // 2) now send each cart item as a DETAIL record
+      for (let i = 0; i < itemsToSend.length; i++) {
+        const item = itemsToSend[i];
+        const lineValue = item.finalSaleRate * item.itemQty;
+
+        const detailModel = {
+          ...detailsFormData,
+          COMPANY_CODE: masterFormData.COMPANY_CODE,
+          BRANCH_CODE: masterFormData.BRANCH_CODE,
+          SALES_ORDER_SERIAL_NO: newSerialNo,
+          ORDER_NO: masterFormData.ORDER_NO,
+          ORDER_DATE: masterFormData.ORDER_DATE,
+          SERIAL_NO: -1,                    // detail line number
+          ITEM_CODE: item.itemCode || item.ITEM_CODE,    // or however you map
+          SUB_MATERIAL_NO: item.subProductNo,
+          DESCRIPTION: item.itemName || item.ITEM_NAME,
+          UOM_SALES: item.uomStock,    // sales-unit (e.g. “PCS”)
+          UOM_STOCK: item.uomStock,
+          CONVERSION_RATE: 1,
+          QTY: item.itemQty,
+          QTY_STOCK: item.itemQty,
+          CONVRATE_TO_MASTER: 1,
+          QTY_TO_MASTER: item.itemQty,
+          RATE: item.finalSaleRate,
+          VALUE: lineValue,
+          DISCOUNT_VALUE: 0,
+          DISCOUNT_RATE: 0,
+          NET_VALUE: lineValue,
+          VALUE_IN_LC: lineValue,
+          TRANSPORT_CHARGE: 0,
+          DELETED_STATUS: "F",
+          USER_NAME: userData.currentUserLogin,
+          ENT_DATE: "",
+        };
+
+        const detailPayload = {
+          UserName: userData.currentUserLogin,
+          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
+        };
+
+        await saveDataService(detailPayload, userData.currentUserLogin, userData.clientURL);
+      }
 
       toast({
         title: "Order Saved Successfully",
-        description: response, // Optional: you can show the response here
+        description: response,
       });
 
+      clearCart();
     } catch (error) {
       console.error(error); // Good practice to log it
       toast({
@@ -154,7 +256,7 @@ const CartPage = () => {
             <h1 className="text-3xl font-bold">Shopping Cart</h1>
             <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
           </div>
-          <Button variant="link" onClick={() => navigate(-1)}>
+          <Button variant="link" onClick={() => navigate("/categories")}>
             Continue Shopping <MoveRight />
           </Button>
         </div>
@@ -225,7 +327,7 @@ const CartPage = () => {
           </div>
 
           {/* Customer & Summary */}
-          <div className="space-y-6">
+          <div className="space-y-6 col-span-2 md:col-span-1">
             {/* Customer Selector */}
             <Card className="p-6 space-y-2">
               <h2 className="text-lg font-semibold">Select Customer</h2>
@@ -280,15 +382,23 @@ const CartPage = () => {
 
             {/* Order Summary */}
             <Card className="p-6 space-y-4">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Total Items</span>
-                <span>{totalItem}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Subtotal</span>
+              <div className="flex justify-between text-sm">
+                <span>Subtotal ({totalItem} Items)</span>
                 <span>{formatPrice(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-green-500">
+                <span>Discount</span>
+                <span>-20</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Delivery Charge</span>
+                <span>20</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Other Charges</span>
+                <span>20</span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span>Tax (1.8%)</span>
                 <span>{formatPrice(tax)}</span>
               </div>
@@ -298,7 +408,14 @@ const CartPage = () => {
                 <span>{formatPrice(total)}</span>
               </div>
               <div className="space-y-3 pt-4">
-                <Button variant="outline" className="w-full" onClick={handleSaveOrder}>Save my order</Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSaveOrder}
+                  disabled={loading || cart.length === 0}
+                >
+                  {loading ? "Saving…" : "Save my order"}
+                </Button>
                 <Button className="w-full">Proceed to Checkout</Button>
               </div>
             </Card>

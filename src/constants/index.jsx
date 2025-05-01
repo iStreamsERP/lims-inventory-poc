@@ -65,6 +65,11 @@ export const navbarLinks = [
         path: "/users",
       },
       {
+        label: "User Role",
+        icon: Users,
+        path: "/user-role",
+      },
+      {
         label: "User Preferences",
         icon: Users,
         path: "/user-preferences",

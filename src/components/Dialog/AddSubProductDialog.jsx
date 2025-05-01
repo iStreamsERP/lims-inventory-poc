@@ -115,6 +115,11 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
     }, [subProduct.ITEM_NAME, subProductFormData, sortedFields]);
 
     useEffect(() => {
+        return () => { URL.revokeObjectURL(previewUrl); };
+    }, [previewUrl]);
+
+
+    useEffect(() => {
         setSubProductFormData(initialFormData);
 
         if (subProduct?.SUB_MATERIAL_NO >= 0) {
@@ -154,8 +159,6 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
             return updated
         })
     }, [isSalePriceChecked])
-
-    console.log(subProductFormData);
 
     // whenever the form data or the sortedFields change, detect any commas
     useEffect(() => {
@@ -250,154 +253,185 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
         }
     };
 
-    const handleSingleSubmit = async () => {
-        if (subProductFormData.image_file === null) {
-            toast({ variant: "destructive", title: "Please upload an image." });
-            return false;
-        }
-
-        let existingProductName = "";
-
-        try {
-            const isNewProduct = subProductFormData.SUB_MATERIAL_NO === -1;
-            const updatedFormData = {
-                ...subProductFormData,
-                ITEM_NAME: formatFullItemName(subProductFormData, !isNewProduct),
+    const validateDynamicFields = () => {
+        const newErrors = {};
+        sortedFields.forEach((field) => {
+            const { valueKey, label, errorKey } = dynamicFields[field];
+            const val = subProductFormData[valueKey];
+            if (!val || !val.toString().trim()) {
+                newErrors[errorKey] = `${label} is required`;
             }
-
-            existingProductName = await fetchExistingProduct(updatedFormData.ITEM_NAME);
-
-            if (existingProductName && existingProductName.trim() !== "") {
-                toast({
-                    variant: "destructive",
-                    title: "Error saving data. Please try again.",
-                    description: `Product with name ${existingProductName} already exists.`,
-                });
-                return false;
-            }
-
-            const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
-
-            const payload = {
-                UserName: userData.currentUserLogin,
-                DModelData: convertedDataModel,
-            }
-            const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
-
-            // Extract serial number from response
-            const serialNoMatch = response.match(/\/(\d+)'/);
-            const serialNo = serialNoMatch?.[1];
-
-            toast({ title: response })
-
-            if (serialNo) {
-                await handleUploadImage(serialNo, isNewProduct);
-            }
-
-            setSubProductFormData(initialFormData);
-        } catch (errors) {
-            toast({
-                variant: "destructive",
-                title: "Error saving data. Please try again.", errors,
-            })
-        } finally {
-            onClose();
-        }
+        });
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
+    const handleSingleSubmit = async () => {
+        // 1. validate dynamic fields & image
+        if (!validateDynamicFields()) {
+          toast({ variant: "destructive", title: "Please fill all required fields." });
+          return;
+        }
+        if (!subProductFormData.rawImage) {
+          toast({ variant: "destructive", title: "Please upload an image." });
+          return;
+        }
+      
+        // capture original vs new name
+        const originalName = subProduct?.ITEM_NAME; 
+        const isNewProduct = subProductFormData.SUB_MATERIAL_NO === -1;
+        const updatedFormData = {
+          ...subProductFormData,
+          ITEM_NAME: formatFullItemName(subProductFormData, !isNewProduct),
+        };
+        const newName = updatedFormData.ITEM_NAME;
+      
+        try {
+          // only check for duplicates if it's not the same record
+          const existingProductName = await fetchExistingProduct(newName);
+          if (
+            existingProductName &&
+            existingProductName.trim() !== "" &&
+            existingProductName !== originalName
+          ) {
+            toast({
+              variant: "destructive",
+              title: "Error saving data. Please try again.",
+              description: `Product with name ${existingProductName} already exists.`,
+            });
+            return false;
+          }
+      
+          // save (create or update) record
+          const converted = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
+          const payload = { UserName: userData.currentUserLogin, DModelData: converted };
+          const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      
+          // extract serialNo & upload image
+          const serialNo = response.match(/\/(\d+)'/)?.[1];
+          toast({ title: response });
+          if (serialNo) await handleUploadImage(serialNo, isNewProduct);
+      
+          // reset & close
+          setSubProductFormData(initialFormData);
+          onClose();
+        } catch (err) {
+          toast({ variant: "destructive", title: "Error saving data. Please try again.", description: err.message });
+        }
+      };
+
     const handleMultipleSubmit = async () => {
+        if (!validateDynamicFields()) {
+            toast({
+                variant: "destructive",
+                title: "Please fill all required fields.",
+            });
+            return;
+        }
         if (!subProductFormData.rawImage) {
             toast({ variant: "destructive", title: "Please upload an image." });
-            return false;
-        }
-
-        const axes = sortedFields
-            .map(field => {
-                const key = dynamicFields[field].valueKey;
-                const arr = (subProductFormData[key] || "")
-                    .split(",")
-                    .map(s => s.trim())
-                    .filter(Boolean);
-                return { key, values: arr };
-            })
-            .filter(ax => ax.values.length > 0);
-
-        if (!axes.length) {
-            toast({ variant: "destructive", title: "Enter at least color or size or varaint any one of them." });
             return;
         }
 
-        // all combos
-        const combos = cartesianProduct(axes.map(ax => ax.values));
-        const useSameImage = combos.length > 1
-            ? window.confirm("Do you want same image for all sub-products?")
-            : true;
+        // 2. Build your axes (e.g. color, size, …)
+        const axes = sortedFields
+            .map(f => {
+                const key = dynamicFields[f].valueKey;
+                const values = (subProductFormData[key] || "")
+                    .split(",")
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                return values.length ? { key, values } : null;
+            })
+            .filter(Boolean);
 
-        // remember if we came in “edit” mode
+        if (axes.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Enter at least color or size or variant.",
+            });
+            return;
+        }
+
+        // 3. Generate all combinations
+        const combos = cartesianProduct(axes.map(a => a.values));
+
+        // 4. Ask once if we should reuse the image
+        const useSameImage =
+            combos.length <= 1 || window.confirm("Use same image for all?");
+
+        if (combos.length > 1 && !useSameImage) {
+            toast({ title: "Aborted: no items were created." });
+            return;
+        }
+
         const startedWithExisting = subProductFormData.SUB_MATERIAL_NO >= 0;
 
-        const duplicates = [];
-        let createdCount = 0;
+        // 5. Process each combo sequentially
+        const summary = { created: 0, duplicates: [], failed: [] };
 
         for (let i = 0; i < combos.length; i++) {
             const combo = combos[i];
-            // copy the formData
             const data = { ...subProductFormData };
 
-            // if this is the 2nd+ combo, force create new
+            // if not the first, force “new” mode
             if (i > 0) data.SUB_MATERIAL_NO = -1;
 
-            // merge each axis value
-            axes.forEach((ax, idx) => data[ax.key] = combo[idx]);
+            // assign each axis value into data
+            axes.forEach((ax, idx) => {
+                data[ax.key] = combo[idx];
+            });
 
-            // recompute the name
             data.ITEM_NAME = formatFullItemName(data);
 
-
-            const existingProductName = await fetchExistingProduct(data.ITEM_NAME);
-
-            if (existingProductName) {
-                duplicates.push(data.ITEM_NAME);
+            // 5a. skip duplicates
+            if (await fetchExistingProduct(data.ITEM_NAME)) {
+                summary.duplicates.push(data.ITEM_NAME);
                 continue;
             }
 
-            // send it
-            const converted = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", data);
-            const payload = { UserName: userData.currentUserLogin, DModelData: converted };
-
+            // 5b. save and maybe upload image
             try {
-                const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+                const payload = {
+                    UserName: userData.currentUserLogin,
+                    DModelData: convertDataModelToStringData(
+                        "INVT_SUBMATERIAL_MASTER",
+                        data
+                    ),
+                };
+                const response = await saveDataService(
+                    payload,
+                    userData.currentUserLogin,
+                    userData.clientURL
+                );
 
-                // parse the returned serial#
-                const match = response.match(/\/(\d+)'/);
-                const serialNo = match?.[1];
-
-                // upload image: always for first if editing, or for all if user said yes
+                const serialNo = response.match(/\/(\d+)'/)?.[1];
                 const shouldUpload = serialNo && (useSameImage || i === 0);
                 if (shouldUpload) {
-                    // if we started with an existing record, only the 0th is an update; 
-                    // but if we started fresh, the 0th is also new
-                    const isNewUpload = startedWithExisting ? (i > 0) : true;
+                    // when editing, only uploads for new items (i>0); when fresh, always new
+                    const isNewUpload = startedWithExisting ? i > 0 : true;
                     await handleUploadImage(serialNo, isNewUpload);
                 }
 
-                createdCount++;
+                summary.created++;
             } catch (err) {
-                console.error("save failed for", data, err);
-                toast({ variant: "destructive", title: `Failed: ${data.ITEM_NAME}` });
+                console.error("Failed", data.ITEM_NAME, err);
+                summary.failed.push(data.ITEM_NAME);
             }
         }
 
+        // 6. Reset & notify
         setSubProductFormData(initialFormData);
+        onClose();
 
-        // summary toast (replace the two above)
-        let message = `Created ${createdCount} new sub-products.`;
-        if (duplicates.length) {
-            message += ` Skipped duplicates: ${duplicates.join(", ")}`;
+        let message = `Created ${summary.created} sub-products.`;
+        if (summary.duplicates.length) {
+            message += ` Skipped duplicates: ${summary.duplicates.join(", ")}.`;
+        }
+        if (summary.failed.length) {
+            message += ` Errors: ${summary.failed.join(", ")}.`;
         }
         toast({ title: message });
-
-        onClose();
     };
 
     return (

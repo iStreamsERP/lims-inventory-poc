@@ -35,6 +35,7 @@ import axios from "axios"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PacmanLoader } from "react-spinners"
+import { convertServiceDate } from "@/utils/dateUtils"
 
 const OrderList = () => {
     const [tableList, setTableList] = useState([]);
@@ -58,15 +59,14 @@ const OrderList = () => {
         setLoading(true);
         try {
             const payload = {
-                SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE OTHER_REF1 = 'MXXXX'`,
+                SQLQuery: `SELECT * FROM SALES_ORDER_MASTER ORDER BY SALES_ORDER_SERIAL_NO DESC`,
             };
+
             const response = await getDataModelFromQueryService(
                 payload,
                 userData.currentUserLogin,
                 userData.clientURL
             );
-
-            console.log(response);
 
             setTableList(response || []);
         } catch (error) {
@@ -198,9 +198,30 @@ const OrderList = () => {
         },
         {
             accessorKey: "CLIENT_NAME",
-            header: "Cateogry",
+            header: "Customer Name",
             cell: ({ row }) => (
                 <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
+            ),
+        },
+        {
+            accessorKey: "NET_VALUE",
+            header: "Net Value",
+            cell: ({ row }) => (
+                <div className="capitalize">{row.getValue("NET_VALUE") || "-"}</div>
+            ),
+        },
+        {
+            accessorKey: "TOTAL_VALUE",
+            header: "Total Value",
+            cell: ({ row }) => (
+                <div className="capitalize">{row.getValue("TOTAL_VALUE") || "-"}</div>
+            ),
+        },
+        {
+            accessorKey: "USER_NAME",
+            header: "User Name",
+            cell: ({ row }) => (
+                <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
             ),
         },
         {
@@ -217,7 +238,7 @@ const OrderList = () => {
                     </Button>
                 )
             },
-            cell: ({ row }) => <div>{row.getValue("ORDER_DATE") || "-"}</div>,
+            cell: ({ row }) => <div>{convertServiceDate(row.getValue("ORDER_DATE")) || "-"}</div>,
         },
         {
             accessorKey: "action",
@@ -246,6 +267,9 @@ const OrderList = () => {
         },
 
     ]
+
+    console.log(tableList[0]);
+    
 
     const fuzzyFilter = (row, columnId, filterValue) => {
         const value = row.getValue(columnId);
