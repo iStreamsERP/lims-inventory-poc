@@ -204,6 +204,13 @@ const OrderList = () => {
             ),
         },
         {
+            accessorKey: "ORDER_CATEGORY",
+            header: "Category",
+            cell: ({ row }) => (
+                <div className="capitalize">{row.getValue("ORDER_CATEGORY") || "-"}</div>
+            ),
+        },
+        {
             accessorKey: "NET_VALUE",
             header: "Net Value",
             cell: ({ row }) => (

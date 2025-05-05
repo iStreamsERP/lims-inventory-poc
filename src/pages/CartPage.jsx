@@ -1,30 +1,19 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
-import { useToast } from '@/hooks/use-toast';
-import { getDataModelFromQueryService, saveDataService } from '@/services/dataModelService';
-import { convertDataModelToStringData } from '@/utils/dataModelConverter';
-import { formatPrice } from '@/utils/formatPrice';
-import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { toWords } from 'number-to-words';
-import { sub } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import { getDataModelFromQueryService, saveDataService } from "@/services/dataModelService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { formatPrice } from "@/utils/formatPrice";
+import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toWords } from "number-to-words";
+import { sub } from "date-fns";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -49,10 +38,11 @@ const CartPage = () => {
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
     SALES_ORDER_SERIAL_NO: -1,
-    ORDER_NO: '',
-    ORDER_DATE: new Date().toISOString().split('T')[0],
+    ORDER_NO: "",
+    ORDER_DATE: new Date().toISOString().split("T")[0],
     CLIENT_ID: selectedClient?.CLIENT_ID,
     CLIENT_NAME: selectedClient?.CLIENT_NAME,
+    ORDER_CATEGORY: "",
     TOTAL_VALUE: 0,
     DISCOUNT_VALUE: 0,
     NET_VALUE: 0,
@@ -79,14 +69,14 @@ const CartPage = () => {
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
     SALES_ORDER_SERIAL_NO: masterFormData.SALES_ORDER_SERIAL_NO,
-    ORDER_NO: '',
-    ORDER_DATE: new Date().toISOString().split('T')[0],
+    ORDER_NO: "",
+    ORDER_DATE: new Date().toISOString().split("T")[0],
     SERIAL_NO: -1,
-    ITEM_CODE: '',
-    SUB_MATERIAL_NO: '',
-    DESCRIPTION: '',
-    UOM_SALES: '',
-    UOM_STOCK: '',
+    ITEM_CODE: "",
+    SUB_MATERIAL_NO: "",
+    DESCRIPTION: "",
+    UOM_SALES: "",
+    UOM_STOCK: "",
     CONVERSION_RATE: 1,
     QTY: 0,
     QTY_STOCK: 0,
@@ -105,22 +95,21 @@ const CartPage = () => {
   });
 
   useEffect(() => {
-    setMasterFormData(fd => ({
+    setMasterFormData((fd) => ({
       ...fd,
       CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
-      CLIENT_NAME: selectedClient?.CLIENT_NAME ?? '',
+      CLIENT_NAME: selectedClient?.CLIENT_NAME ?? "",
+      ORDER_CATEGORY: cart.length > 0 ? cart[0].itemGroup : "",
       TOTAL_VALUE: subtotal,
-      DISCOUNT_VALUE: 0
+      DISCOUNT_VALUE: 0,
     }));
   }, [selectedClient, subtotal]);
 
   // Filter list based on dropdown input value
-  const filteredClients = clientData.filter(client =>
-    client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase())
-  );
+  const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
 
   const handleSelectClient = (clientName) => {
-    const client = clientData.find(c => c.CLIENT_NAME === clientName);
+    const client = clientData.find((c) => c.CLIENT_NAME === clientName);
     setValue(clientName);
     setSelectedClient(client || null);
     setOpenCustomer(false);
@@ -135,11 +124,7 @@ const CartPage = () => {
       const payload = {
         SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO from CLIENT_MASTER`,
       };
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
       setClientData(response || []);
     } catch (error) {
       toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
@@ -162,8 +147,6 @@ const CartPage = () => {
         NET_VALUE: subtotal,
         AMOUNT_IN_WORDS: toWords(Number(subtotal)),
       };
-
-
 
       const payload = {
         UserName: userData.currentUserLogin,
@@ -197,11 +180,11 @@ const CartPage = () => {
           SALES_ORDER_SERIAL_NO: newSerialNo,
           ORDER_NO: masterFormData.ORDER_NO,
           ORDER_DATE: masterFormData.ORDER_DATE,
-          SERIAL_NO: -1,                    // detail line number
-          ITEM_CODE: item.itemCode || item.ITEM_CODE,    // or however you map
+          SERIAL_NO: -1, // detail line number
+          ITEM_CODE: item.itemCode || item.ITEM_CODE, // or however you map
           SUB_MATERIAL_NO: item.subProductNo,
           DESCRIPTION: item.itemName || item.ITEM_NAME,
-          UOM_SALES: item.uomStock,    // sales-unit (e.g. “PCS”)
+          UOM_SALES: item.uomStock, // sales-unit (e.g. “PCS”)
           UOM_STOCK: item.uomStock,
           CONVERSION_RATE: 1,
           QTY: item.itemQty,
@@ -255,7 +238,10 @@ const CartPage = () => {
             <h1 className="text-3xl font-bold">Shopping Cart</h1>
             <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
           </div>
-          <Button variant="link" onClick={() => navigate("/categories")}>
+          <Button
+            variant="link"
+            onClick={() => navigate("/categories")}
+          >
             Continue Shopping <MoveRight />
           </Button>
         </div>
@@ -267,7 +253,10 @@ const CartPage = () => {
               <p className="text-center text-gray-400">Your cart is empty.</p>
             ) : (
               cart.map((item, idx) => (
-                <div key={idx} className="space-y-4">
+                <div
+                  key={idx}
+                  className="space-y-4"
+                >
                   <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
                     <div className="flex items-center gap-3">
                       <img
@@ -276,10 +265,11 @@ const CartPage = () => {
                         width={80}
                         height={80}
                         className="rounded-md object-cover"
-                        style={{ aspectRatio: '1/1' }}
+                        style={{ aspectRatio: "1/1" }}
                       />
                       <div>
-                        <h3 className="font-medium">{item.itemName}</h3>
+                        <h3 className="font-medium">{item.itemName || item.ITEM_NAME}</h3>
+                        {item.itemColor && <p className="text-xs text-gray-500">Type: {item.itemGroup}</p>}
                         {item.itemColor && <p className="text-xs text-gray-500">Color: {item.itemColor}</p>}
                         {item.itemSize && <p className="text-xs text-gray-500">Size: {item.itemSize}</p>}
                         {item.itemVariant && <p className="text-xs text-gray-500">Variant: {item.itemVariant}</p>}
@@ -326,20 +316,23 @@ const CartPage = () => {
           </div>
 
           {/* Customer & Summary */}
-          <div className="space-y-4 col-span-2 md:col-span-1">
+          <div className="col-span-2 space-y-4 md:col-span-1">
             {/* Customer Selector */}
-            <Card className="p-6 space-y-2">
+            <Card className="space-y-2 p-6">
               <h2 className="text-lg font-semibold">Select Customer</h2>
 
-              <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
+              <Popover
+                open={openCustomer}
+                onOpenChange={setOpenCustomer}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={openCustomer}
-                    className="w-full flex justify-between"
+                    className="flex w-full justify-between"
                   >
-                    {value || 'Select customer...'}
+                    {value || "Select customer..."}
                     <ChevronsUpDown className="opacity-60" />
                   </Button>
                 </PopoverTrigger>
@@ -354,14 +347,14 @@ const CartPage = () => {
                     <CommandList>
                       <CommandEmpty>No customers found.</CommandEmpty>
                       <CommandGroup>
-                        {filteredClients.map(client => (
+                        {filteredClients.map((client) => (
                           <CommandItem
                             key={client.CLIENT_ID}
                             value={client.CLIENT_NAME}
                             onSelect={handleSelectClient}
                           >
                             {client.CLIENT_NAME}
-                            <Check className={`ml-auto ${value === client.CLIENT_NAME ? 'opacity-100' : 'opacity-0'}`} />
+                            <Check className={`ml-auto ${value === client.CLIENT_NAME ? "opacity-100" : "opacity-0"}`} />
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -380,7 +373,7 @@ const CartPage = () => {
             </Card>
 
             {/* Order Summary */}
-            <Card className="p-6 space-y-4 sticky top-0">
+            <Card className="sticky top-0 space-y-4 p-6">
               <div className="flex justify-between text-sm">
                 <span>Subtotal ({totalItem} Items)</span>
                 <span>{formatPrice(subtotal)}</span>
