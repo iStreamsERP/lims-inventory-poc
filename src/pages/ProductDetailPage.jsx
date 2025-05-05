@@ -186,6 +186,21 @@ const ProductDetailPage = () => {
 
                 const handleClick = (dim, value, availableSet) => {
                     setError('');
+
+                    if (!value) {
+                        if (dim === 'color') {
+                            setSelectedColor('');
+                            setSelectedSize('');
+                            setSelectedVariant('');
+                        } else if (dim === 'size') {
+                            setSelectedSize('');
+                            setSelectedVariant('');
+                        } else {
+                            setSelectedVariant('');
+                        }
+                        return;
+                    }
+
                     if (!availableSet.includes(value)) {
                         setError(`${dim} '${value}' not available`);
                         return;
@@ -202,23 +217,8 @@ const ProductDetailPage = () => {
                     }
                 };
 
-                console.log(chosen);
-
-
                 return (
                     <Card key={item.itemCode} className="mx-auto w-full p-6">
-                        <div className="flex justify-end mb-4">
-                            {/* Reset Filters Button */}
-                            <Button variant="outline" size="sm" onClick={() => {
-                                setSelectedColor('');
-                                setSelectedSize('');
-                                setSelectedVariant('');
-                                setError('');
-                            }}>
-                                Reset
-                            </Button>
-                        </div>
-
                         <div className="flex flex-col md:flex-row gap-6">
                             <div className="w-full md:w-1/2">
                                 <div className="h-96 w-full overflow-hidden rounded-lg bg-neutral-300">
@@ -274,6 +274,18 @@ const ProductDetailPage = () => {
                                 )}
 
                                 {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+
+                                <div className="flex mt-4">
+                                    {/* Reset Filters Button */}
+                                    <Button variant="outline" size="sm" onClick={() => {
+                                        setSelectedColor('');
+                                        setSelectedSize('');
+                                        setSelectedVariant('');
+                                        setError('');
+                                    }}>
+                                        Reset
+                                    </Button>
+                                </div>
 
                                 <div className="mt-6 flex gap-4">
                                     <Button variant="outline" onClick={() => addItem({ ...chosen, uomStock: item.uomStock, itemQty: 1 })} className="flex-1">

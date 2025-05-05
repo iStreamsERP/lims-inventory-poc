@@ -77,7 +77,6 @@ const App = () => {
             { path: "users", element: <UserListPage /> },
             { path: "user-role", element: <UserRole /> },
 
-
             { path: "user-preferences", element: <UserPreferences /> },
             { path: "account-settings", element: <AccountSettings /> },
             { path: "cart-page", element: <CartPage /> },

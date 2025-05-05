@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import UserDialog from "@/components/dialog/UserDialog";
 import axios from "axios"
+import { Link } from "react-router-dom"
 
 const UserListPage = () => {
   const [userTableData, setUserTableData] = useState([]);
@@ -318,6 +319,11 @@ const UserListPage = () => {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Link to="/user-role">
+              <Button variant="outline">Add Role <Plus /></Button>
+            </Link>
+
             <Dialog
               open={isDialogOpen}
               onOpenChange={(open) => {

@@ -82,45 +82,49 @@ const CategoryListPage = () => {
 		}
 	};
 
-	return loading ? (
-		<BarLoader color="#36d399" height={2} width="100%" />
-	) : (
+	return (
 		<div className="flex flex-col gap-y-4">
 			<h1 className="title">All Categories</h1>
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-				{categories.map((category, index) => (
-					<div key={index} className="group overflow-hidden">
-						<div
-							className="h-36 w-full rounded-lg bg-neutral-300 dark:bg-gray-900 overflow-hidden"
-						>
-							<Link to={`/product-card-list/${category.GROUP_LEVEL1}`} className="relative">
-								{category.imageUrl ? (
-									<img
-										src={category.imageUrl}
-										alt={category.GROUP_LEVEL1}
-										loading="lazy"
-										onError={(e) => {
-											e.target.onerror = null;
-											e.target.src = "";
-											e.target.style.backgroundColor = "red";
-											e.target.style.display = "none";
-										}}
-										className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-									/>
-								) : (
-									<span className="text-sm text-white">No Image</span>
-								)}
-								<Badge className="absolute top-2 right-2 z-20 h-fit">
-									{category.productCount || 0} Products
-								</Badge>
-							</Link>
-						</div>
-						<h3 className="text-lg font-semibold truncate leading-snug group-hover:text-blue-700">
-							{category.GROUP_LEVEL1}
-						</h3>
+			{
+				loading ? (
+					<BarLoader color="#36d399" height={2} width="100%" />
+				) : (
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+						{categories.map((category, index) => (
+							<div key={index} className="group overflow-hidden">
+								<div
+									className="h-36 w-full rounded-lg bg-neutral-300 dark:bg-gray-900 overflow-hidden"
+								>
+									<Link to={`/product-card-list/${category.GROUP_LEVEL1}`} className="relative">
+										{category.imageUrl ? (
+											<img
+												src={category.imageUrl}
+												alt={category.GROUP_LEVEL1}
+												loading="lazy"
+												onError={(e) => {
+													e.target.onerror = null;
+													e.target.src = "";
+													e.target.style.backgroundColor = "red";
+													e.target.style.display = "none";
+												}}
+												className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+											/>
+										) : (
+											<span className="text-sm text-white">No Image</span>
+										)}
+										<Badge className="absolute top-2 right-2 z-20 h-fit">
+											{category.productCount || 0} Products
+										</Badge>
+									</Link>
+								</div>
+								<h3 className="text-lg font-semibold truncate leading-snug group-hover:text-blue-700">
+									{category.GROUP_LEVEL1}
+								</h3>
+							</div>
+						))}
 					</div>
-				))}
-			</div>
+				)
+			}
 		</div>
 	);
 };

@@ -22,7 +22,7 @@ import { convertDataModelToStringData } from '@/utils/dataModelConverter';
 import { formatPrice } from '@/utils/formatPrice';
 import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toWords } from 'number-to-words';
 import { sub } from 'date-fns';
 
@@ -70,7 +70,6 @@ const CartPage = () => {
     TERMS_AND_CONDITIONS: "",
     DELETED_STATUS: "F",
     DELETED_DATE: "",
-    DELETED_USER: "",
     DELETED_USER: "",
     USER_NAME: userData.currentUserLogin,
     ENT_DATE: "",
@@ -327,7 +326,7 @@ const CartPage = () => {
           </div>
 
           {/* Customer & Summary */}
-          <div className="space-y-6 col-span-2 md:col-span-1">
+          <div className="space-y-4 col-span-2 md:col-span-1">
             {/* Customer Selector */}
             <Card className="p-6 space-y-2">
               <h2 className="text-lg font-semibold">Select Customer</h2>
@@ -371,17 +370,17 @@ const CartPage = () => {
                 </PopoverContent>
               </Popover>
 
-              {selectedClient && (
+              {/* {selectedClient && (
                 <div className="text-sm space-y-1 pt-2">
                   <p><span className="font-semibold">City:</span> {selectedClient.CITY_NAME}</p>
                   <p><span className="font-semibold">Country:</span> {selectedClient.COUNTRY}</p>
                   <p><span className="font-semibold">Phone:</span> {selectedClient.TELEPHONE_NO}</p>
                 </div>
-              )}
+              )} */}
             </Card>
 
             {/* Order Summary */}
-            <Card className="p-6 space-y-4">
+            <Card className="p-6 space-y-4 sticky top-0">
               <div className="flex justify-between text-sm">
                 <span>Subtotal ({totalItem} Items)</span>
                 <span>{formatPrice(subtotal)}</span>
@@ -416,7 +415,9 @@ const CartPage = () => {
                 >
                   {loading ? "Saving…" : "Save my order"}
                 </Button>
-                <Button className="w-full">Proceed to Checkout</Button>
+                <Link to="proceed-to-check">
+                  <Button className="w-full">Proceed to Checkout</Button>
+                </Link>
               </div>
             </Card>
           </div>

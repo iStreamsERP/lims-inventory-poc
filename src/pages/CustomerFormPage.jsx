@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { capitalizeFirstLetter } from "@/utils/stringUtils";
+import { toTitleCase } from "@/utils/stringUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -298,7 +298,7 @@ const CustomerFormPage = () => {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  const newValue = capitalizeFirstLetter(commandInputValue.trim());
+                                  const newValue = toTitleCase(commandInputValue.trim());
                                   if (newValue) {
                                     setNatureOfBusiness((prev) => [
                                       ...prev,

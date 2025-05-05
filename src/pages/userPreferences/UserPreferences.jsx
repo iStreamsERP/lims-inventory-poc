@@ -17,17 +17,17 @@ const UserPreferences = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 h-[calc(100vh-156px)] gap-x-4">
                 <aside className="flex flex-col gap-2 h-full">
-                    <Link to="/ss" className="hover:underline">
+                    <Link to="/settings" className="hover:underline">
                         <div className="px-4 py-2 text-sm leading-none rounded-lg">
                             Account
                         </div>
                     </Link>
-                    <Link to="/ss" className="hover:underline">
+                    <Link to="/cloud-services" className="hover:underline">
                         <div className="px-4 py-2 text-sm bg-gray-300 text-slate-950 dark:bg-gray-800 dark:text-slate-50 leading-none rounded-lg">
                             Cloud Services
                         </div>
                     </Link>
-                    <Link to="/ss" className="hover:underline">
+                    <Link to="/integration" className="hover:underline">
                         <div className="px-4 py-2 text-sm leading-none rounded-lg">
                             Integration
                         </div>
@@ -47,7 +47,7 @@ const UserPreferences = () => {
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AWS</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Authorize MongoDB to post alert notifications to your Slack workspace.
+                                    Authorize AWS to post alert notifications to your Slack workspace.
                                 </p>
                             </div>
                         </div>
@@ -61,14 +61,14 @@ const UserPreferences = () => {
                             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-slate-800">
                                 <img
                                     src="https://www.cbackup.com/screenshot/en/others/mega/megacloud-icon.png"
-                                    alt="AWS Logo"
+                                    alt="Mega Cloud Logo"
                                     className="h-full w-full object-cover"
                                 />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AWS</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Mega Cloud</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Authorize MongoDB to post alert notifications to your Slack workspace.
+                                    Authorize Mega Cloud to post alert notifications to your Slack workspace.
                                 </p>
                             </div>
                         </div>

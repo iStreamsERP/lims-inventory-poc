@@ -73,8 +73,11 @@ const ServiceListPage = () => {
   }
 
   const handleDelete = async (service) => {
-    const confirm = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
-    if (!confirm) return alert("data's not be deleted deleted");
+    const result = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
+
+    if (!result) {
+      return
+    }
 
     try {
       const payload = {

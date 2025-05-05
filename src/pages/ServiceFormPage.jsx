@@ -18,12 +18,11 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { capitalizeFirstLetter } from "@/utils/stringUtils";
+import { toTitleCase } from "@/utils/stringUtils";
 import { Check, ChevronsUpDown, PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
-
 
 const initialFormData = {
     COMPANY_CODE: 1,
@@ -363,7 +362,7 @@ export default function ServiceFormPage() {
                                                                         <Button
                                                                             size="sm"
                                                                             onClick={() => {
-                                                                                const newValue = capitalizeFirstLetter(commandInputValue.trim());
+                                                                                const newValue = toTitleCase(commandInputValue.trim());
                                                                                 if (newValue) {
                                                                                     setCategoryList(prev => [
                                                                                         ...prev,

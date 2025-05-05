@@ -618,7 +618,7 @@ export default function ProductFormPage() {
                                     <Button
                                       size="sm"
                                       onClick={() => {
-                                        const newValue = capitalizeFirstLetter(commandInputValue.trim());
+                                        const newValue = toTitleCase(commandInputValue.trim());
                                         if (newValue) {
                                           setCategoryData((prev) => [...prev, { GROUP_LEVEL1: newValue }]);
                                           setFormData((prev) => ({

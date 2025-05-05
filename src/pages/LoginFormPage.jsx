@@ -20,13 +20,15 @@ import Lottie from 'react-lottie';
 import animationData from "@/lotties/crm-animation-lotties.json";
 
 const LoginFormPage = () => {
+  const navigate = useNavigate();
+  const { login, setUserData } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const { login, setUserData } = useAuth();
 
   const defaultOptions = {
     loop: true,
@@ -125,8 +127,9 @@ const LoginFormPage = () => {
           clientURL: clientURL,
         };
 
-        // Call login from context. It will handle splitting the payload.
-        login(payload);
+        // Call login from context, passing rememberMe so AuthContext
+        // knows whether to persist in localStorage or sessionStorage
+        login(payload, rememberMe);
 
         navigate("/");
       } catch (err) {
@@ -207,9 +210,13 @@ const LoginFormPage = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Checkbox id="terms" />
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked)}
+                />
                 <label
-                  htmlFor="terms"
+                  htmlFor="remember-me"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   Remember me
