@@ -8,7 +8,7 @@ import { CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 
-const ServicePricingPage = () => {
+const ServiceCategoryListPage = () => {
   const { userData } = useAuth();
   const { addItem } = useCart();
 
@@ -46,14 +46,17 @@ const ServicePricingPage = () => {
     }
   };
 
-  const handleAddToCart = ({
-    ITEM_CODE: itemCode,
-    ITEM_NAME: itemName,
-    ITEM_GROUP: itemGroup,
-    SALE_RATE: finalSaleRate,
-    SALE_UOM: saleUom,
-  }) => {
-    addItem({ itemCode, itemName, itemGroup, finalSaleRate, saleUom, itemQty: 1 });
+  const handleAddToCart = ({ ITEM_CODE: itemCode, ITEM_NAME: itemName, ITEM_GROUP: itemGroup, SALE_RATE: finalSaleRate, SALE_UOM: saleUom }) => {
+    addItem({
+      itemCode,
+      itemName,
+      itemGroup,
+      finalSaleRate,
+      saleUom,
+      image:
+        "https://img.freepik.com/free-vector/businessman-holding-pencil-big-complete-checklist-with-tick-marks_1150-35019.jpg?t=st=1746508610~exp=1746512210~hmac=bffe01511ed20780fc69db0bdf2fbea126fb78ea57216b6ba027d4b8dd527c53&w=996",
+      itemQty: 1,
+    });
   };
 
   const priceFormatter = new Intl.NumberFormat("en-IN", {
@@ -131,4 +134,4 @@ const ServicePricingPage = () => {
   );
 };
 
-export default ServicePricingPage;
+export default ServiceCategoryListPage;

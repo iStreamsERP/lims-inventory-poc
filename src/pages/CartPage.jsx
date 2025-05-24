@@ -13,7 +13,7 @@ import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toWords } from "number-to-words";
-import { sub } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -28,10 +28,7 @@ const CartPage = () => {
   const [loading, setLoading] = useState(false);
 
   // Cart totals
-  const taxRate = 0.018;
   const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
   const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
 
   const [masterFormData, setMasterFormData] = useState({
@@ -44,7 +41,7 @@ const CartPage = () => {
     CLIENT_NAME: selectedClient?.CLIENT_NAME,
     ORDER_CATEGORY: "",
     TOTAL_VALUE: 0,
-    DISCOUNT_VALUE: 0,
+    DISCOUNT_VALUE: 10,
     NET_VALUE: 0,
     AMOUNT_IN_WORDS: "",
     CURRENCY_NAME: "Rupees",
@@ -94,16 +91,39 @@ const CartPage = () => {
     TRANSPORT_CHARGE: "",
   });
 
+  const getOrderCategoryFromCart = () => {
+    const categories = cart.map((item) => item.itemGroup);
+
+    const category = Array.from(new Set(categories));
+
+    if (category.length === 1) {
+      setMasterFormData((prev) => ({
+        ...prev,
+        ORDER_CATEGORY: category[0],
+      }));
+    } else {
+      setMasterFormData((prev) => ({
+        ...prev,
+        ORDER_CATEGORY: "ALL",
+      }));
+    }
+  };
+
+  useEffect(() => {
+    fetchClientData();
+  }, []);
+
   useEffect(() => {
     setMasterFormData((fd) => ({
       ...fd,
       CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
       CLIENT_NAME: selectedClient?.CLIENT_NAME ?? "",
-      ORDER_CATEGORY: cart.length > 0 ? cart[0].itemGroup : "",
       TOTAL_VALUE: subtotal,
-      DISCOUNT_VALUE: 0,
+      NET_VALUE: subtotal,
+      ORDER_CATEGORY: getOrderCategoryFromCart(),
+      AMOUNT_IN_WORDS: toWords(Number(subtotal)),
     }));
-  }, [selectedClient, subtotal]);
+  }, [selectedClient, subtotal, cart]);
 
   // Filter list based on dropdown input value
   const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
@@ -114,10 +134,6 @@ const CartPage = () => {
     setSelectedClient(client || null);
     setOpenCustomer(false);
   };
-
-  useEffect(() => {
-    fetchClientData();
-  }, []);
 
   const fetchClientData = async () => {
     try {
@@ -132,8 +148,8 @@ const CartPage = () => {
   };
 
   const handleSaveOrder = async () => {
-    if (selectedClient === null) {
-      return toast({ variant: "destructive", title: "Please select a client." });
+    if (!selectedClient) {
+      return toast({ variant: "destructive", title: "Please select a customer." });
     }
 
     try {
@@ -141,11 +157,6 @@ const CartPage = () => {
 
       const payloadModel = {
         ...masterFormData,
-        TOTAL_VALUE: subtotal,
-        CLIENT_ID: selectedClient.CLIENT_ID,
-        CLIENT_NAME: selectedClient.CLIENT_NAME,
-        NET_VALUE: subtotal,
-        AMOUNT_IN_WORDS: toWords(Number(subtotal)),
       };
 
       const payload = {
@@ -268,8 +279,9 @@ const CartPage = () => {
                         style={{ aspectRatio: "1/1" }}
                       />
                       <div>
-                        <h3 className="font-medium">{item.itemName || item.ITEM_NAME}</h3>
-                        {item.itemColor && <p className="text-xs text-gray-500">Type: {item.itemGroup}</p>}
+                        <Badge variant="outline">{item.itemGroup && <p className="text-xs text-gray-500">{item.itemGroup}</p>}</Badge>
+                        <h3 className="text-lg font-medium">{item.itemName || item.ITEM_NAME}</h3>
+                        {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
                         {item.itemColor && <p className="text-xs text-gray-500">Color: {item.itemColor}</p>}
                         {item.itemSize && <p className="text-xs text-gray-500">Size: {item.itemSize}</p>}
                         {item.itemVariant && <p className="text-xs text-gray-500">Variant: {item.itemVariant}</p>}
@@ -281,7 +293,10 @@ const CartPage = () => {
                         variant="outline"
                         size="icon"
                         className="h-6 w-8"
-                        onClick={() => updateItemQuantity(item.subProductNo, item.itemQty - 1)}
+                        onClick={() => {
+                          const lineKey = item.subProductNo ?? item.itemCode;
+                          updateItemQuantity(lineKey, item.itemQty - 1);
+                        }}
                       >
                         <Minus size={14} />
                       </Button>
@@ -290,7 +305,10 @@ const CartPage = () => {
                         variant="outline"
                         size="icon"
                         className="h-6 w-8"
-                        onClick={() => updateItemQuantity(item.subProductNo, item.itemQty + 1)}
+                        onClick={() => {
+                          const lineKey = item.subProductNo ?? item.itemCode;
+                          updateItemQuantity(lineKey, item.itemQty + 1);
+                        }}
                       >
                         <Plus size={14} />
                       </Button>
@@ -302,7 +320,10 @@ const CartPage = () => {
                         variant="ghost"
                         size="icon"
                         className="ml-2"
-                        onClick={() => removeItem(item.subProductNo)}
+                        onClick={() => {
+                          const lineKey = item.subProductNo ?? item.itemCode;
+                          removeItem(lineKey);
+                        }}
                       >
                         <X className="h-5 w-5" />
                         <span className="sr-only">Remove</span>
@@ -380,7 +401,7 @@ const CartPage = () => {
               </div>
               <div className="flex justify-between text-sm text-green-500">
                 <span>Discount</span>
-                <span>-20</span>
+                <span>{formatPrice(masterFormData.DISCOUNT_VALUE)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Delivery Charge</span>
@@ -390,14 +411,10 @@ const CartPage = () => {
                 <span>Other Charges</span>
                 <span>20</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax (1.8%)</span>
-                <span>{formatPrice(tax)}</span>
-              </div>
               <Separator />
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>{formatPrice(total)}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               <div className="space-y-3 pt-4">
                 <Button

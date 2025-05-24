@@ -1,622 +1,997 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Check, ChevronsUpDown, EditIcon, Pencil, PlusIcon, ShoppingCart, TrashIcon } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DialogClose } from "@radix-ui/react-dialog";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { deleteDataModelService, getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { convertServiceDate } from "@/utils/dateUtils";
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { Check, ChevronsUpDown, Settings2, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
+
+// Define initial master form data outside the component
+const initialMasterFormData = {
+  COMPANY_CODE: 1,
+  BRANCH_CODE: 1,
+  SALES_ORDER_SERIAL_NO: -1,
+  ORDER_NO: "ORDER-" + new Date().getTime(),
+  ORDER_DATE: new Date().toISOString().split("T")[0],
+  QUOTATION_NO: "QUOTATION-" + new Date().getTime(),
+  QUOTATION_DATE: new Date().toISOString().split("T")[0],
+  CLIENT_ID: null,
+  CLIENT_NAME: null,
+  ORDER_CATEGORY: "",
+  TOTAL_VALUE: 0,
+  DISCOUNT_VALUE: 0,
+  NET_VALUE: 0,
+  AMOUNT_IN_WORDS: "",
+  CURRENCY_NAME: "Rupees",
+  NO_OF_DECIMALS: 0,
+  EXCHANGE_RATE: 0,
+  ORDER_VALUE_IN_LC: 0,
+  MODE_OF_PAYMENT: "Static",
+  CREDIT_DAYS: 0,
+  ADVANCE_AMOUNT: 0,
+  MODE_OF_TRANSPORT: "",
+  DELIVERY_DATE: "",
+  DELIVERY_ADDRESS: "",
+  TERMS_AND_CONDITIONS: "",
+  DELETED_STATUS: "F",
+  DELETED_DATE: "",
+  DELETED_USER: "",
+  USER_NAME: "",
+  ENT_DATE: "",
+};
 
 const OrderFormPage = () => {
-  const CustomerList = [
-    { customername: "Alice", country: "USA", city: "New York", phone: "+1 9876543210" },
-    { customername: "Hiroshi", country: "Japan", city: "Tokyo", phone: "+81 2345678901" },
-    { customername: "Carlos", country: "Spain", city: "Madrid", phone: "+34 8765432109" },
-    { customername: "Fatima", country: "UAE", city: "Dubai", phone: "+971 543210987" },
-    { customername: "Liam", country: "Canada", city: "Toronto", phone: "+1 6543210987" },
-    { customername: "Sophia", country: "Australia", city: "Sydney", phone: "+61 8765432190" },
-    { customername: "Pierre", country: "France", city: "Paris", phone: "+33 7654321098" },
-    { customername: "Chen", country: "China", city: "Beijing", phone: "+86 6543210987" },
-    { customername: "Vikram", country: "India", city: "Mumbai", phone: "+91 9876543210" },
-    { customername: "Elena", country: "Russia", city: "Moscow", phone: "+7 8765432109" },
-  ];
-  const [carts, setCarts] = useState([
-    {
-      itemcode: "MICRO10383",
-      img: "https://angiehomes.co/cdn/shop/products/main-qimg-2a454bd75f67342c6def07_grande.jpg?v=1636616330",
-      uom: "pcs",
-      customername: "Ravi",
-      item: "Samsung",
-      qty: 2,
-      rate: 12000,
-      color: "Black",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "TRF20240003",
-      img: "https://images-cdn.ubuy.co.in/63513e7722f3fe049d367fb1-midewhik-desk-gaming-desks-portable.jpg",
-      uom: "pcs",
-      customername: "Arun",
-      item: "Dell",
-      qty: 1,
-      rate: 15000,
-      color: "Red",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "TRF20244444",
-      img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGb94_S2mjUk8bTp3e5EyT8f8vEV81qxTdFQ&s",
-      uom: "pcs",
-      customername: "Ajeth",
-      item: "Mac",
-      qty: 1,
-      rate: 1510,
-      color: "Pink",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "MICRO10567",
-      img: "https://m.media-amazon.com/images/I/81t6Av5DvXL._SX466_.jpg",
-      customername: "Vijay",
-      item: "Lenovo",
-      uom: "pcs",
-      qty: 3,
-      rate: 14000,
-      color: "Silver",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "TRF20248888",
-      img: "https://blogs.windows.com/wp-content/uploads/mswbprod/sites/2/2018/05/e55fcbfa05409c0e2262acca4756e76b-1024x870.jpg",
-      customername: "Suresh",
-      item: "HP",
-      uom: "pcs",
-      qty: 1,
-      rate: 12500,
-      color: "Blue",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "MICRO10999",
-      img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTD1F9vqk5KiL271SAnU6XVqBbEdmXMDc1H2g&s",
-      customername: "Rahul",
-      item: "Asus",
-      uom: "pcs",
-      qty: 2,
-      rate: 13500,
-      color: "White",
-      tax: 3,
-      discount: 5,
-    },
-    {
-      itemcode: "TRF20249999",
-      img: "https://m.media-amazon.com/images/I/71jG+e7roXL._AC_SL1500_.jpg",
-      customername: "Kiran",
-      item: "Acer",
-      uom: "pcs",
-      qty: 1,
-      rate: 11000,
-      color: "Green",
-      tax: 3,
-      discount: 5,
-    },
-  ]);
+  const location = useLocation();
+  const { id } = useParams();
+  const { userData } = useAuth();
+  const { toast } = useToast();
 
-  const [isFocused, setIsFocused] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchTermCustomer, setSearchTermCustomer] = useState("");
+  const [itemData, setItemData] = useState([]);
+  const [categoryData, setCategoryData] = useState("ALL");
+  const [openProduct, setOpenProduct] = useState(false);
+
+  const [clientData, setClientData] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [openCustomer, setOpenCustomer] = useState(false);
+
+  const [itemValue, setItemValue] = useState("");
+  const [customerValue, setCustomerValue] = useState("");
+
   const [tableData, setTableData] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [editingQtyIndex, setEditingQtyIndex] = useState(null);
-  const [editedRow, setEditedRow] = useState({});
-  const [itemcode, SetItemcode] = useState("");
-  const [item, setItem] = useState("");
-  const [qty, setQty] = useState("");
-  const [open, setOpen] = useState(false);
-  const [openItem, setOpenItem] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  let amount;
-  const filteredItems = searchTerm
-    ? carts.filter(
-      (cart) =>
-        cart.itemcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cart.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cart.uom.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    : [];
+  const [editingCell, setEditingCell] = useState({ rowIndex: null, columnId: null });
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({
+    // DISCOUNT_VALUE: false,
+  });
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [editingDiscountRowId, setEditingDiscountRowId] = useState(null);
+  const [discountInputs, setDiscountInputs] = useState({ percentage: 0, value: 0 });
+
+  // Determine document type
+  const isQuotation = location.pathname.includes("quotation");
+  const isEditMode = Boolean(id);
+  const docTypeLabel = isQuotation ? "Quotation" : "Order";
+
+  // Master Form state
+  const [masterFormData, setMasterFormData] = useState(initialMasterFormData);
+
+  // Detail Form Data
+  const [detailsFormData, setDetailsFormData] = useState({
+    COMPANY_CODE: 1,
+    BRANCH_CODE: 1,
+    SALES_ORDER_SERIAL_NO: masterFormData.SALES_ORDER_SERIAL_NO,
+    ORDER_NO: "",
+    ORDER_DATE: new Date().toISOString().split("T")[0],
+    SERIAL_NO: -1,
+    ITEM_CODE: "",
+    SUB_MATERIAL_NO: "",
+    DESCRIPTION: "",
+    UOM_SALES: "",
+    UOM_STOCK: "",
+    CONVERSION_RATE: 1,
+    QTY: 0,
+    QTY_STOCK: 0,
+    CONVRATE_TO_MASTER: 0,
+    QTY_TO_MASTER: 0,
+    RATE: 0,
+    VALUE: 0,
+    DISCOUNT_VALUE: 0,
+    DISCOUNT_RATE: 0,
+    NET_VALUE: 0,
+    VALUE_IN_LC: 0,
+    DELETED_STATUS: 0,
+    USER_NAME: userData.currentUserLogin,
+    ENT_DATE: "",
+    TRANSPORT_CHARGE: "",
+  });
+
+  // Add this useEffect to determine order category from table items
+  useEffect(() => {
+    const orderCategories = Array.from(new Set(tableData.map((item) => item.ORDER_CATEGORY)));
+
+    let finalCategory = "";
+    if (orderCategories.length === 1) {
+      finalCategory = orderCategories[0];
+    } else if (orderCategories.length > 1) {
+      finalCategory = "ALL";
+    }
+
+    setMasterFormData((prev) => ({
+      ...prev,
+      ORDER_CATEGORY: finalCategory,
+    }));
+  }, [tableData]);
+
+  // Add this useEffect to calculate financial values
+  useEffect(() => {
+    const totalValue = tableData.reduce((sum, item) => {
+      const rate = item.SALE_RATE || item.RATE || 0;
+      return sum + item.QTY * rate;
+    }, 0);
+    const totalDiscount = tableData.reduce((sum, item) => sum + (item.DISCOUNT_VALUE || 0), 0);
+    const netValue = totalValue - totalDiscount;
+
+    setMasterFormData((prev) => ({
+      ...prev,
+      TOTAL_VALUE: totalValue,
+      DISCOUNT_VALUE: totalDiscount,
+      NET_VALUE: netValue,
+      ORDER_VALUE_IN_LC: netValue,
+    }));
+  }, [tableData]);
+
+  // Fetch data
+  useEffect(() => {
+    // Fetch items and UOM
+    const fetchData = async () => {
+      const baseCondition = `COST_CODE = 'MXXXX'`;
+      const itemGroupCondition = categoryData !== "ALL" ? ` AND ITEM_GROUP = '${categoryData}'` : "";
+
+      try {
+        const payload = {
+          DataModelName: "INVT_MATERIAL_MASTER_VIEW",
+          WhereCondition: baseCondition + itemGroupCondition,
+          Orderby: "",
+        };
+        const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+        setItemData(response || []);
+      } catch (err) {
+        console.error(err);
+        toast({ variant: "destructive", title: err?.message || "Error fetching items" });
+      }
+    };
+
+    fetchData();
+  }, [categoryData, userData]);
+
+  const fetchExistingDetailData = async () => {
+    if (!isEditMode) return;
+    try {
+      const payload = {
+        DataModelName: "SALES_ORDER_DETAILS",
+        WhereCondition: `SALES_ORDER_SERIAL_NO = ${id}`,
+        Orderby: "",
+      };
+
+      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const dataWithIds = (response || []).map((item) => ({
+        ...item,
+        id: item.SERIAL_NO?.toString() || Math.random().toString(36).substr(2, 9),
+      }));
+
+      setTableData(dataWithIds);
+    } catch (err) {
+      console.error(err);
+      toast({ variant: "destructive", title: err?.message || "Error loading order items" });
+    }
+  };
+
+  // Reset state when id changes
+  useEffect(() => {
+    if (!isEditMode) {
+      setMasterFormData(initialMasterFormData);
+      setTableData([]);
+      setSelectedClient(null);
+      setCustomerValue("");
+    }
+  }, [id, isEditMode]);
+
+  // Fetch existing data only in edit mode
+  useEffect(() => {
+    if (!isEditMode) return;
+    const fetchExistingMasterData = async () => {
+      try {
+        const payload = {
+          DataModelName: "SALES_ORDER_MASTER",
+          WhereCondition: `SALES_ORDER_SERIAL_NO = '${id}'`,
+          Orderby: "",
+        };
+
+        const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+        if (response?.[0]) {
+          setMasterFormData(response[0]);
+          setSelectedClient({
+            CLIENT_ID: response[0].CLIENT_ID,
+            CLIENT_NAME: response[0].CLIENT_NAME,
+          });
+          setCustomerValue(response[0].CLIENT_NAME);
+        }
+      } catch (err) {
+        console.error(err);
+        toast({ variant: "destructive", title: err?.message || "Error loading order data" });
+      }
+    };
+
+    fetchExistingMasterData();
+    fetchExistingDetailData();
+  }, [id, isEditMode, userData]);
+
+  // Fetch clients
+  useEffect(() => {
+    const fetchClientData = async () => {
+      try {
+        const payload = { SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO FROM CLIENT_MASTER` };
+        const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+        setClientData(response || []);
+      } catch (error) {
+        toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
+      }
+    };
+    fetchClientData();
+  }, [userData]);
 
   const handleSelectItem = (item) => {
-    setSelectedItem(item);
-    SetItemcode(item.itemcode || ""); // Ensure itemcode is set
-    setItem(item.item);
-    setQty(item.qty);
-    setSearchTerm(""); // Show selected item in input
-    setIsFocused(false); // Hide dropdown after selection
-    if (!tableData.some((cart) => cart.itemcode === item.itemcode)) {
-      setTableData((prevTableData) => [...prevTableData, item]);
-    }
-    setOpenItem(false);
+    const tempId = Math.random().toString(36).substr(2, 9);
+    setItemValue(item.ITEM_NAME);
+    setOpenProduct(false);
+
+    const qty = 1;
+    const rate = item.SALE_RATE;
+    const discountPercent = item.DISCOUNT_PERCENTAGE || 0;
+    const discountValue = qty * rate * (discountPercent / 100);
+    const netValue = qty * rate - discountValue;
+
+    setTableData((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        ITEM_CODE: item.ITEM_CODE,
+        ITEM_NAME: item.ITEM_NAME,
+        SERIAL_NO: -1,
+        SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
+        ORDER_CATEGORY: item.ITEM_GROUP,
+        CONVRATE_TO_MASTER: item.CONVRATE_TO_MASTER,
+        UOM_STOCK: item.UOM_STOCK,
+        QTY_IN_HAND: item.QTY_IN_HAND,
+        QTY: qty,
+        SALE_RATE: rate,
+        DISCOUNT_PERCENTAGE: discountPercent,
+        DISCOUNT_VALUE: discountValue,
+        NET_VALUE: netValue,
+      },
+    ]);
   };
 
-  const handleAddMaterial = () => {
-    if (selectedItem && qty) {
-      if (!tableData.some((item) => item.itemcode === selectedItem.itemcode)) {
-        updatedTableData[editingIndex] = {
-          ...editedRow,
-          qty: Number(editedRow.qty) || 0,
-        };
-        setTableData(updatedTableData);
-        setEditingIndex(null);
+  // Handle selecting client
+  const handleSelectClient = (name) => {
+    const client = clientData.find((c) => c.CLIENT_NAME === name) || null;
+    setSelectedClient(client);
+    setMasterFormData((prev) => ({
+      ...prev,
+      CLIENT_ID: client?.CLIENT_ID,
+      CLIENT_NAME: client?.CLIENT_NAME,
+    }));
+    setCustomerValue(name);
+    setOpenCustomer(false);
+  };
+
+  // Filtered for command
+  const filteredClients = clientData.filter((c) => c.CLIENT_NAME.toLowerCase().includes(customerValue.toLowerCase()));
+
+  const handleCellChange = (rowIndex, columnId, value) => {
+    setTableData((prev) => {
+      const newData = [...prev];
+      const currentRow = newData[rowIndex];
+      const newValue = parseFloat(value) || 0;
+
+      // Quantity validation
+      if (columnId === "QTY") {
+        if (newValue > currentRow.QTY_IN_HAND) {
+          toast({
+            variant: "destructive",
+            title: "Quantity exceeds available stock",
+            description: `Available: ${currentRow.QTY_IN_HAND}`,
+          });
+          return prev;
+        }
       }
-      setSelectedItem(null);
-      setQty("");
-      SetItemcode("");
-      setItem("");
-      setSearchTerm("");
+
+      // Update the changed cell
+      newData[rowIndex] = {
+        ...currentRow,
+        [columnId]: newValue,
+      };
+
+      // Recalculate dependent values
+      if (["QTY", "SALE_RATE", "DISCOUNT_PERCENTAGE", "DISCOUNT_VALUE", "DISCOUNT_PERCENTAGE"].includes(columnId)) {
+        const qty = newData[rowIndex].QTY;
+        const rate = newData[rowIndex].SALE_RATE;
+        let discountValue = 0;
+
+        // Handle both percentage and flat discount
+        if (newData[rowIndex].DISCOUNT_PERCENTAGE > 0) {
+          discountValue = qty * rate * (newData[rowIndex].DISCOUNT_PERCENTAGE / 100);
+        } else {
+          discountValue = newData[rowIndex].DISCOUNT_VALUE || 0;
+        }
+
+        newData[rowIndex] = {
+          ...newData[rowIndex],
+          DISCOUNT_VALUE: discountValue,
+          NET_VALUE: qty * rate - discountValue,
+        };
+      }
+
+      return newData;
+    });
+  };
+
+  const DiscountCell = ({ row }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [discountInputs, setDiscountInputs] = useState({
+      percentage: row.original.DISCOUNT_PERCENTAGE || 0,
+      value: row.original.DISCOUNT_VALUE || 0,
+    });
+
+    const qty = row.original.QTY;
+    const rate = row.original.SALE_RATE || row.original.RATE || 0;
+
+    const handleSave = () => {
+      setTableData((prev) => {
+        return prev.map((item) => {
+          if (item.id === row.original.id) {
+            return {
+              ...item,
+              DISCOUNT_PERCENTAGE: discountInputs.percentage,
+              DISCOUNT_VALUE: discountInputs.value,
+              NET_VALUE: qty * rate - discountInputs.value,
+            };
+          }
+          return item;
+        });
+      });
+      setIsOpen(false);
+    };
+
+    return (
+      <Dialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+      >
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full text-right"
+          >
+            <div>{row.original.DISCOUNT_VALUE.toFixed(2)}</div>
+            <div className="text-xs text-red-500">({row.original.DISCOUNT_PERCENTAGE}%)</div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Discount</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Percentage</Label>
+              <Input
+                type="number"
+                value={discountInputs.percentage}
+                onChange={(e) => {
+                  const newPct = parseFloat(e.target.value) || 0;
+                  const newVal = (qty * rate * newPct) / 100;
+                  setDiscountInputs({ percentage: newPct, value: newVal });
+                }}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Value</Label>
+              <Input
+                type="number"
+                value={discountInputs.value}
+                onChange={(e) => {
+                  const newVal = parseFloat(e.target.value) || 0;
+                  const newPct = (newVal / (qty * rate)) * 100 || 0;
+                  setDiscountInputs({ value: newVal, percentage: newPct });
+                }}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSave}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Handle input change for editable fields
+  const columns = [
+    {
+      accessorKey: "ITEM_NAME",
+      header: "Items",
+      size: 180,
+      cell: ({ row }) => {
+        return (
+          <div className="flex w-full flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs">{row.original.ITEM_CODE}</span>
+            </div>
+            <p className="w-full whitespace-nowrap text-sm">{row.original.ITEM_NAME || row.original.DESCRIPTION}</p>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "UOM_STOCK",
+      header: "UOM",
+      size: 50,
+      cell: ({ row }) => <p>{row.original.UOM_STOCK}</p>,
+    },
+    {
+      accessorKey: "QTY",
+      header: "Qty",
+      size: 50,
+      cell: ({ row }) => <div className="capitalize">{row.getValue("QTY") || "-"}</div>,
+    },
+    {
+      accessorKey: "SALE_RATE",
+      header: () => <div className="text-right">Rate</div>,
+      size: 80,
+      cell: ({ row }) => <div className="text-right">{row.original.SALE_RATE || row.original.RATE}</div>,
+    },
+    {
+      accessorKey: "ITEM_RATE",
+      header: () => <div className="text-right">Value</div>,
+      size: 80,
+      cell: ({ row }) => {
+        return <div className="text-right">{row.original.QTY * (row.original.SALE_RATE || row.original.RATE)}</div>;
+      },
+    },
+    {
+      accessorKey: "DISCOUNT_VALUE",
+      header: () => <div className="text-right">Discount Value</div>,
+      enableHiding: false,
+      size: 80,
+      cell: ({ row }) => <DiscountCell row={row} />,
+    },
+    {
+      accessorKey: "NET_VALUE",
+      header: () => <div className="text-right">Net Value</div>,
+      size: 80,
+      cell: ({ row }) => <div className="text-right capitalize">{(row.original.NET_VALUE || 0).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: "action",
+      header: () => <div></div>,
+      id: "actions",
+      size: 65,
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <Button
+            onClick={() => handleDelete(product)}
+            className="flex items-center gap-1 text-red-600"
+            variant="ghost"
+          >
+            <Trash2 />
+          </Button>
+        );
+      },
+    },
+  ];
+
+  const fuzzyFilter = (row, columnId, filterValue) => {
+    const value = row.getValue(columnId);
+    return String(value || "")
+      .toLowerCase()
+      .includes(filterValue.toLowerCase());
+  };
+
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter,
+    initialState: {
+      columnVisibility: {
+        // DISCOUNT_VALUE: false,
+      },
+    },
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+    },
+  });
+
+  const handleDelete = async (product) => {
+    const isConfirmDelete = window.confirm("Are you sure you want to delete this item? This action cannot be undone.");
+    if (!isConfirmDelete) return;
+
+    if (isEditMode) {
+      try {
+        const payload = {
+          UserName: userData.currentUserLogin,
+          DataModelName: "SALES_ORDER_DETAILS",
+          WhereCondition: `SERIAL_NO = '${product.SERIAL_NO}'`,
+        };
+        const response = await deleteDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+        toast({ title: response });
+      } catch (err) {
+        toast({ variant: "destructive", title: err.message });
+      } finally {
+        fetchExistingDetailData();
+      }
+    } else {
+      setTableData((prev) => prev.filter((item) => item.id !== product.id));
     }
   };
 
-  const filteredCustomers = CustomerList.filter(
-    (customer) =>
-      customer.customername.toLowerCase().includes(searchTermCustomer.toLowerCase()) ||
-      customer.phone.includes(searchTermCustomer) ||
-      customer.city.toLowerCase().includes(searchTermCustomer.toLowerCase()) ||
-      customer.country.toLowerCase().includes(searchTermCustomer.toLowerCase()),
-  );
-
-
-  const handleSelect = (customer) => {
-    setSelectedCustomer(customer);
-    setOpen(false);
-    setIsEditing(false); // Hide input after selection
-  };
-
-  const handleDeleteItem = (index) => {
-    const updatedTableData = [...tableData];
-    updatedTableData.splice(index, 1);
-    setTableData(updatedTableData);
-  };
-  const handleInputChange = (
-    e,
-    index
-  ) => {
-    const { name, value } = e.target;
-    const updated = [...tableData];
-    const parsedValue = value === "" ? "" : parseFloat(value);
-
-    if (updated[index]) {
-      updated[index] = {
-        ...updated[index],
-        [name]: parsedValue,
-      };
-      setTableData(updated);
+  const handleSaveOrder = async () => {
+    if (!selectedClient) {
+      return toast({ variant: "destructive", title: "Please select a customer." });
     }
-  };
 
-  const handleQtyChange = (e, index) => {
-    const value = e.target.value;
-    const updated = [...tableData];
-
-    if (updated[index]) {
-      updated[index] = {
-        ...updated[index],
-        qty: value === "" ? "" : parseFloat(value),
+    try {
+      setLoading(true);
+      const payloadModel = {
+        ...masterFormData,
+        ORDER_NO: isQuotation ? "" : masterFormData.ORDER_NO,
+        QUOTATION_NO: isQuotation ? masterFormData.QUOTATION_NO : "",
+        ORDER_DATE: isQuotation ? "" : masterFormData.ORDER_DATE,
+        QUOTATION_DATE: isQuotation ? masterFormData.QUOTATION_DATE : "",
       };
-      setTableData(updated);
+
+      const payload = {
+        UserName: userData.currentUserLogin,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel),
+      };
+
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const m = response.match(/Serial No\s*'(\d+)'/);
+      const newSerialNo = m ? parseInt(m[1], 10) : null;
+
+      if (typeof response === "string" && response.trim().startsWith("Error")) {
+        throw new Error(response);
+      }
+
+      if (!newSerialNo) {
+        throw new Error("Could not parse new order serial number from response");
+      }
+
+      const itemsToSend = tableData;
+
+      // 2) now send each item as a DETAIL record
+      for (let i = 0; i < itemsToSend.length; i++) {
+        const item = itemsToSend[i];
+        const lineValue = item.QTY * item.SALE_RATE;
+        console.log("item", item);
+
+        const detailModel = {
+          ...detailsFormData,
+          COMPANY_CODE: masterFormData.COMPANY_CODE,
+          BRANCH_CODE: masterFormData.BRANCH_CODE,
+          SALES_ORDER_SERIAL_NO: newSerialNo,
+          ORDER_NO: isQuotation ? "" : masterFormData.ORDER_NO,
+          QUOTATION_NO: isQuotation ? masterFormData.QUOTATION_NO : "",
+          ORDER_DATE: isQuotation ? "" : masterFormData.ORDER_DATE,
+          QUOTATION_DATE: isQuotation ? masterFormData.QUOTATION_DATE : "",
+          SERIAL_NO: item.SERIAL_NO,
+          ITEM_CODE: item.ITEM_CODE,
+          SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
+          DESCRIPTION: item.ITEM_NAME,
+          UOM_SALES: item.UOM_STOCK,
+          UOM_STOCK: item.UOM_STOCK,
+          CONVERSION_RATE: 1,
+          QTY: item.QTY,
+          QTY_STOCK: item.QTY,
+          CONVRATE_TO_MASTER: 1,
+          QTY_TO_MASTER: item.QTY,
+          RATE: item.SALE_RATE,
+          VALUE: lineValue,
+          DISCOUNT_VALUE: item.DISCOUNT_VALUE,
+          DISCOUNT_RATE: 0,
+          NET_VALUE: item.NET_VALUE,
+          VALUE_IN_LC: lineValue,
+          TRANSPORT_CHARGE: 0,
+          DELETED_STATUS: "F",
+          USER_NAME: userData.currentUserLogin,
+          ENT_DATE: "",
+        };
+
+        const detailPayload = {
+          UserName: userData.currentUserLogin,
+          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
+        };
+
+        await saveDataService(detailPayload, userData.currentUserLogin, userData.clientURL);
+      }
+
+      toast({
+        title: "Order Saved Successfully",
+        description: response,
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Error saving data. Please try again.",
+        description: error?.message || "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">Order Creation</h1>
-      <div className="flex flex-col gap-2 lg:flex-row">
-        <Card className="w-full lg:w-[74%] 2xl:w-[100%]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-8">
+        {/* Main form */}
+        <Card className="col-span-6 md:col-span-6">
           <CardHeader>
             <CardTitle>
-              <div className="flex h-full w-full flex-col justify-between lg:flex-row">
-                <h2 className="text-lg text-gray-600">
-                  Order No - <span className="font-normal text-purple-400">MIR-2024-0002</span>
-                </h2>
-                <h2 className="text-lg text-gray-600">
-                  Order Date - <span className="font-normal text-gray-500">2024-03-05</span>
-                </h2>
+              <div className="flex justify-between text-lg">
+                <p>
+                  {docTypeLabel} No :{" "}
+                  <span className="text-purple-500">
+                    {isEditMode ? (isQuotation ? masterFormData.QUOTATION_NO : masterFormData.ORDER_NO) : "(New)"}
+                  </span>
+                </p>
+                <p>
+                  {docTypeLabel} Date :{" "}
+                  <span className="text-gray-500">
+                    {isEditMode
+                      ? isQuotation
+                        ? convertServiceDate(masterFormData.QUOTATION_DATE)
+                        : convertServiceDate(masterFormData.ORDER_DATE)
+                      : isQuotation
+                        ? masterFormData.QUOTATION_DATE
+                        : masterFormData.ORDER_DATE}
+                  </span>
+                </p>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex w-full flex-col gap-2 lg:flex-row">
-              <Popover
-                open={openItem}
-                onOpenChange={setOpenItem}
-                className="w-full"
+            {/* Category & product select */}
+            <div className="mb-4 flex items-center gap-3">
+              <Select
+                value={categoryData}
+                onValueChange={setCategoryData}
               >
-                <PopoverTrigger
-                  asChild
-                  className="w-full"
-                >
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="ALL">All</SelectItem>
+                    <SelectItem value="PRODUCT">Product</SelectItem>
+                    <SelectItem value="SERVICE">Service</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <Popover
+                open={openProduct}
+                onOpenChange={setOpenProduct}
+              >
+                <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    role="combobox"
-                    aria-expanded={openItem}
-                    className="w-full justify-between font-normal"
+                    className="flex-1 justify-between"
                   >
-                    {selectedItem ? selectedItem.itemcode : "Search ItemCode"}
-                    <ChevronsUpDown className="opacity-50" />
+                    {itemValue || "Select item..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-2">
-                  <Input
-                    placeholder="Search ItemCode..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="mb-2"
-                  />
-                  <div className="max-h-48 w-full overflow-y-scroll rounded border p-2 shadow">
-                    {(filteredItems.length > 0 ? filteredItems : carts).map((item) => (
-                      <div
-                        key={item.itemcode}
-                        className="cursor-pointer p-2 hover:bg-gray-100"
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        <div className="font-semibold">{item.itemcode}</div>
-                        <div className="text-xs text-gray-500">
-                          {item.item} - {item.uom}
-                        </div>
-                      </div>
-                    ))}
-                    {filteredItems.length === 0 && <div className="text-sm text-gray-500">No items found.</div>}
-                  </div>
+
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search by name or code..." />
+                    <CommandList>
+                      <CommandEmpty>No item found.</CommandEmpty>
+                      <CommandGroup>
+                        {itemData.map((item, index) => {
+                          const isSelected = itemValue === item.ITEM_NAME;
+                          const combinedValue = `${item.ITEM_CODE} ${item.ITEM_NAME}`;
+
+                          return (
+                            <CommandItem
+                              key={index}
+                              value={combinedValue}
+                              onSelect={() => handleSelectItem(item)}
+                            >
+                              <span>
+                                {item.ITEM_CODE} - <span>{item.ITEM_NAME}</span>
+                              </span>
+                              <Check className={cn("ml-auto h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                 </PopoverContent>
               </Popover>
-              <Input
-                type="text"
-                placeholder="Available Items"
-                value={item}
-              />
-              <Input
-                type="number"
-                placeholder="Quantity"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-              />
-
-              <Button onClick={handleAddMaterial}>
-                Add Material <PlusIcon size={16} />
-              </Button>
             </div>
 
-            <Table className="mt-4 w-full">
-              <ScrollArea className="max-h-[380px] w-full overflow-x-scroll overflow-y-scroll rounded-md border ps-3 xl:h-[399px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>S.No</TableHead>
-                    <TableHead>Itemcode</TableHead>
-                    <TableHead className="text-center">Item</TableHead>
-                    <TableHead className="text-center">Uom</TableHead>
-                    <TableHead className="text-center">Quantity</TableHead>
-                    <TableHead className="text-center">Rate</TableHead>
-                    <TableHead className="text-center">Tax</TableHead>
-                    <TableHead className="text-center">Discount</TableHead>
-                    <TableHead className="text-center">Amount</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+            {/* Table */}
+            <div className="mb-2 flex items-center gap-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Settings2 /> View
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {table
+                    .getAllColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={column.id}
+                          className="capitalize"
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                        >
+                          {column.id}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
+            <div className="rounded-md border">
+              <Table style={{ tableLayout: "fixed" }}>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        return (
+                          <TableHead
+                            key={header.id}
+                            style={{
+                              width: header.column.getSize(),
+                              minWidth: header.column.getSize(),
+                            }}
+                          >
+                            {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableHeader>
                 <TableBody>
-                  {tableData.length === 0 ? (
+                  {error ? (
                     <TableRow>
                       <TableCell
-                        colSpan={12}
-                        className="h-[260px] text-center text-gray-500"
+                        colSpan={columns.length}
+                        className="h-24 text-center text-red-500"
                       >
-                        -- No Material Added Yet. Search to Add Material --
+                        {error}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    tableData.map((cart, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>{cart.itemcode}</TableCell>
-                        <TableCell className="flex w-[200px] justify-center gap-2 text-center xl:w-[200px]">
-                          <img
-                            src={cart.img}
-                            alt={cart.name}
-                            className="h-10 w-10 rounded"
-                          />
-                          <div>
-                            <p className="font-semibold text-gray-500">{cart.item}</p>
-                            <div className="flex items-center">
-                              <span
-                                style={{ backgroundColor: cart.color }}
-                                className="mr-1 rounded-full p-1"
-                              ></span>
-                              <p className="text-sm text-gray-400">{cart.color}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">{cart.uom}</TableCell>
-                        <TableCell className="text-right">
-                          <TableCell
-                            className="text-right"
-                            onClick={() => setEditingQtyIndex(index)}
-                          >
-                            {editingQtyIndex === index ? (
-                              <Input
-                                type="number"
-                                value={tableData[index]?.qty ?? ""}
-                                onChange={(e) => handleQtyChange(e, index)}
-                                onBlur={() => setEditingQtyIndex(null)}
-                                autoFocus
-                                className="w-20"
-                              />
-                            ) : (
-                              cart.qty
-                            )}
-                          </TableCell>
-                        </TableCell>
-                        <TableCell className="text-right">{cart.rate}</TableCell>
-                        <TableCell className="text-right">{cart.tax}</TableCell>
-                        <TableCell className="text-right">{cart.discount}</TableCell>
-                        <TableCell className="text-right">{(tableData[index].qty * tableData[index].rate) - ((tableData[index].qty * tableData[index].rate) * (tableData[index].discount / 100)) + ((tableData[index].qty * tableData[index].rate) * (tableData[index].tax / 100))}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  className="h-4 w-4"
-                                >
-                                  <Pencil size={16} />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                  <DialogTitle>Edit</DialogTitle>
-                                  <DialogDescription>Make changes to your Material here. Values auto-save.</DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label
-                                      htmlFor="rate"
-                                      className="text-right"
-                                    >
-                                      Rate
-                                    </Label>
-                                    <Input
-                                      id="rate"
-                                      type="number"
-                                      name="rate"
-                                      value={cart.rate || ""}
-                                      onChange={(e) => handleInputChange(e, index)}
-                                      className="col-span-3"
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label
-                                      htmlFor="tax"
-                                      className="text-right"
-                                    >
-                                      Tax
-                                    </Label>
-                                    <Input
-                                      id="tax"
-                                      type="number"
-                                      name="tax"
-                                      value={cart.tax || ""}
-                                      onChange={(e) => handleInputChange(e, index)}
-                                      className="col-span-3"
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label
-                                      htmlFor="discount"
-                                      className="text-right"
-                                    >
-                                      Discount
-                                    </Label>
-                                    <Input
-                                      id="discount"
-                                      type="number"
-                                      value={cart.discount || ""}
-                                      name="discount"
-                                      onChange={(e) => handleInputChange(e, index)}
-                                      className="col-span-3"
-                                    />
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <DialogClose asChild>
-                                    <Button >Save</Button>
-                                  </DialogClose>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 text-red-400"
-                              onClick={() => handleDeleteItem(index)}
+                  ) : table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row, rowIndex) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const cid = cell.column.id;
+                          const isEditable = ["QTY", "SALE_RATE", "ITEM_RATE"].includes(cid);
+                          const isEditing = editingCell.rowIndex === rowIndex && editingCell.columnId === cid;
+                          const cellValue = cell.getValue();
+
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              style={{
+                                width: cell.column.getSize(),
+                                minWidth: cell.column.getSize(),
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                              onClick={() => {
+                                if (isEditable) {
+                                  setEditingCell({ rowIndex, columnId: cid });
+                                }
+                              }}
+                              className={isEditable ? "cursor-pointer" : ""}
                             >
-                              <TrashIcon size={16} />
-                            </Button>
-                          </div>
-                        </TableCell>
+                              {isEditable ? (
+                                isEditing ? (
+                                  <Input
+                                    autoFocus
+                                    defaultValue={cellValue}
+                                    onBlur={(e) => {
+                                      handleCellChange(rowIndex, cid, e.target.value);
+                                      setEditingCell({ rowIndex: null, columnId: null });
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.target.blur();
+                                      }
+                                    }}
+                                    className="h-fit px-2 py-0"
+                                  />
+                                ) : (
+                                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                                )
+                              ) : (
+                                flexRender(cell.column.columnDef.cell, cell.getContext())
+                              )}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        No items found.
+                      </TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell
-                      colSpan={2}
-                      className="position-absolute whitespace-nowrap text-gray-600"
-                    >
-                      No Of Selected Items
-                    </TableCell>
-                    <TableCell
-                      colSpan={1}
-                      className="text-left text-gray-600"
-                    >
-                      {tableData.length}
-                    </TableCell>
-                    <TableCell colSpan={4}></TableCell>
-                    <TableCell className="position-absolute text-gray-600">Total</TableCell>
-                    <TableCell
-                      className="text-right text-gray-600"
-                      colSpan={1}
-                    >
-                      {tableData.reduce((total, item) => total + (item.qty * item.rate) - ((item.qty * item.rate) * (item.discount / 100)) + ((item.qty * item.rate) * (item.tax / 100)), 0)}
-                    </TableCell>
-                    <TableCell colSpan={1}></TableCell>
-                  </TableRow>
-                </TableFooter>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </Table>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <div className="text-muted-foreground flex-1 text-sm">
+                {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <div className="sm:w-full md:w-full lg:w-fit xl:w-fit">
-          <Card className="mb-2 h-[170px] w-full xl:w-[250px]">
+
+        {/* Sidebar */}
+        <div className="col-span-6 space-y-4 md:col-span-2">
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between gap-1 space-y-1">
-                <CardTitle className="text-gray-600">Customer</CardTitle>
-                <CardTitle>
-                  {selectedCustomer === null ? (
-                    ""
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      className="p-1 text-xs"
-                      onClick={() => setIsEditing(true)} // Enable editing
-                    >
-                      <Pencil />
-                    </Button>
-                  )}
-                </CardTitle>
-              </div>
+              <CardTitle>Select Customer</CardTitle>
             </CardHeader>
             <CardContent>
-              {selectedCustomer && !isEditing ? (
-                <div>
-                  <p className="text-lg font-bold text-gray-600">{selectedCustomer.customername}</p>
-                  <p className="text-xs font-semibold text-gray-500">
-                    {selectedCustomer.country}, {selectedCustomer.city}
-                  </p>
-                  <p className="mb-2 text-xs font-semibold text-gray-500">{selectedCustomer.phone}</p>
-                </div>
-              ) : (
-                <Popover
-                  open={open}
-                  onOpenChange={setOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className="w-full justify-between"
-                    >
-                      {selectedCustomer ? selectedCustomer.customername : "Search Customer..."}
-                      <ChevronsUpDown className="opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-2">
-                    <Input
-                      placeholder="Search by name, phone, or city..."
-                      value={searchTermCustomer}
-                      onChange={(e) => setSearchTermCustomer(e.target.value)}
-                      className="mb-2"
+              <Popover
+                open={openCustomer}
+                onOpenChange={setOpenCustomer}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                  >
+                    {customerValue || "Select..."} <ChevronsUpDown />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search..."
+                      value={customerValue}
+                      onValueChange={setCustomerValue}
                     />
-                    <div className="max-h-48 overflow-y-auto rounded border p-2 shadow">
-                      {filteredCustomers.length > 0 ? (
-                        filteredCustomers.map((customer) => (
-                          <div
-                            key={customer.phone}
-                            className="flex cursor-pointer flex-col p-2 hover:bg-gray-100"
-                            onClick={() => handleSelect(customer)}
+                    <CommandList>
+                      <CommandEmpty>No customers</CommandEmpty>
+                      <CommandGroup>
+                        {filteredClients.map((c) => (
+                          <CommandItem
+                            key={c.CLIENT_ID}
+                            value={c.CLIENT_NAME}
+                            onSelect={handleSelectClient}
                           >
-                            <span className="font-semibold">{customer.customername}</span>
-                            <span className="text-xs text-gray-500">
-                              {customer.city}, {customer.country}
-                            </span>
-                            <span className="text-xs text-gray-500">{customer.phone}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-gray-500">No customers found.</div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
+                            {c.CLIENT_NAME}
+                            <Check className={cn("ml-auto", customerValue === c.CLIENT_NAME ? "opacity-100" : "opacity-0")} />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
-              <CardDescription>You have 3 order in cart.</CardDescription>
+              <CardDescription>{tableData.length} items</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-start justify-between">
-                  <p className="mt-2 text-xs font-medium leading-none text-gray-600">GSTIN NO:</p>
-                  <p className="text-muted-foreground text-sm font-semibold">GSTIN8976543</p>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal (Before Discount):</span>
+                  <span>{tableData.reduce((sum, r) => sum + r.QTY * r.SALE_RATE, 0).toFixed(2)}</span>
                 </div>
-
-                {/* <div className="flex items-start justify-between">
-                <p className="mt-2 text-xs font-medium leading-none text-gray-600">OVERALL SELECTED ITEMS QTY :</p>
-                <p className="text-muted-foreground mt-1 text-sm font-semibold">{tableData.reduce((total, item) => total + item.qty, 0)}</p>
-              </div> */}
-
-                <div className="flex items-start justify-between">
-                  <p className="mt-2 text-xs font-medium leading-none text-gray-600">Total Before Tax :</p>
-                  <p className="text-muted-foreground text-sm font-semibold"> {tableData.reduce((total, item) => total + item.qty * item.rate, 0)}</p>
+                <div className="flex justify-between">
+                  <span>Discount:</span>
+                  <span>{tableData.reduce((sum, r) => sum + (r.DISCOUNT_VALUE || 0), 0).toFixed(2)}</span>
                 </div>
-
-                <div className="flex items-start justify-between">
-                  <p className="mt-2 text-xs font-medium leading-none text-gray-600">Estimated Tax :</p>
-                  <p className="text-muted-foreground text-sm font-semibold">
-                    {" "}
-                    {tableData.reduce((total, item) => total + (item.qty * item.rate) + ((item.qty * item.rate) * ((item.tax) / 100)), 0)}
-                  </p>
-                </div>
-
-                <div className="flex items-start justify-between border-b border-slate-200/60 pb-4">
-                  <p className="mt-2 text-xs font-medium leading-none text-green-600">Overall Discount:</p>
-                  <p className="text-muted-foreground text-sm font-semibold text-green-600">
-                    {tableData.reduce((total, item) => total + (item.qty * item.rate) - ((item.qty * item.rate) * ((item.discount) / 100)), 0)}
-                  </p>
-                </div>
-
-                <div className="flex items-start justify-between">
-                  <p className="mt-2 text-xs font-bold leading-none text-red-600">Order Total:</p>
-                  <p className="text-muted-foreground text-sm font-semibold text-red-600">
-                    {tableData.reduce((total, item) => total + (item.qty * item.rate) - ((item.qty * item.rate) * ((item.discount) / 100)) + ((item.qty * item.rate) * ((item.tax) / 100)), 0)}
-                  </p>
+                <div className="flex justify-between font-bold">
+                  <span>Order Total:</span>
+                  <span>{(tableData.reduce((sum, r) => sum + r.NET_VALUE, 0) * 1.18).toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-1">
+            <CardFooter className="flex flex-col gap-2">
               <Button
-                className="w-full"
                 variant="outline"
-              >
-                <ShoppingCart /> Add to cart
-              </Button>
-              <Button
-                // onClick={handleProceedToPay}
                 className="w-full"
+                onClick={handleSaveOrder}
               >
+                {loading ? "Saving…" : "Save my order"}
+              </Button>
+              <Button className="w-full">
                 <Check /> Proceed To Pay
               </Button>
             </CardFooter>
@@ -624,7 +999,6 @@ const OrderFormPage = () => {
         </div>
       </div>
     </div>
-
   );
 };
 

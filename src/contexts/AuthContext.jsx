@@ -30,9 +30,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Toggle theme function
-  // const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
-
   // auth only stores token and email for authentication
   const [auth, setAuth] = useState(() => {
     try {

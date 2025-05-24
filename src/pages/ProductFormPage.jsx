@@ -170,11 +170,8 @@ export default function ProductFormPage() {
       setFormData((prev) => ({
         ...prev,
         ...client,
-        SUB_MATERIAL_BASED_ON: client.SUB_MATERIAL_BASED_ON
-          ? client.SUB_MATERIAL_BASED_ON.split(',').map((item) => item.trim())
-          : [],
+        SUB_MATERIAL_BASED_ON: client.SUB_MATERIAL_BASED_ON ? client.SUB_MATERIAL_BASED_ON.split(",").map((item) => item.trim()) : [],
       }));
-
     } catch (err) {
       toast({
         variant: "destructive",
@@ -218,15 +215,10 @@ export default function ProductFormPage() {
   const fetchSubProductCount = async () => {
     try {
       const payload = {
-        SQLQuery:
-          `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
+        SQLQuery: `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
       };
 
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
 
       setSubProductCount(response[0]?.count || 0);
     } catch (err) {
@@ -238,7 +230,7 @@ export default function ProductFormPage() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const fetchUom = async () => {
     try {
@@ -359,13 +351,10 @@ export default function ProductFormPage() {
     }
     try {
       setLoading(true);
-
+      debugger;
       const normalizedData = {
         ...formData,
         ITEM_NAME: toTitleCase(formData.ITEM_NAME),
-        ITEM_FINISH: toTitleCase(formData.ITEM_FINISH),
-        ITEM_SIZE: toTitleCase(formData.ITEM_SIZE),
-        ITEM_TYPE: toTitleCase(formData.ITEM_TYPE),
         SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
         // if you persist SUB_MATERIAL_BASED_ON as CSV:
         SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
@@ -390,7 +379,7 @@ export default function ProductFormPage() {
           ITEM_CODE: newItemCode,
         }));
 
-        setSubmitCount(c => c + 1);
+        setSubmitCount((c) => c + 1);
 
         toast({
           title: response,
@@ -879,134 +868,123 @@ export default function ProductFormPage() {
                       </label>
                     </div>
 
-                    {
-                      (formData?.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
-                        <>
-                          <div className="mt-3 w-full">
-                            <Label className="block text-sm font-medium">
-                              Select sub product details
-                            </Label>
+                    {(formData?.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
+                      <>
+                        <div className="mt-3 w-full">
+                          <Label className="block text-sm font-medium">Select sub product details</Label>
 
-                            <Popover
-                              open={openSubMaterialDetails}
-                              onOpenChange={setOpenSubMaterialDetails}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={openSubMaterialDetails}
-                                  className="w-full justify-between text-left gap-2 min-h-10 font-normal text-gray-400"
-                                >
-                                  {formData.SUB_MATERIAL_BASED_ON.length > 0
-                                    ? formData.SUB_MATERIAL_BASED_ON.join(", ")
-                                    : "Select sub material details"}
-                                  <ChevronsUpDown className="opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
+                          <Popover
+                            open={openSubMaterialDetails}
+                            onOpenChange={setOpenSubMaterialDetails}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openSubMaterialDetails}
+                                className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
+                              >
+                                {formData.SUB_MATERIAL_BASED_ON.length > 0
+                                  ? formData.SUB_MATERIAL_BASED_ON.join(", ")
+                                  : "Select sub material details"}
+                                <ChevronsUpDown className="opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
 
-                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                <Command className="w-full justify-start">
-                                  <CommandInput
-                                    placeholder="Search sub product details"
-                                    className="h-9"
-                                  />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      No sub product details found.
-                                    </CommandEmpty>
-                                    <CommandGroup>
-                                      {subMaterialBasedOnList.map((item, index) => (
-                                        <CommandItem
-                                          key={index}
-                                          value={item.name}
-                                          onSelect={(currentValue) => {
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command className="w-full justify-start">
+                                <CommandInput
+                                  placeholder="Search sub product details"
+                                  className="h-9"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No sub product details found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {subMaterialBasedOnList.map((item, index) => (
+                                      <CommandItem
+                                        key={index}
+                                        value={item.name}
+                                        onSelect={(currentValue) => {
+                                          setFormData((prev) => {
+                                            const currentSelections = prev.SUB_MATERIAL_BASED_ON || [];
+                                            if (currentSelections.includes(currentValue)) {
+                                              // Remove the item if it's already selected
+                                              return {
+                                                ...prev,
+                                                SUB_MATERIAL_BASED_ON: currentSelections.filter((val) => val !== currentValue),
+                                              };
+                                            } else {
+                                              // Otherwise add the new selection
+                                              return {
+                                                ...prev,
+                                                SUB_MATERIAL_BASED_ON: [...currentSelections, currentValue],
+                                              };
+                                            }
+                                          });
+                                          setError((prev) => ({
+                                            ...prev,
+                                            SUB_MATERIAL_BASED_ON: "",
+                                          }));
+                                        }}
+                                      >
+                                        {item.name}
+                                        <Check
+                                          className={cn("ml-auto", formData.SUB_MATERIAL_BASED_ON.includes(item.value) ? "opacity-100" : "opacity-0")}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
 
-                                            setFormData((prev) => {
-                                              const currentSelections = prev.SUB_MATERIAL_BASED_ON || [];
-                                              if (currentSelections.includes(currentValue)) {
-                                                // Remove the item if it's already selected
-                                                return {
-                                                  ...prev,
-                                                  SUB_MATERIAL_BASED_ON: currentSelections.filter(
-                                                    (val) => val !== currentValue
-                                                  ),
-                                                };
-                                              } else {
-                                                // Otherwise add the new selection
-                                                return {
-                                                  ...prev,
-                                                  SUB_MATERIAL_BASED_ON: [...currentSelections, currentValue],
-                                                };
-                                              }
-                                            });
-                                            setError((prev) => ({
-                                              ...prev,
-                                              SUB_MATERIAL_BASED_ON: "",
-                                            }));
-                                          }}
-                                        >
-                                          {item.name}
-                                          <Check
-                                            className={cn(
-                                              "ml-auto",
-                                              formData.SUB_MATERIAL_BASED_ON.includes(item.value)
-                                                ? "opacity-100"
-                                                : "opacity-0"
-                                            )}
-                                          />
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
+                        <div className="w-full">
+                          <Label
+                            htmlFor="UOM_SUBMATERIAL"
+                            className="block text-sm font-medium leading-6"
+                          >
+                            UOM for SubMaterial
+                          </Label>
+                          <Input
+                            type="text"
+                            name="UOM_SUBMATERIAL"
+                            id="UOM_SUBMATERIAL"
+                            value={formData.UOM_SUBMATERIAL || "Not Selected"}
+                            onChange={handleChange}
+                            readOnly
+                          />
+                        </div>
 
-                          <div className="w-full">
-                            <Label
-                              htmlFor="UOM_SUBMATERIAL"
-                              className="block text-sm font-medium leading-6"
-                            >
-                              UOM for SubMaterial
-                            </Label>
-                            <Input
-                              type="text"
-                              name="UOM_SUBMATERIAL"
-                              id="UOM_SUBMATERIAL"
-                              value={formData.UOM_SUBMATERIAL || "Not Selected"}
-                              onChange={handleChange}
-                              readOnly
-                            />
-                          </div>
-
-                          <div className="w-full">
-                            <Label
-                              htmlFor="SUBMATERIAL_CONVRATE"
-                              className="block text-sm font-medium leading-6"
-                            >
-                              Conversion Rate
-                            </Label>
-                            <Input
-                              type="text"
-                              name="SUBMATERIAL_CONVRATE"
-                              id="SUBMATERIAL_CONVRATE"
-                              value={formData.SUBMATERIAL_CONVRATE || 1}
-                              onChange={handleChange}
-                              readOnly
-                            />
-                          </div>
-                        </>
-                      )
-                    }
+                        <div className="w-full">
+                          <Label
+                            htmlFor="SUBMATERIAL_CONVRATE"
+                            className="block text-sm font-medium leading-6"
+                          >
+                            Conversion Rate
+                          </Label>
+                          <Input
+                            type="text"
+                            name="SUBMATERIAL_CONVRATE"
+                            id="SUBMATERIAL_CONVRATE"
+                            value={formData.SUBMATERIAL_CONVRATE || 1}
+                            onChange={handleChange}
+                            readOnly
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
           <div className="flex justify-center pt-5">
-            <Button disabled={loading} type="submit">
+            <Button
+              disabled={loading}
+              type="submit"
+            >
               {loading ? (
                 <BeatLoader
                   color="#000"
@@ -1022,8 +1000,11 @@ export default function ProductFormPage() {
         </form>
       </div>
       <div className="col-span-1 mt-5 h-fit w-full lg:col-span-5 lg:mt-24">
-        <AddSubProduct formDataProps={formData} onSubmitTrigger={submitCount} />
+        <AddSubProduct
+          formDataProps={formData}
+          onSubmitTrigger={submitCount}
+        />
       </div>
-    </div >
+    </div>
   );
 }

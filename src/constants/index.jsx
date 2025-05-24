@@ -1,4 +1,4 @@
-import { BaggageClaim, ChartColumn, Grid2x2Plus, Headset, Home, MessageCircleQuestion, MonitorCog, NotepadText, Package, PackagePlus, Settings, ShoppingBag, Tags, UserCheck, UserPlus, Users } from "lucide-react";
+import { BaggageClaim, ChartColumn, Grid2x2Plus, Headset, Home, MessageCircleQuestion, MonitorCog, NotepadText, Package, PackagePlus, ScrollText, Settings, ShoppingBag, Tags, UserCheck, UserPlus, Users } from "lucide-react";
 
 export const navbarLinks = [
   {
@@ -32,7 +32,7 @@ export const navbarLinks = [
       {
         label: "Service Category",
         icon: Tags,
-        path: "/service-price-page",
+        path: "/service-category-list",
       },
     ],
   },
@@ -55,9 +55,44 @@ export const navbarLinks = [
         path: "/orders",
       },
       {
+        label: "Quotation",
+        icon: ScrollText,
+        path: "/quotations",
+      },
+      {
         label: "Users",
         icon: Users,
         path: "/users",
+      },
+      {
+        label: "User Role",
+        icon: Users,
+        path: "/user-role",
+      },
+      {
+        label: "Document Category",
+        icon: NotepadText,
+        path: "/document-categories",
+      },
+      {
+        label: "Access Rights",
+        icon: UserCheck,
+        path: "/access-rights",
+      },
+      {
+        label: "User Rights",
+        icon: UserCheck,
+        path: "/user-rights",
+      },
+      {
+        label: "Category Access",
+        icon: UserCheck,
+        path: "/category-access",
+      },
+      {
+        label: "Invoice",
+        icon: PackagePlus,
+        path: "/invoice-form",
       },
       {
         label: "Enquiry",

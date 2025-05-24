@@ -320,10 +320,6 @@ const UserListPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link to="/user-role">
-              <Button variant="outline">Add Role <Plus /></Button>
-            </Link>
-
             <Dialog
               open={isDialogOpen}
               onOpenChange={(open) => {

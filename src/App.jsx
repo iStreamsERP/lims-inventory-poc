@@ -1,14 +1,18 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import EnquiryForm from "./components/form/EnquiryForm";
+import AccessRights from "./pages/AccessRights";
 import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
+import CategoryAccessPage from "./pages/CategoryAccessPage";
 import CategoryListPage from "./pages/CategoryListPage";
 import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import CustomerFormPage from "./pages/CustomerFormPage";
 import CustomerListPage from "./pages/CustomerListPage";
 import DashboardPage from "./pages/DashboardPage";
+import DocumentCategoryListPage from "./pages/DocumentCategoryListPage";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage";
+import InvoiceForm from "./pages/InvoiceForm";
 import LoginFormPage from "./pages/LoginFormPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderFormPage from "./pages/OrderFormPage";
@@ -18,15 +22,16 @@ import ProductCardListPage from "./pages/ProductCardListPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import ProductFormPage from "./pages/ProductFormPage";
 import ProductListPage from "./pages/ProductListPage";
+import ServiceCategoryListPage from "./pages/ServiceCategoryListPage";
 import ServiceFormPage from "./pages/ServiceFormPage";
 import ServiceListPage from "./pages/ServiceListPage";
-import ServicePricingPage from "./pages/ServicePricingPage";
 import SignUpPage from "./pages/SignUpPage";
 import UserListPage from "./pages/UserListPage";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
+import UserRights from "./pages/UserRights";
+import UserRole from "./pages/UserRole";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import UserRole from "./pages/UserRole";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -67,22 +72,37 @@ const App = () => {
             { path: "services", element: <ServiceListPage /> },
             { path: "/new-service", element: <ServiceFormPage /> },
             { path: "/service/:id", element: <ServiceFormPage /> },
-            { path: "service-price-page", element: <ServicePricingPage /> },
+            { path: "service-category-list", element: <ServiceCategoryListPage /> },
 
             { path: "orders", element: <OrderList /> },
             { path: "/new-order", element: <OrderFormPage /> },
+            { path: "/order/:id", element: <OrderFormPage /> },
+            
+            { path: "quotations", element: <OrderList /> },
+            { path: "/new-quotation", element: <OrderFormPage /> },
+            { path: "/quotation/:id", element: <OrderFormPage /> },
 
             { path: "enquiry-form", element: <EnquiryForm /> },
 
             { path: "users", element: <UserListPage /> },
             { path: "user-role", element: <UserRole /> },
 
+            { path: "document-categories", element: <DocumentCategoryListPage /> },
+
+            { path: "access-rights", element: <AccessRights /> },
+
+            { path: "user-rights", element: <UserRights /> },
+
+            { path: "invoice-form", element: <InvoiceForm /> },
+
+            { path: "category-access", element: <CategoryAccessPage /> },
+
             { path: "user-preferences", element: <UserPreferences /> },
             { path: "account-settings", element: <AccountSettings /> },
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
-          ]
-        }
+          ],
+        },
       ],
     },
     {
@@ -92,7 +112,10 @@ const App = () => {
   ]);
 
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider
+      defaultTheme="dark"
+      storageKey="vite-ui-theme"
+    >
       <RouterProvider router={router} />
     </ThemeProvider>
   );
