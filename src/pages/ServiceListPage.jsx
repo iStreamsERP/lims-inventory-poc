@@ -1,15 +1,8 @@
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,40 +11,32 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
-import { useToast } from "@/hooks/use-toast"
-import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { PacmanLoader } from "react-spinners"
-
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PacmanLoader } from "react-spinners";
 
 const ServiceListPage = () => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sorting, setSorting] = useState([])
-  const [columnFilters, setColumnFilters] = useState([])
-  const [columnVisibility, setColumnVisibility] = useState({})
-  const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState("")
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
   const { userData } = useAuth();
-  const { toast } = useToast()
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAllServicesData();
-  }, [])
+  }, []);
 
   const fetchAllServicesData = async () => {
     setLoading(true);
@@ -60,42 +45,39 @@ const ServiceListPage = () => {
       const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
-        Orderby: ""
-      }
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL)
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
       setTableData(response);
     } catch (error) {
       setError(error?.message);
-
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const handleDelete = async (service) => {
     const result = window.confirm("Are you sure you want to delete this service? This action cannot be undone.");
 
     if (!result) {
-      return
+      return;
     }
 
     try {
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: `ITEM_CODE = '${service.ITEM_CODE}'`,
       };
 
-      const response = await deleteDataModelService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
       toast({
         variant: "destructive",
         title: response,
-      })
+      });
 
       fetchAllServicesData();
     } catch (error) {
@@ -111,10 +93,7 @@ const ServiceListPage = () => {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -141,18 +120,14 @@ const ServiceListPage = () => {
             Service Code
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>,
     },
     {
       accessorKey: "ITEM_NAME",
       header: "Service Name",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>,
     },
     {
       accessorKey: "GROUP_LEVEL1",
@@ -166,12 +141,12 @@ const ServiceListPage = () => {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0 "
+            className="p-0"
           >
             Sale Price
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
       cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
@@ -185,11 +160,14 @@ const ServiceListPage = () => {
       header: () => <div>Action</div>,
       id: "actions",
       cell: ({ row }) => {
-        const service = row.original
+        const service = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0"
+              >
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal />
               </Button>
@@ -197,19 +175,31 @@ const ServiceListPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate(`/service/${service.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(service)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/service/${service.ITEM_CODE}`)}
+                className="flex items-center gap-1"
+              >
+                <Pencil /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-1 text-red-600"
+                onClick={() => handleDelete(service)}
+              >
+                {" "}
+                <Trash2 /> Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-
-  ]
+  ];
 
   const fuzzyFilter = (row, columnId, filterValue) => {
     const value = row.getValue(columnId);
-    return String(value || "").toLowerCase().includes(filterValue.toLowerCase());
+    return String(value || "")
+      .toLowerCase()
+      .includes(filterValue.toLowerCase());
   };
 
   const table = useReactTable({
@@ -232,24 +222,26 @@ const ServiceListPage = () => {
       rowSelection,
       globalFilter,
     },
-  })
+  });
 
   return (
     <div className="flex flex-col gap-y-4">
       <h1 className="title">All Services</h1>
       <div className="w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
+        <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">
           <Input
             placeholder="Global Search..."
-            value={(table.getState().globalFilter) ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)
-            }
+            value={table.getState().globalFilter ?? ""}
+            onChange={(event) => table.setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
+                <Button
+                  variant="outline"
+                  className="ml-auto"
+                >
                   <Settings2 /> View
                 </Button>
               </DropdownMenuTrigger>
@@ -263,19 +255,19 @@ const ServiceListPage = () => {
                         key={column.id}
                         className="capitalize"
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
                         {column.id}
                       </DropdownMenuCheckboxItem>
-                    )
+                    );
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => navigate("/new-service")}>Create<Plus /></Button>
-
+            <Button onClick={() => navigate("/new-service")}>
+              Create
+              <Plus />
+            </Button>
           </div>
         </div>
         <div className="rounded-md border">
@@ -286,14 +278,9 @@ const ServiceListPage = () => {
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
-                    )
+                    );
                   })}
                 </TableRow>
               ))}
@@ -301,29 +288,39 @@ const ServiceListPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     <PacmanLoader color="#6366f1" />
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-red-500"
+                  >
                     {error}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     No services found.
                   </TableCell>
                 </TableRow>
@@ -333,8 +330,7 @@ const ServiceListPage = () => {
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
           <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="space-x-2">
             <Button

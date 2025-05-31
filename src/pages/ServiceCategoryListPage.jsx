@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
-import { getDataModelService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
@@ -18,7 +18,7 @@ const ServiceCategoryListPage = () => {
 
   useEffect(() => {
     // only fetch once userData is ready
-    if (userData?.currentUserLogin && userData?.clientURL) {
+    if (userData?.userEmail && userData?.clientURL) {
       fetchAllServicesData();
     }
   }, [userData]);
@@ -32,7 +32,9 @@ const ServiceCategoryListPage = () => {
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
         Orderby: "",
       };
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
       // assume response is an array
       const updated = response.map((item) => ({
         ...item,
@@ -64,6 +66,7 @@ const ServiceCategoryListPage = () => {
     currency: "INR",
     maximumFractionDigits: 0,
   });
+
 
   return (
     <div className="mx-auto w-full px-4">
@@ -106,7 +109,7 @@ const ServiceCategoryListPage = () => {
                   Add to Cart
                 </Button>
 
-                <div className="text-muted-foreground space-y-1 text-sm font-normal">
+                <div className="space-y-1 text-sm font-normal text-muted-foreground">
                   <div className="mb-1 font-semibold">Features</div>
                   {item.FEATURES.length > 0 ? (
                     item.FEATURES.map((feature, i) => (

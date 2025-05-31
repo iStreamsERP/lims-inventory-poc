@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Check, CheckSquare, ChevronDown, ChevronRight, ChevronsUpDown, Square } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -123,7 +124,7 @@ const TreeNode = ({ node, level = 0, onSelect, onRemove, isRemovable = false, se
           </div>
         )}
 
-        <span className={cn("flex-grow text-sm", !hasChildren && !useCheckbox && "ml-1")}>{node.label}</span>
+        <span className={cn("flex-grow text-xs", !hasChildren && !useCheckbox && "ml-1")}>{node.label}</span>
 
         {!hasChildren && !isRemovable && isSelected && !useCheckbox && <Check className="h-4 w-4 text-green-500" />}
       </div>
@@ -178,8 +179,8 @@ const TreeView = ({
   );
 };
 
-const UserRights = () => {
-  const [userDetails, setUserDetails] = useState({ userName: "" });
+const UserAccessRights = () => {
+  const [userDetails, setUserDetails] = useState({ USER_NAME: "" });
   const [usersList, setUsersList] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
 
@@ -202,12 +203,12 @@ const UserRights = () => {
   const { userData } = useAuth();
 
   useEffect(() => {
-    if (!hasFetchedData && userData?.userEmail && userData?.clientURL) {
+    if (!hasFetchedData && userData?.currentUserLogin && userData?.clientURL) {
       fetchUsersData();
       fetchFormsData();
       setHasFetchedData(true);
     }
-  }, [userData?.userEmail, userData?.clientURL, hasFetchedData]);
+  }, [userData?.currentUserLogin, userData?.clientURL, hasFetchedData]);
 
   useEffect(() => {
     if (formsList.length > 0) {
@@ -216,15 +217,28 @@ const UserRights = () => {
 
       formsList.forEach((form) => {
         if (!moduleMap[form.MODULE_NAME]) {
-          moduleMap[form.MODULE_NAME] = { id: `module-${form.MODULE_NAME}`, label: form.MODULE_NAME, children: {} };
+          moduleMap[form.MODULE_NAME] = {
+            id: `module-${form.MODULE_NAME}`,
+            label: form.MODULE_NAME,
+            children: {},
+          };
         }
 
         const formTypes = moduleMap[form.MODULE_NAME].children;
         if (!formTypes[form.FORM_TYPE]) {
-          formTypes[form.FORM_TYPE] = { id: `type-${form.MODULE_NAME}-${form.FORM_TYPE}`, label: form.FORM_TYPE, children: [] };
+          formTypes[form.FORM_TYPE] = {
+            id: `type-${form.MODULE_NAME}-${form.FORM_TYPE}`,
+            label: form.FORM_TYPE,
+            children: [],
+          };
         }
 
-        formTypes[form.FORM_TYPE].children.push({ id: form.FORM_NAME, label: form.DESCRIPTION || form.FORM_NAME, formData: form, type: "Form" });
+        formTypes[form.FORM_TYPE].children.push({
+          id: form.FORM_NAME,
+          label: form.DESCRIPTION || form.FORM_NAME,
+          formData: form,
+          type: "Form",
+        });
       });
 
       Object.values(moduleMap).forEach((module) => {
@@ -279,27 +293,40 @@ const UserRights = () => {
       const moduleMap = {};
 
       selectedForms.forEach((form) => {
-        const moduleName = form.formData.MODULE_NAME;
-        const formType = form.formData.FORM_TYPE || "General";
+        const MODULE_NAME = form.formData.MODULE_NAME;
+        const FORM_TYPE = form.formData.FORM_TYPE || "General";
 
-        if (!moduleMap[moduleName]) {
-          moduleMap[moduleName] = { id: `assigned-module-${moduleName}`, label: moduleName, children: {} };
+        if (!moduleMap[MODULE_NAME]) {
+          moduleMap[MODULE_NAME] = {
+            id: `assigned-module-${MODULE_NAME}`,
+            label: MODULE_NAME,
+            children: {},
+          };
         }
 
-        const formTypes = moduleMap[moduleName].children;
-        if (!formTypes[formType]) {
-          formTypes[formType] = { id: `assigned-type-${moduleName}-${formType}`, label: formType, children: [] };
+        const formTypes = moduleMap[MODULE_NAME].children;
+        if (!formTypes[FORM_TYPE]) {
+          formTypes[FORM_TYPE] = {
+            id: `assigned-type-${MODULE_NAME}-${FORM_TYPE}`,
+            label: FORM_TYPE,
+            children: [],
+          };
         }
 
-        formTypes[formType].children.push({ id: form.id, label: form.label, formData: form.formData, type: "Form" });
+        formTypes[FORM_TYPE].children.push({
+          id: form.id,
+          label: form.label,
+          formData: form.formData,
+          type: "Form",
+        });
       });
 
       const assignedTreeStructure = [];
       Object.values(moduleMap).forEach((module) => {
         const moduleNode = { id: module.id, label: module.label, children: [] };
 
-        Object.values(module.children).forEach((formType) => {
-          moduleNode.children.push(formType);
+        Object.values(module.children).forEach((FORM_TYPE) => {
+          moduleNode.children.push(FORM_TYPE);
         });
 
         assignedTreeStructure.push(moduleNode);
@@ -325,26 +352,34 @@ const UserRights = () => {
       const formattedUsers = Array.isArray(response)
         ? response
             .map((user) => ({
-              userName: user.USER_NAME?.trim(),
+              USER_NAME: user.USER_NAME?.trim(),
             }))
-            .filter((user) => user.userName)
+            .filter((user) => user.USER_NAME)
         : [];
       setUsersList(formattedUsers);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error fetching users", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Error fetching users",
+        description: error.message,
+      });
     } finally {
       setLoadingUsers(false);
     }
   };
 
-  const fetchUserRoles = async (userName) => {
-    if (!userName) {
+  const fetchUserRoles = async (USER_NAME) => {
+    if (!USER_NAME) {
       setUserRoles([]);
       return;
     }
 
     try {
-      const payload = { DataModelName: "general_roles_users", WhereCondition: `USER_NAME = '${userName}'`, Orderby: "ROLE_ID" };
+      const payload = {
+        DataModelName: "general_roles_users",
+        WhereCondition: `USER_NAME = '${USER_NAME}'`,
+        Orderby: "ROLE_ID",
+      };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
@@ -353,11 +388,11 @@ const UserRights = () => {
         return;
       }
 
-      const roleIds = response.map((role) => `'${role.ROLE_ID}'`).join(",");
+      const ROLE_ID = response.map((role) => `'${role.ROLE_ID}'`).join(",");
 
       const masterRolesPayload = {
         DataModelName: "general_roles_master",
-        WhereCondition: `ROLE_ID IN (${roleIds})`,
+        WhereCondition: `ROLE_ID IN (${ROLE_ID})`,
         Orderby: "ROLE_ID",
       };
 
@@ -370,7 +405,7 @@ const UserRights = () => {
             ROLE_ID: userRole.ROLE_ID,
             USER_NAME: userRole.USER_NAME,
             ROLE_NAME: masterRole?.ROLE_NAME || "N/A",
-            DESCRIPTION: masterRole?.ROLE_DESCRIPTION || "No description available",
+            ROLE_DESCRIPTION: masterRole?.ROLE_DESCRIPTION || "No description available",
           };
         });
         setUserRoles(combinedRoles);
@@ -378,7 +413,11 @@ const UserRights = () => {
         setUserRoles([]);
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Error fetching user roles", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Error fetching user roles",
+        description: error.message,
+      });
       setUserRoles([]);
     }
   };
@@ -398,7 +437,11 @@ const UserRights = () => {
       setFormsList(formsArray);
     } catch (error) {
       setFormsList([]);
-      toast({ variant: "destructive", title: "Error fetching forms", description: error.message || "Failed to fetch forms master data" });
+      toast({
+        variant: "destructive",
+        title: "Error fetching forms",
+        description: error.message || "Failed to fetch forms master data",
+      });
     } finally {
       setLoadingForms(false);
     }
@@ -412,9 +455,13 @@ const UserRights = () => {
 
     setLoading(true);
     try {
-      const payload = { DataModelName: "USER_RIGHTS", WhereCondition: `USER_NAME = '${userName}'`, Orderby: "MODULE_NAME, FORM_NAME" };
+      const rightRequestPayload = {
+        DataModelName: "USER_RIGHTS",
+        WhereCondition: `USER_NAME = '${userName}'`,
+        Orderby: "MODULE_NAME, FORM_NAME",
+      };
 
-      const rightsResponse = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const rightsResponse = await callSoapService(userData.clientURL, "DataModel_GetData", rightRequestPayload);
 
       if (!Array.isArray(rightsResponse)) {
         setSelectedForms([]);
@@ -436,17 +483,17 @@ const UserRights = () => {
       try {
         const formNames = rightsResponse.map((right) => `'${right.FORM_NAME}'`).join(",");
         if (formNames) {
-          const payload = {
+          const formsRequestData = {
             DataModelName: "FORMS_MASTER",
             WhereCondition: `FORM_NAME IN (${formNames})`,
             Orderby: "MODULE_NAME, FORM_NAME",
           };
 
-          const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+          const formsResponse = await callSoapService(userData.clientURL, "DataModel_GetData", formsRequestData);
 
-          if (Array.isArray(response)) {
+          if (Array.isArray(formsResponse)) {
             const updatedFormItems = formItems.map((item) => {
-              const formDetails = response.find((f) => f.FORM_NAME === item.id) || {};
+              const formDetails = formsResponse.find((f) => f.FORM_NAME === item.id) || {};
               return {
                 ...item,
                 label: formDetails.DESCRIPTION || item.label,
@@ -470,7 +517,11 @@ const UserRights = () => {
       }
     } catch (error) {
       console.error("Error fetching user form access:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch form access rights for this user" });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch form access rights for this user",
+      });
       setSelectedForms([]);
     } finally {
       setLoading(false);
@@ -478,10 +529,10 @@ const UserRights = () => {
   };
 
   const handleUserSelect = (user) => {
-    setUserDetails({ userName: user.userName });
+    setUserDetails({ USER_NAME: user.USER_NAME });
     setOpenUserPopover(false);
-    fetchUserRoles(user.userName);
-    fetchUserFormAccess(user.userName);
+    fetchUserRoles(user.USER_NAME);
+    fetchUserFormAccess(user.USER_NAME);
   };
 
   const handleFormSelect = (node) => {
@@ -489,9 +540,16 @@ const UserRights = () => {
 
     if (!isAlreadySelected) {
       setSelectedForms((prev) => [...prev, node]);
-      toast({ title: "Form added", description: `${node.label} added to selection` });
+      toast({
+        title: "Form added",
+        description: `${node.label} added to selection`,
+      });
     } else {
-      toast({ variant: "default", title: "Info", description: "This form is already selected" });
+      toast({
+        variant: "default",
+        title: "Info",
+        description: "This form is already selected",
+      });
     }
   };
 
@@ -501,12 +559,18 @@ const UserRights = () => {
 
       if (formsToAdd.length > 0) {
         setSelectedForms((prev) => [...prev, ...formsToAdd]);
-        toast({ title: "Forms added", description: `${formsToAdd.length} forms added to selection` });
+        toast({
+          title: "Forms added",
+          description: `${formsToAdd.length} forms added to selection`,
+        });
       }
     } else {
       setSelectedForms((prev) => prev.filter((selectedForm) => !forms.some((form) => form.id === selectedForm.id)));
 
-      toast({ title: "Forms removed", description: `${forms.length} forms removed from selection` });
+      toast({
+        title: "Forms removed",
+        description: `${forms.length} forms removed from selection`,
+      });
     }
   };
 
@@ -514,24 +578,32 @@ const UserRights = () => {
     try {
       setSelectedForms((prev) => prev.filter((form) => form.id !== node.id));
 
-      toast({ title: "Form removed", description: `${node.label} removed from selection`, duration: 2000 });
+      toast({
+        title: "Form removed",
+        description: `${node.label} removed from selection`,
+        duration: 2000,
+      });
 
-      if (userDetails.userName) {
+      if (userDetails.USER_NAME) {
         try {
           const payload = {
-            UserName: userData.userEmail,
+            UserName: userData.currentUserLogin,
             DataModelName: "USER_RIGHTS",
-            WhereCondition: `USER_NAME = '${userDetails.userName}' AND FORM_NAME = '${node.id}'`,
+            WhereCondition: `USER_NAME = '${userDetails.USER_NAME}' AND FORM_NAME = '${node.id}'`,
           };
 
           const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
-        } catch (deleteError) {
-          console.error("Error removing from database:", deleteError);
+        } catch (err) {
+          console.error("Error removing from database:", err);
         }
       }
     } catch (error) {
       console.error("Error removing form:", error);
-      toast({ variant: "destructive", title: "Error removing form", description: error.message || "Failed to remove form access" });
+      toast({
+        variant: "destructive",
+        title: "Error removing form",
+        description: error.message || "Failed to remove form access",
+      });
     }
   };
 
@@ -539,32 +611,44 @@ const UserRights = () => {
     try {
       setSelectedForms((prev) => prev.filter((selectedForm) => !forms.some((form) => form.id === selectedForm.id)));
 
-      toast({ title: "Forms removed", description: `${forms.length} forms removed from selection`, duration: 2000 });
+      toast({
+        title: "Forms removed",
+        description: `${forms.length} forms removed from selection`,
+        duration: 2000,
+      });
 
-      if (userDetails.userName) {
+      if (userDetails.USER_NAME) {
         for (const node of forms) {
           try {
             const payload = {
-              UserName: userData.userEmail,
+              UserName: userData.currentUserLogin,
               DataModelName: "USER_RIGHTS",
-              WhereCondition: `USER_NAME = '${userDetails.userName}' AND FORM_NAME = '${node.id}'`,
+              WhereCondition: `USER_NAME = '${userDetails.USER_NAME}' AND FORM_NAME = '${node.id}'`,
             };
 
             const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
-          } catch (deleteError) {
-            console.error(`Error removing form ${node.id} from database:`, deleteError);
+          } catch (err) {
+            console.error(`Error removing form ${node.id} from database:`, err);
           }
         }
       }
     } catch (error) {
       console.error("Error removing multiple forms:", error);
-      toast({ variant: "destructive", title: "Error removing forms", description: error.message || "Failed to remove form access rights" });
+      toast({
+        variant: "destructive",
+        title: "Error removing forms",
+        description: error.message || "Failed to remove form access rights",
+      });
     }
   };
 
   const handleSave = async () => {
-    if (!userDetails.userName || selectedForms.length === 0) {
-      toast({ variant: "destructive", title: "Validation Error", description: "Please select both a user and at least one rights item" });
+    if (!userDetails.USER_NAME || selectedForms.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select both a user and at least one rights item",
+      });
       return;
     }
 
@@ -572,7 +656,7 @@ const UserRights = () => {
     try {
       const payload = {
         DataModelName: "USER_RIGHTS",
-        WhereCondition: `USER_NAME = '${userDetails.userName}'`,
+        WhereCondition: `USER_NAME = '${userDetails.USER_NAME}'`,
         Orderby: "",
       };
 
@@ -586,227 +670,223 @@ const UserRights = () => {
         }
 
         const formAccessData = {
-          USER_NAME: userDetails.userName,
+          USER_NAME: userDetails.USER_NAME,
           MODULE_NAME: form.formData.MODULE_NAME || "General",
           FORM_NAME: form.id,
           CAN_VIEW_ALLCOLUMNS: null,
         };
 
         const data = convertDataModelToStringData("USER_RIGHTS", formAccessData);
+
         const payload = {
           UserName: userData.userEmail,
           DModelData: data,
         };
 
+
         const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
-        if (response === null || response === undefined || (typeof response === "object" && response.error)) {
-          throw new Error(`Failed to save form ${form.label} to user ${userDetails.userName}`);
+        if (response === null || response === undefined || (typeof response === "object" && saveResponse.error)) {
+          throw new Error(`Failed to save form ${form.label} to user ${userDetails.USER_NAME}`);
         }
       }
 
-      await fetchUserFormAccess(userDetails.userName);
+      await fetchUserFormAccess(userDetails.USER_NAME);
 
-      toast({ variant: "default", title: "Success", description: `Saved rights items to user ${userDetails.userName}`, duration: 3000 });
+      toast({
+        variant: "default",
+        title: "Success",
+        description: `Saved rights items to user ${userDetails.USER_NAME}`,
+        duration: 3000,
+      });
     } catch (error) {
       console.error("Save error:", error);
-      toast({ variant: "destructive", title: "Save failed", description: error.message || "Failed to save user access rights" });
+      toast({
+        variant: "destructive",
+        title: "Save failed",
+        description: error.message || "Failed to save user access rights",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setUserDetails({ userName: "", userId: "" });
+    setUserDetails({ USER_NAME: "" });
     setUserRoles([]);
     setSelectedForms([]);
   };
 
-  const isUserSelected = !!userDetails.userName;
+  const isUserSelected = !!userDetails.USER_NAME;
 
   return (
-    <div className="flex flex-col gap-3">
-      <h1 className="text-2xl font-semibold">User Rights Management</h1>
-
-      <div className="flex flex-col items-start gap-4 md:flex-row">
+    <div className="flex flex-col gap-4">
+      {/* User Selection and Roles */}
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {/* User Details */}
-        <Card className="flex-grow border">
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {/* Select User */}
-              <div className="col-span-1">
-                <Label>User Name</Label>
-                <Popover
-                  open={openUserPopover}
-                  onOpenChange={setOpenUserPopover}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between text-left font-normal"
-                    >
-                      {userDetails.userName || "Select user"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="z-50 h-[200px] w-[var(--radix-popover-trigger-width)] p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search user"
-                        value={userSearchInput}
-                        onValueChange={setUserSearchInput}
-                      />
-                      <CommandList>
-                        <CommandEmpty>No users found.</CommandEmpty>
-                        <CommandGroup>
-                          {loadingUsers ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Loading users...</div>
-                          ) : (
-                            usersList
-                              .filter((user) => user.userName.toLowerCase().includes(userSearchInput.toLowerCase()))
-                              .map((user) => (
-                                <CommandItem
-                                  key={`user-${user.userName}`}
-                                  value={user.userName}
-                                  onSelect={() => handleUserSelect(user)}
-                                >
-                                  {user.userName}
-                                  <Check className={cn("ml-auto h-4 w-4", userDetails.userName === user.userName ? "opacity-100" : "opacity-0")} />
-                                </CommandItem>
-                              ))
-                          )}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Assigned Roles */}
-              <div className="col-span-2">
-                <Label>Assigned Roles</Label>
-                <div className="h-32 overflow-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[150px]">Role Name</TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {userRoles.length > 0 ? (
-                        userRoles.map((role, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{role.ROLE_NAME}</TableCell>
-                            <TableCell>{role.DESCRIPTION || "N/A"}</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={2}
-                            className="py-4 text-center text-muted-foreground"
+        <Card className="flex flex-col p-4">
+          <Label className="mb-2 text-xs font-semibold">Select User</Label>
+          <Popover
+            open={openUserPopover}
+            onOpenChange={setOpenUserPopover}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between text-left font-normal"
+              >
+                {userDetails.USER_NAME || "Select user"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="z-50 h-[200px] w-[var(--radix-popover-trigger-width)] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Search user"
+                  value={userSearchInput}
+                  onValueChange={setUserSearchInput}
+                />
+                <CommandList>
+                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandGroup>
+                    {loadingUsers ? (
+                      <div className="p-4 text-center text-sm text-muted-foreground">Loading users...</div>
+                    ) : (
+                      usersList
+                        .filter((user) => user.USER_NAME.toLowerCase().includes(userSearchInput.toLowerCase()))
+                        .map((user) => (
+                          <CommandItem
+                            key={`user-${user.USER_NAME}`}
+                            value={user.USER_NAME}
+                            onSelect={() => handleUserSelect(user)}
                           >
-                            {userDetails.userName ? "No roles assigned to this user." : "Select a user to view roles."}
-                          </TableCell>
+                            {user.USER_NAME}
+                            <Check className={cn("ml-auto h-4 w-4", userDetails.USER_NAME === user.USER_NAME ? "opacity-100" : "opacity-0")} />
+                          </CommandItem>
+                        ))
+                    )}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          <div className="mt-1">
+            <Label className="mb-2 text-xs font-semibold">Assigned Roles</Label>
+            <div className="rounded-md border dark:border-gray-800">
+              <Table>
+                <ScrollArea className={userRoles.length > 4 ? "h-[278px]" : "h-auto"}>
+                  <TableHeader className={userRoles.length > 4 ? "sticky top-0 z-10 bg-background" : ""}>
+                    <TableRow className="dark:border-gray-800">
+                      <TableHead className="text-xs">Role Name</TableHead>
+                      <TableHead className="text-xs">Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userRoles.length > 0 ? (
+                      userRoles.map((role, index) => (
+                        <TableRow
+                          key={index}
+                          className="dark:border-gray-800"
+                        >
+                          <TableCell className="text-xs">{role.ROLE_NAME}</TableCell>
+                          <TableCell className="text-xs">{role.ROLE_DESCRIPTION || "N/A"}</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={2}
+                          className="py-4 text-center text-muted-foreground"
+                        >
+                          {userDetails.USER_NAME ? "No roles assigned to this user." : "Select a user to view roles."}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </ScrollArea>
+              </Table>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Buttons */}
-        <div className="flex gap-4 md:self-end md:pb-6">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={!isUserSelected}
-          >
-            Cancel
-          </Button>
+        {/* Add Access Rights */}
+        <Card className={`flex flex-col p-4 ${!isUserSelected ? "pointer-events-none opacity-50" : ""}`}>
+          <Label className="mb-2 text-xs font-semibold">Add Access Rights</Label>
+          <div className="h-[350px] overflow-hidden rounded-md border dark:border-gray-800">
+            {loadingForms ? (
+              <div className="flex h-full w-full items-center justify-center p-2">
+                <span className="text-sm text-muted-foreground">Loading forms...</span>
+              </div>
+            ) : filteredTreeData.length > 0 ? (
+              <ScrollArea className="h-full w-full p-2">
+                <TreeView
+                  data={filteredTreeData}
+                  onSelect={handleFormSelect}
+                  selectedItems={selectedForms}
+                  useCheckbox={true}
+                  onSelectAll={handleBulkFormsSelection}
+                  isSelectAllMode={true}
+                />
+              </ScrollArea>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center p-2">
+                <span className="text-sm text-muted-foreground">All available forms are already added</span>
+              </div>
+            )}
+          </div>
+        </Card>
 
-          <Button
-            onClick={handleSave}
-            disabled={saving || !isUserSelected || selectedForms.length === 0}
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+        {/* Remove Access Rights */}
+        <Card className={`flex flex-col p-4 ${!isUserSelected ? "pointer-events-none opacity-50" : ""}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <Label className="text-xs font-semibold">Remove Access Rights</Label>
+            <span className="text-xs text-gray-500">Assigned Forms ({selectedForms.length})</span>
+          </div>
+          <div className="h-[350px] overflow-hidden rounded-md border dark:border-gray-800">
+            {loading ? (
+              <div className="flex h-full w-full items-center justify-center p-2">
+                <span className="text-sm text-muted-foreground">Loading assigned forms...</span>
+              </div>
+            ) : assignedFormsTreeData.length > 0 ? (
+              <ScrollArea className="h-full w-full p-2">
+                <TreeView
+                  data={assignedFormsTreeData}
+                  onRemove={handleRemoveSelectedForm}
+                  isRemovable={true}
+                  useCheckbox={true}
+                  onSelectAll={handleRemoveMultipleSelectedForms}
+                  isSelectAllMode={true}
+                />
+              </ScrollArea>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center p-2">
+                <span className="text-sm text-muted-foreground">No forms assigned to this user</span>
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Add Rights */}
-        <Card className={cn("border", !isUserSelected && "pointer-events-none opacity-50")}>
-          <CardTitle className="pl-6 pt-4 text-lg font-semibold">Add Access Rights</CardTitle>
-          <CardContent className="p-6 pt-2">
-            <div className="flex flex-col space-y-4">
-              <div className="h-80 overflow-hidden rounded-md border">
-                {loadingForms ? (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="text-sm text-muted-foreground">Loading forms...</span>
-                  </div>
-                ) : filteredTreeData.length > 0 ? (
-                  <ScrollArea className="h-full w-full p-2">
-                    <TreeView
-                      data={filteredTreeData}
-                      onSelect={handleFormSelect}
-                      selectedItems={selectedForms}
-                      useCheckbox={true}
-                      onSelectAll={handleBulkFormsSelection}
-                      isSelectAllMode={true}
-                    />
-                  </ScrollArea>
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="text-sm text-muted-foreground">All available forms are already added</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Remove Rights */}
-        <Card className={cn("border", !isUserSelected && "pointer-events-none opacity-50")}>
-          <CardTitle className="pl-6 pt-4 text-lg font-semibold">Remove Access Rights</CardTitle>
-          <CardContent className="p-6 pt-2">
-            <div className="flex flex-col space-y-4">
-              <div className="h-80 overflow-hidden rounded-md border">
-                {loading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="text-sm text-muted-foreground">Loading assigned forms...</span>
-                  </div>
-                ) : assignedFormsTreeData.length > 0 ? (
-                  <ScrollArea className="h-full w-full p-2">
-                    <TreeView
-                      data={assignedFormsTreeData}
-                      onRemove={handleRemoveSelectedForm}
-                      isRemovable={true}
-                      useCheckbox={true}
-                      onSelectAll={handleRemoveMultipleSelectedForms}
-                      isSelectAllMode={true}
-                    />
-                  </ScrollArea>
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="text-sm text-muted-foreground">No forms assigned to this user</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Assigned Forms ({selectedForms.length})</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-4">
+        <Button
+          variant="outline"
+          onClick={handleCancel}
+          disabled={!isUserSelected}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={saving || !isUserSelected || selectedForms.length === 0}
+        >
+          {saving ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
     </div>
   );
 };
 
-export default UserRights;
+export default UserAccessRights;

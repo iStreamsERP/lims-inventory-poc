@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -6,14 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelFromQueryService, saveDataService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
+import { toWords } from "number-to-words";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toWords } from "number-to-words";
-import { Badge } from "@/components/ui/badge";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -58,7 +58,7 @@ const CartPage = () => {
     DELETED_STATUS: "F",
     DELETED_DATE: "",
     DELETED_USER: "",
-    USER_NAME: userData.currentUserLogin,
+    USER_NAME: userData.userEmail,
     ENT_DATE: "",
   });
 
@@ -86,7 +86,7 @@ const CartPage = () => {
     NET_VALUE: 0,
     VALUE_IN_LC: 0,
     DELETED_STATUS: 0,
-    USER_NAME: userData.currentUserLogin,
+    USER_NAME: userData.userEmail,
     ENT_DATE: "",
     TRANSPORT_CHARGE: "",
   });
@@ -140,7 +140,9 @@ const CartPage = () => {
       const payload = {
         SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO from CLIENT_MASTER`,
       };
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
       setClientData(response || []);
     } catch (error) {
       toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
@@ -160,11 +162,11 @@ const CartPage = () => {
       };
 
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel),
       };
 
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
       const m = response.match(/Serial No\s*'(\d+)'/);
       const newSerialNo = m ? parseInt(m[1], 10) : null;
@@ -210,16 +212,16 @@ const CartPage = () => {
           VALUE_IN_LC: lineValue,
           TRANSPORT_CHARGE: 0,
           DELETED_STATUS: "F",
-          USER_NAME: userData.currentUserLogin,
+          USER_NAME: userData.userEmail,
           ENT_DATE: "",
         };
 
-        const detailPayload = {
-          UserName: userData.currentUserLogin,
+        const payload = {
+          UserName: userData.userEmail,
           DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
         };
 
-        await saveDataService(detailPayload, userData.currentUserLogin, userData.clientURL);
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
       }
 
       toast({

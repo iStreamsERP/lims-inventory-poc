@@ -7,7 +7,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelFromQueryService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { formatPrice } from "@/utils/formatPrice";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -75,7 +75,7 @@ const ProductDetailPage = () => {
         WHERE m.ITEM_CODE = '${id}'`,
       };
 
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
       const normalized = await Promise.all(
         response.map(async (item) => {
@@ -132,7 +132,7 @@ const ProductDetailPage = () => {
     try {
       const { data } = await axios.get(
         `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
-          userData.currentUserLogin,
+          userData.userEmail,
         )}&fileName=PRODUCT_IMAGE_${code}`,
         { responseType: "blob" },
       );
@@ -146,7 +146,7 @@ const ProductDetailPage = () => {
     try {
       const { data } = await axios.get(
         `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
-          userData.currentUserLogin,
+          userData.userEmail,
         )}&fileName=SUB_PRODUCT_IMAGE_${code}_${no}`,
         { responseType: "blob" },
       );
@@ -225,13 +225,13 @@ const ProductDetailPage = () => {
         };
 
         const handleAddToCart = () => {
-            addItem({
-              ...chosen,
-              uomStock: item.uomStock,
-              itemGroup: item.itemGroup,
-              itemQty: 1
-            });
-          };
+          addItem({
+            ...chosen,
+            uomStock: item.uomStock,
+            itemGroup: item.itemGroup,
+            itemQty: 1,
+          });
+        };
 
         return (
           <Card
@@ -252,7 +252,7 @@ const ProductDetailPage = () => {
 
               <div className="flex-1">
                 <p className="text-xl font-semibold">{item.itemName}</p>
-                <p className="text-muted-foreground mb-3 text-sm">
+                <p className="mb-3 text-sm text-muted-foreground">
                   {item.itemBrand || "Brand not available"}, <span>{item.category}</span>
                 </p>
                 <Badge variant="outline">4.3 ★</Badge>

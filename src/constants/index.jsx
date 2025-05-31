@@ -1,29 +1,19 @@
-import { BaggageClaim, ChartColumn, Grid2x2Plus, Headset, Home, MessageCircleQuestion, MonitorCog, NotepadText, Package, PackagePlus, ScrollText, Settings, ShoppingBag, Tags, UserCheck, UserPlus, Users } from "lucide-react";
+import { ChartColumn, Headset, Home, LibraryBig, Package, ScrollText, ShieldUser, ShoppingBag, Tags, UserPlus } from "lucide-react";
 
-export const navbarLinks = [
+export const getNavbarLinks = (isAdmin) => [
   {
-    title: "Dashboard",
+    title: "Main",
     links: [
       {
         label: "Dashboard",
         icon: Home,
         path: "/",
       },
-    ],
-  },
-  {
-    title: "Customers",
-    links: [
       {
         label: "Customers",
         icon: UserPlus,
         path: "/customers",
       },
-    ],
-  },
-  {
-    title: "Categories",
-    links: [
       {
         label: "Product Category",
         icon: Package,
@@ -34,11 +24,6 @@ export const navbarLinks = [
         icon: Tags,
         path: "/service-category-list",
       },
-    ],
-  },
-  {
-    title: "Lists",
-    links: [
       {
         label: "Products",
         icon: ShoppingBag,
@@ -59,50 +44,41 @@ export const navbarLinks = [
         icon: ScrollText,
         path: "/quotations",
       },
+    ],
+  },
+  {
+    title: "Access Control",
+    links: [
       {
-        label: "Users",
-        icon: Users,
-        path: "/users",
-      },
-      {
-        label: "User Role",
-        icon: Users,
-        path: "/user-role",
-      },
-      {
-        label: "Document Category",
-        icon: NotepadText,
-        path: "/document-categories",
-      },
-      {
-        label: "Access Rights",
-        icon: UserCheck,
-        path: "/access-rights",
-      },
-      {
-        label: "User Rights",
-        icon: UserCheck,
-        path: "/user-rights",
-      },
-      {
-        label: "Category Access",
-        icon: UserCheck,
-        path: "/category-access",
-      },
-      {
-        label: "Invoice",
-        icon: PackagePlus,
-        path: "/invoice-form",
-      },
-      {
-        label: "Enquiry",
-        icon: MessageCircleQuestion,
-        path: "/enquiry-form",
-      },
-      {
-        label: "User Preferences",
-        icon: MonitorCog,
-        path: "/user-preferences",
+        label: "User Administration",
+        icon: ShieldUser,
+        children: [
+          {
+            label: "Users",
+            icon: LibraryBig,
+            path: "/users",
+          },
+          {
+            label: "User Role",
+            icon: LibraryBig,
+            path: "/user-role",
+          },
+          {
+            label: "User Access Rights",
+            icon: LibraryBig,
+            path: "/user-access-rights",
+          },
+          {
+            label: "Role Access Rights",
+            icon: LibraryBig,
+            path: "/role-access-rights",
+          },
+          {
+            label: "Category Access",
+            icon: LibraryBig,
+            path: "/category-access",
+          },
+        ],
       },
     ],
   },

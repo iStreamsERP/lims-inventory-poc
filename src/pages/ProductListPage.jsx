@@ -1,15 +1,8 @@
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,65 +11,59 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
-import { useToast } from "@/hooks/use-toast"
-import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { PacmanLoader } from "react-spinners"
-import axios from "axios"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PacmanLoader } from "react-spinners";
 
 const ProductListPage = () => {
   const [productTableList, setproductTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sorting, setSorting] = useState([])
-  const [columnFilters, setColumnFilters] = useState([])
-  const [columnVisibility, setColumnVisibility] = useState({})
-  const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState("")
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
   const { userData } = useAuth();
-  const { toast } = useToast()
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAllProductsData();
-  }, [])
+  }, []);
 
   const fetchAllProductsData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const allProductDataPayload = {
+      const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT'",
-        Orderby: "ITEM_CODE DESC"
-      }
-      const data = await getDataModelService(allProductDataPayload, userData.currentUserLogin, userData.clientURL)
-      setproductTableList(data);
+        Orderby: "ITEM_CODE DESC",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
+      setproductTableList(response);
     } catch (error) {
       setError(error?.message);
-
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const handleImageDelete = async (newItemCode) => {
     setLoading(true);
 
     try {
-      const email = encodeURIComponent(userData.currentUserLogin);
+      const email = encodeURIComponent(userData.userEmail);
       const fileName = encodeURIComponent(`PRODUCT_IMAGE_${newItemCode}`);
       const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
 
@@ -92,15 +79,11 @@ const ProductListPage = () => {
           title: `Image delete failed with status: ${response.status}`,
         });
       }
-
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error deleting image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        description: error?.response?.data?.message || error?.message || "Unknown error occurred.",
       });
     } finally {
       setLoading(false);
@@ -111,26 +94,22 @@ const ProductListPage = () => {
     const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
 
     if (!result) {
-      return
+      return;
     }
 
     try {
-      const deleteProductPayload = {
-        UserName: userData.currentUserLogin,
+      const payload = {
+        UserName: userData.userEmail,
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: `ITEM_CODE = '${product.ITEM_CODE}'`,
       };
 
-      const deleteProductResponse = await deleteDataModelService(
-        deleteProductPayload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
       toast({
         variant: "destructive",
-        title: deleteProductResponse,
-      })
+        title: response,
+      });
 
       await handleImageDelete(product.ITEM_CODE);
 
@@ -150,10 +129,7 @@ const ProductListPage = () => {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -180,25 +156,19 @@ const ProductListPage = () => {
             Product Code
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("ITEM_CODE") || "-"}</div>,
     },
     {
       accessorKey: "ITEM_NAME",
       header: "Product Name",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("ITEM_NAME") || "-"}</div>,
     },
     {
       accessorKey: "GROUP_LEVEL1",
       header: "Cateogry",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("GROUP_LEVEL1") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("GROUP_LEVEL1") || "-"}</div>,
     },
     {
       accessorKey: "SALE_RATE",
@@ -212,7 +182,7 @@ const ProductListPage = () => {
             Sale Price
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
       cell: ({ row }) => <div>{row.getValue("SALE_RATE") || "-"}</div>,
     },
@@ -222,11 +192,14 @@ const ProductListPage = () => {
       id: "actions",
       // enableHiding: false,
       cell: ({ row }) => {
-        const product = row.original
+        const product = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0"
+              >
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal />
               </Button>
@@ -234,19 +207,31 @@ const ProductListPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate(`/product/${product.ITEM_CODE}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDelete(product)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/product/${product.ITEM_CODE}`)}
+                className="flex items-center gap-1"
+              >
+                <Pencil /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-1 text-red-600"
+                onClick={() => handleDelete(product)}
+              >
+                {" "}
+                <Trash2 /> Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-
-  ]
+  ];
 
   const fuzzyFilter = (row, columnId, filterValue) => {
     const value = row.getValue(columnId);
-    return String(value || "").toLowerCase().includes(filterValue.toLowerCase());
+    return String(value || "")
+      .toLowerCase()
+      .includes(filterValue.toLowerCase());
   };
 
   const table = useReactTable({
@@ -269,24 +254,26 @@ const ProductListPage = () => {
       rowSelection,
       globalFilter,
     },
-  })
+  });
 
   return (
     <div className="flex flex-col gap-y-4">
       <h1 className="title">All Products</h1>
       <div className="w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
+        <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">
           <Input
             placeholder="Global Search..."
-            value={(table.getState().globalFilter) ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)
-            }
+            value={table.getState().globalFilter ?? ""}
+            onChange={(event) => table.setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
+                <Button
+                  variant="outline"
+                  className="ml-auto"
+                >
                   <Settings2 /> View
                 </Button>
               </DropdownMenuTrigger>
@@ -300,19 +287,19 @@ const ProductListPage = () => {
                         key={column.id}
                         className="capitalize"
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
                         {column.id}
                       </DropdownMenuCheckboxItem>
-                    )
+                    );
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => navigate("/new-product")}>Create<Plus /></Button>
-
+            <Button onClick={() => navigate("/new-product")}>
+              Create
+              <Plus />
+            </Button>
           </div>
         </div>
         <div className="rounded-md border">
@@ -323,14 +310,9 @@ const ProductListPage = () => {
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
-                    )
+                    );
                   })}
                 </TableRow>
               ))}
@@ -338,29 +320,39 @@ const ProductListPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     <PacmanLoader color="#6366f1" />
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-red-500"
+                  >
                     {error}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     No products found.
                   </TableCell>
                 </TableRow>
@@ -370,8 +362,7 @@ const ProductListPage = () => {
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
           <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="space-x-2">
             <Button

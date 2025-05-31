@@ -1,15 +1,7 @@
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,95 +10,85 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
-import { deleteDataModelService, getDataModelService } from "@/services/dataModelService"
-import { deleteUser } from "@/services/userManagementService"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { PacmanLoader } from "react-spinners"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PacmanLoader } from "react-spinners";
 
 const CustomerListPage = () => {
   const [customersData, setCustomersData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sorting, setSorting] = useState([])
-  const [columnFilters, setColumnFilters] = useState([])
-  const [columnVisibility, setColumnVisibility] = useState({})
-  const [rowSelection, setRowSelection] = useState({})
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
+  const [rowSelection, setRowSelection] = useState({});
   const { userData } = useAuth();
-  const { toast } = useToast()
+  const { toast } = useToast();
 
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAllClientData();
-  }, [])
+  }, []);
 
   const fetchAllClientData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const clientDataPayload = {
+      const payload = {
         DataModelName: "CLIENT_MASTER",
         WhereCondition: "",
         Orderby: "CLIENT_ID DESC",
-      }
-      const data = await getDataModelService(clientDataPayload, userData.currentUserLogin, userData.clientURL)
-      setCustomersData(data);
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      setCustomersData(response);
     } catch (error) {
       setError(error.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const handleDeleteCustomer = async (customer) => {
-    alert("Are you sure you want to delete this customer? This action cannot be undone.")
+    alert("Are you sure you want to delete this customer? This action cannot be undone.");
     // throw new Error("User deletion is not implemented yet.");
 
     try {
-      const deleteCustomerPayload = {
-        UserName: userData.currentUserLogin,
+      const payload = {
+        UserName: userData.userEmail,
         DataModelName: "CLIENT_MASTER",
         WhereCondition: `CLIENT_ID = ${customer.CLIENT_ID}`,
-      }
+      };
 
-      const deleteCustomerResponse = await deleteDataModelService(deleteCustomerPayload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
       toast({
         variant: "destructive",
-        title: deleteCustomerResponse,
-      })
+        title: response,
+      });
 
       fetchAllClientData();
     } catch (error) {
       toast({
         variant: "destructive",
         title: error?.message || "Unknown error occurred.",
-      })
+      });
     }
-  }
+  };
 
   const columns = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -124,9 +106,7 @@ const CustomerListPage = () => {
     {
       accessorKey: "CLIENT_ID",
       header: "Client ID",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("CLIENT_ID")}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_ID")}</div>,
     },
     {
       accessorKey: "CLIENT_NAME",
@@ -140,25 +120,19 @@ const CustomerListPage = () => {
             Client Name
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>,
     },
     {
       accessorKey: "TELEPHONE_NO",
       header: "Telephone No",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>,
     },
     {
       accessorKey: "EMAIL_ADDRESS",
       header: "Email ID",
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>
-      ),
+      cell: ({ row }) => <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>,
     },
     {
       accessorKey: "COUNTRY",
@@ -172,7 +146,7 @@ const CustomerListPage = () => {
             Country
             <ArrowUpDown />
           </Button>
-        )
+        );
       },
       cell: ({ row }) => <div>{row.getValue("COUNTRY") || "-"}</div>,
     },
@@ -192,11 +166,14 @@ const CustomerListPage = () => {
       id: "actions",
       // enableHiding: false,
       cell: ({ row }) => {
-        const customer = row.original
+        const customer = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0"
+              >
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal />
               </Button>
@@ -204,16 +181,31 @@ const CustomerListPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/customer-dashboard/1")} className="flex items-center gap-1"><Eye /> View</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/customer/${customer.CLIENT_ID}`)} className="flex items-center gap-1"><Pencil /> Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 flex items-center gap-1" onClick={() => handleDeleteCustomer(customer)}> <Trash2 /> Delete</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate("/customer-dashboard/1")}
+                className="flex items-center gap-1"
+              >
+                <Eye /> View
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/customer/${customer.CLIENT_ID}`)}
+                className="flex items-center gap-1"
+              >
+                <Pencil /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-1 text-red-600"
+                onClick={() => handleDeleteCustomer(customer)}
+              >
+                {" "}
+                <Trash2 /> Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-
-  ]
+  ];
 
   const fuzzyFilter = (row, columnId, filterValue) => {
     return row.getValue(columnId)?.toLowerCase().includes(filterValue.toLowerCase());
@@ -237,24 +229,26 @@ const CustomerListPage = () => {
       columnVisibility,
       rowSelection,
     },
-  })
+  });
 
   return (
     <div className="flex flex-col gap-y-4">
       <h1 className="title">All Customers</h1>
       <div className="w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
+        <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">
           <Input
             placeholder="Global Search..."
-            value={(table.getState().globalFilter) ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)
-            }
+            value={table.getState().globalFilter ?? ""}
+            onChange={(event) => table.setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
+                <Button
+                  variant="outline"
+                  className="ml-auto"
+                >
                   <Settings2 /> View
                 </Button>
               </DropdownMenuTrigger>
@@ -268,17 +262,18 @@ const CustomerListPage = () => {
                         key={column.id}
                         className="capitalize"
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
                         {column.id}
                       </DropdownMenuCheckboxItem>
-                    )
+                    );
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => navigate("/new-customer")}>Create<Plus /></Button>
+            <Button onClick={() => navigate("/new-customer")}>
+              Create
+              <Plus />
+            </Button>
           </div>
         </div>
         <div className="rounded-md border">
@@ -289,14 +284,9 @@ const CustomerListPage = () => {
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
-                    )
+                    );
                   })}
                 </TableRow>
               ))}
@@ -304,29 +294,39 @@ const CustomerListPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     <PacmanLoader color="#6366f1" />
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-red-500">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-red-500"
+                  >
                     {error}
                   </TableCell>
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     No results.
                   </TableCell>
                 </TableRow>
@@ -336,8 +336,7 @@ const CustomerListPage = () => {
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
           <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="space-x-2">
             <Button
@@ -360,7 +359,7 @@ const CustomerListPage = () => {
         </div>
       </div>
     </div>
-  )
+  );
 };
 
 export default CustomerListPage;

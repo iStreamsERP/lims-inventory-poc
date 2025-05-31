@@ -1,5 +1,3 @@
-import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,12 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { deleteDataModelService, getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService";
-import axios from "axios";
+import { callSoapService } from "@/services/callSoapService";
+import { convertServiceDate } from "@/utils/dateUtils";
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PacmanLoader } from "react-spinners";
-import { convertServiceDate } from "@/utils/dateUtils";
 
 const OrderList = () => {
   const { userData } = useAuth();
@@ -50,7 +49,7 @@ const OrderList = () => {
         SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE ${isQuotation ? "QUOTATION_NO IS NOT NULL AND QUOTATION_NO != ''" : "ORDER_NO IS NOT NULL AND ORDER_NO != ''"} ORDER BY SALES_ORDER_SERIAL_NO DESC`,
       };
 
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
       setTableList(response || []);
     } catch (error) {
@@ -70,15 +69,15 @@ const OrderList = () => {
       if (!isConfirmed) return;
 
       try {
-        const deleteProductPayload = {
-          UserName: userData.currentUserLogin,
+        const payload = {
+          UserName: userData.userEmail,
           DataModelName: "SALES_ORDER_MASTER",
           WhereCondition: `SALES_ORDER_SERIAL_NO = ${item.SALES_ORDER_SERIAL_NO}`,
         };
 
-        const deleteProductResponse = await deleteDataModelService(deleteProductPayload, userData.currentUserLogin, userData.clientURL);
+        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
-        toast({ title: deleteProductResponse });
+        toast({ title: response });
       } catch (error) {
         console.error("Error deleting order:", error);
 
@@ -194,7 +193,13 @@ const OrderList = () => {
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => navigate(`/${isQuotation ? "quotation" : "order"}/${item.SALES_ORDER_SERIAL_NO}`)}
+                  onClick={() => navigate(`/${isQuotation ? "view-quotation" : "view-order"}/${item.SALES_ORDER_SERIAL_NO}`)}
+                  className="flex items-center gap-1"
+                >
+                  <Eye /> View
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate(`/${isQuotation ? "edit-quotation" : "edit-order"}/${item.SALES_ORDER_SERIAL_NO}`)}
                   className="flex items-center gap-1"
                 >
                   <Pencil /> Edit
@@ -356,7 +361,7 @@ const OrderList = () => {
           </Table>
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="text-muted-foreground flex-1 text-sm">
+          <div className="flex-1 text-sm text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
           <div className="space-x-2">

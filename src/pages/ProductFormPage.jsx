@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { capitalizeFirstLetter, toTitleCase } from "@/utils/stringUtils";
+import { toTitleCase } from "@/utils/stringUtils";
 import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -146,7 +146,9 @@ export default function ProductFormPage() {
         SQLQuery:
           "SELECT DISTINCT GROUP_LEVEL1 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL1",
       };
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
       setCategoryData(response);
     } catch (error) {
       toast({
@@ -163,7 +165,8 @@ export default function ProductFormPage() {
         WhereCondition: `ITEM_CODE = '${id}'`,
         Orderby: "",
       };
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
       const client = response?.[0] || {};
 
@@ -183,7 +186,7 @@ export default function ProductFormPage() {
   const fetchProductImage = async () => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=PRODUCT_IMAGE_${id}`,
+        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
         {
           responseType: "blob",
         },
@@ -218,7 +221,7 @@ export default function ProductFormPage() {
         SQLQuery: `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
       };
 
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
       setSubProductCount(response[0]?.count || 0);
     } catch (err) {
@@ -239,7 +242,8 @@ export default function ProductFormPage() {
         WhereCondition: "",
         Orderby: "",
       };
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
       setUomList((prev) => ({
         ...prev,
@@ -282,11 +286,11 @@ export default function ProductFormPage() {
       if (id) {
         const payload = new FormData();
         payload.append("file", file);
-        payload.append("email", userData.currentUserLogin);
+        payload.append("email", userData.userEmail);
         payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
 
         const response = await axios.put(
-          `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.currentUserLogin}&fileName=PRODUCT_IMAGE_${newItemCode}`,
+          `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=PRODUCT_IMAGE_${newItemCode}`,
           payload,
           {
             headers: {
@@ -308,7 +312,7 @@ export default function ProductFormPage() {
       } else if (newItemCode) {
         const payload = new FormData();
         payload.append("file", file);
-        payload.append("email", userData.currentUserLogin);
+        payload.append("email", userData.userEmail);
         payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
 
         const response = await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, {
@@ -363,11 +367,12 @@ export default function ProductFormPage() {
       };
 
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DModelData: convertDataModelToStringData("INVT_MATERIAL_MASTER", normalizedData),
       };
 
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
 

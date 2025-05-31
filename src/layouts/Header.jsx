@@ -1,9 +1,6 @@
 import { useTheme } from "@/components/theme-provider";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,23 +9,14 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/contexts/CartContext";
-import {
-  CloudMoon,
-  CloudSun,
-  LogOut,
-  Maximize,
-  Minimize,
-  PanelLeftClose,
-  Settings2,
-  ShoppingCart,
-} from "lucide-react";
+import { CloudMoon, CloudSun, LogOut, Maximize, Minimize, PanelLeftClose, Settings2, ShoppingCart } from "lucide-react";
 import PropTypes from "prop-types";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useCart } from "@/contexts/CartContext";
 
 export const Header = ({ collapsed, setCollapsed }) => {
   const { userData, logout } = useAuth();
@@ -38,6 +26,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -56,123 +45,118 @@ export const Header = ({ collapsed, setCollapsed }) => {
   };
 
   return (
-    <header className="relative z-10 flex p-3 items-center justify-between bg-white shadow-md transition-colors dark:bg-slate-900">
-      <div className="flex items-center gap-x-2">
+    <header className="relative z-10 flex items-center justify-between bg-slate-100 p-3 shadow-md transition-colors dark:bg-slate-950">
+      {/* Left Side: Logo & Collapse Button */}
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           onClick={() => setCollapsed(!collapsed)}
         >
-          <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
+          <PanelLeftClose className={`transition-transform ${collapsed ? "rotate-180" : ""}`} />
         </Button>
-        <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer hover:text-gray-300">
-          iStreams ERP Solutions - CRM
-        </Link>
+        <div className="hidden items-center gap-4 md:flex">
+          <Link
+            to="/"
+            className="whitespace-nowrap text-sm font-semibold transition-colors hover:text-primary"
+          >
+            iStreams ERP Solutions - DMS
+          </Link>
+          <Badge>{userData.isAdmin ? "Admin Mode" : "User Mode"}</Badge>
+        </div>
       </div>
 
-      <nav className="flex items-center justify-end w-full">
-        <div className="flex items-center gap-2">
-          <div className="border border-gray-700 px-2 py-2 rounded-lg text-sm font-semibold hidden lg:block">
-            {userData.organization}
-          </div>
-
-          <Button
-            variant="ghost"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? (
-              <CloudSun />
-            ) : (
-              <CloudMoon />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="hidden md:block"
-            onClick={toggleFullScreen}
-          >
-            {isFullscreen ? (
-              <Minimize />
-            ) : (
-              <Maximize />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/cart-page")}
-            className="relative"
-          >
-            <ShoppingCart className="h-6 w-6" />
-
-            {/* Badge */}
-            {cart.length > 0 && (
-              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-800 rounded-full">
-                {cart.length}
-              </span>
-            )}
-          </Button>
-
-          <DropdownMenu >
-            <DropdownMenuTrigger className="flex items-start gap-2">
-              <Avatar>
-                <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
-                <AvatarFallback>{userData.currentUserName}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col items-start">
-                <span className="text-lg font-semibold leading-6">
-                  {userData.currentUserName}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {userData.currentUserLogin}
-                </span>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[250px]">
-              <DropdownMenuLabel className="flex flex-col justify-between items-start mb-2">
-                <p className="text-md font-medium">
-                  {userData.currentUserName}
-                </p>
-                <p className="text-xs font-normal text-gray-400">
-                  {userData.currentUserLogin}
-                </p>
-              </DropdownMenuLabel>
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="text-gray-400 cursor-pointer">
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex justify-between items-center text-gray-400 cursor-pointer" onClick={() => navigate("/account-settings")}>
-                  Account Settings  <Settings2 />
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-gray-400 cursor-text">
-                  Theme
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600 flex justify-between items-center cursor-pointer">
-                  Log out <LogOut />
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <span className="flex justify-between items-center cursor-pointer">
-                  <Button className="w-full">
-                    Upgrade to Pro
-                  </Button>
-                </span>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* Right Side: Actions */}
+      <nav className="flex items-center gap-2">
+        <div className="hidden rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium dark:border-gray-700 lg:block">
+          {userData.organizationName}
         </div>
+
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <CloudSun /> : <CloudMoon />}
+        </Button>
+
+        {/* Fullscreen Toggle */}
+        <Button
+          variant="ghost"
+          className="hidden md:inline-flex"
+          onClick={toggleFullScreen}
+        >
+          {isFullscreen ? <Minimize /> : <Maximize />}
+        </Button>
+
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/cart-page")}
+          className="relative"
+        >
+          <ShoppingCart className="h-6 w-6" />
+
+          {/* Badge */}
+          {cart.length > 0 && (
+            <span className="absolute right-0 top-0 inline-flex items-center justify-center rounded-full bg-red-800 px-2 py-1 text-xs font-bold leading-none text-white">
+              {cart.length}
+            </span>
+          )}
+        </Button>
+
+        {/* User Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none">
+            <Avatar>
+              <AvatarImage
+                src={userData.userAvatar}
+                alt={userData.userName}
+              />
+              <AvatarFallback>{userData.userName.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="hidden flex-col items-start sm:flex">
+              <span className="text-sm font-semibold">{userData.userName}</span>
+              <span className="text-xs text-muted-foreground">{userData.userEmail}</span>
+            </div>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent className="mt-2 w-64">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{userData.userName}</p>
+                <p className="text-xs text-muted-foreground">{userData.userEmail}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/account-settings")}>
+                <div className="flex w-full items-center justify-between">
+                  Account Settings <Settings2 size={16} />
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>Theme</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-red-600"
+              >
+                <div className="flex w-full items-center justify-between">
+                  Log out <LogOut size={16} />
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="p-0">
+                <Button className="w-full">Upgrade to Pro</Button>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
     </header>
   );
 };
 
 Header.propTypes = {
-  collapsed: PropTypes.bool,
-  setCollapsed: PropTypes.func,
+  collapsed: PropTypes.bool.isRequired,
+  setCollapsed: PropTypes.func.isRequired,
 };
-
-
-
-
-
-
-

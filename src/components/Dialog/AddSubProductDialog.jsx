@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { getDataModelFromQueryService, saveDataService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { cartesianProduct } from "@/utils/cartesian";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { toTitleCase } from "@/utils/stringUtils";
@@ -190,7 +190,7 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
 
     const payload = new FormData();
     payload.append("file", file);
-    payload.append("email", userData.currentUserLogin);
+    payload.append("email", userData.userEmail);
     const filename = `SUB_PRODUCT_IMAGE_${subProduct?.ITEM_CODE}_${serialNo}`;
     payload.append("fileName", filename);
 
@@ -202,7 +202,7 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       const response = isNew
         ? await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
         : await axios.put(
-            `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.currentUserLogin}&fileName=${filename}`,
+            `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=${filename}`,
             payload,
             config,
           );
@@ -232,7 +232,8 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       const payload = {
         SQLQuery: `SELECT ITEM_NAME FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${subProduct?.ITEM_CODE}' AND ITEM_NAME = '${itemName}'`,
       };
-      const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
       return response?.[0]?.ITEM_NAME || null;
     } catch (error) {
@@ -289,9 +290,14 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       }
 
       // save (create or update) record
-      const converted = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
-      const payload = { UserName: userData.currentUserLogin, DModelData: converted };
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const convertedDataModel = convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", updatedFormData);
+
+      const payload = {
+        UserName: userData.userEmail,
+        DModelData: convertedDataModel,
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
       // extract serialNo & upload image
       const serialNo = response.match(/\/(\d+)'/)?.[1];
@@ -378,11 +384,11 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       // 5b. save and maybe upload image
       try {
         const payload = {
-          UserName: userData.currentUserLogin,
+          UserName: userData.userEmail,
           DModelData: convertDataModelToStringData("INVT_SUBMATERIAL_MASTER", data),
         };
 
-        const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
         const serialNo = response.match(/\/(\d+)'/)?.[1];
         const shouldUpload = serialNo && (useSameImage || i === 0);

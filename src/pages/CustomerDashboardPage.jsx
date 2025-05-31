@@ -130,7 +130,7 @@ const CustomerDashboardPage = () => {
                             <CardContent className="space-y-4 p-3 font-normal">
                                 <div className=" flex items-center justify-between text-sm">
                                     <p htmlFor="name" className=" text-gray-400">Email ID</p>
-                                    <p>{userData.currentUserLogin}</p>
+                                    <p>{userData.userEmail}</p>
                                 </div>
 
                                 <div className=" flex items-center justify-between text-sm">

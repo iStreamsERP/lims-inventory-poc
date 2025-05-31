@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { deleteDataModelService, getDataModelFromQueryService, getDataModelService, saveDataService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { convertServiceDate } from "@/utils/dateUtils";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
@@ -86,8 +86,9 @@ const OrderFormPage = () => {
   const [discountInputs, setDiscountInputs] = useState({ percentage: 0, value: 0 });
 
   // Determine document type
-  const isQuotation = location.pathname.includes("quotation");
+  const isQuotation = location.pathname.includes("edit-quotation");
   const isEditMode = Boolean(id);
+
   const docTypeLabel = isQuotation ? "Quotation" : "Order";
 
   // Master Form state
@@ -118,7 +119,7 @@ const OrderFormPage = () => {
     NET_VALUE: 0,
     VALUE_IN_LC: 0,
     DELETED_STATUS: 0,
-    USER_NAME: userData.currentUserLogin,
+    USER_NAME: userData.userEmail,
     ENT_DATE: "",
     TRANSPORT_CHARGE: "",
   });
@@ -171,7 +172,8 @@ const OrderFormPage = () => {
           WhereCondition: baseCondition + itemGroupCondition,
           Orderby: "",
         };
-        const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+        const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
         setItemData(response || []);
       } catch (err) {
@@ -192,7 +194,7 @@ const OrderFormPage = () => {
         Orderby: "",
       };
 
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
       const dataWithIds = (response || []).map((item) => ({
         ...item,
@@ -227,7 +229,7 @@ const OrderFormPage = () => {
           Orderby: "",
         };
 
-        const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+        const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
         if (response?.[0]) {
           setMasterFormData(response[0]);
@@ -252,7 +254,9 @@ const OrderFormPage = () => {
     const fetchClientData = async () => {
       try {
         const payload = { SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO FROM CLIENT_MASTER` };
-        const response = await getDataModelFromQueryService(payload, userData.currentUserLogin, userData.clientURL);
+
+        const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
         setClientData(response || []);
       } catch (error) {
         toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
@@ -448,7 +452,7 @@ const OrderFormPage = () => {
         return (
           <div className="flex w-full flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">{row.original.ITEM_CODE}</span>
+              <span className="text-xs text-muted-foreground">{row.original.ITEM_CODE}</span>
             </div>
             <p className="w-full whitespace-nowrap text-sm">{row.original.ITEM_NAME || row.original.DESCRIPTION}</p>
           </div>
@@ -555,11 +559,12 @@ const OrderFormPage = () => {
     if (isEditMode) {
       try {
         const payload = {
-          UserName: userData.currentUserLogin,
+          UserName: userData.userEmail,
           DataModelName: "SALES_ORDER_DETAILS",
           WhereCondition: `SERIAL_NO = '${product.SERIAL_NO}'`,
         };
-        const response = await deleteDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
         toast({ title: response });
       } catch (err) {
@@ -588,11 +593,11 @@ const OrderFormPage = () => {
       };
 
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel),
       };
 
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
       const m = response.match(/Serial No\s*'(\d+)'/);
       const newSerialNo = m ? parseInt(m[1], 10) : null;
@@ -641,16 +646,18 @@ const OrderFormPage = () => {
           VALUE_IN_LC: lineValue,
           TRANSPORT_CHARGE: 0,
           DELETED_STATUS: "F",
-          USER_NAME: userData.currentUserLogin,
+          USER_NAME: userData.userEmail,
           ENT_DATE: "",
         };
 
         const detailPayload = {
-          UserName: userData.currentUserLogin,
+          UserName: userData.userEmail,
           DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
         };
 
-        await saveDataService(detailPayload, userData.currentUserLogin, userData.clientURL);
+
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+
       }
 
       toast({
@@ -890,7 +897,7 @@ const OrderFormPage = () => {
             </div>
 
             <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="text-muted-foreground flex-1 text-sm">
+              <div className="flex-1 text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
               </div>
               <div className="space-x-2">

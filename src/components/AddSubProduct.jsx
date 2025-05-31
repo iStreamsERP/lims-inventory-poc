@@ -3,12 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { deleteDataModelService, getDataModelFromQueryService, getDataModelService } from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import AddSubProductDialog from "./dialog/AddSubProductDialog";
 import { BarLoader } from "react-spinners";
+import AddSubProductDialog from "./dialog/AddSubProductDialog";
 
 const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const { userData } = useAuth();
@@ -21,11 +21,11 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const [mainProductConfig, setMainProductConfig] = useState({});
   const [selectedSubProduct, setSelectedSubProduct] = useState({
     ITEM_CODE: formDataProps?.ITEM_CODE,
-    ITEM_NAME: formDataProps?.ITEM_NAME
+    ITEM_NAME: formDataProps?.ITEM_NAME,
   });
 
   useEffect(() => {
-    setSelectedSubProduct(prev => ({
+    setSelectedSubProduct((prev) => ({
       ...prev,
       ITEM_CODE: formDataProps?.ITEM_CODE,
       ITEM_NAME: formDataProps?.ITEM_NAME,
@@ -33,7 +33,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
     fetchSubProductData();
     fetchMainProductData();
-  }, [onSubmitTrigger, formDataProps.ITEM_CODE])
+  }, [onSubmitTrigger, formDataProps.ITEM_CODE]);
 
   const fetchSubProductData = async () => {
     setIsLoading(true);
@@ -44,7 +44,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
         Orderby: "",
       };
 
-      const response = await getDataModelService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
       const updated = await Promise.all(
         response.map(async (product) => {
@@ -54,7 +54,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
             rawImage: file,
             previewUrl,
           };
-        })
+        }),
       );
 
       setSubProductList(updated);
@@ -71,8 +71,8 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const fetchSubProductImage = async (itemcode, subMaterialNo) => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.currentUserLogin)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
-        { responseType: "blob" }
+        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
+        { responseType: "blob" },
       );
 
       const blob = response.data;
@@ -94,11 +94,8 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
       const payload = {
         SQLQuery: `SELECT ITEM_NAME AS itemName, SUB_MATERIAL_BASED_ON AS subMaterialBasedOn, SUB_MATERIALS_MODE AS isSubMaterialEnabled FROM INVT_MATERIAL_MASTER WHERE ITEM_CODE = '${formDataProps?.ITEM_CODE}'`,
       };
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
       setMainProductConfig(response?.[0]);
     } catch (error) {
@@ -110,23 +107,25 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   };
 
   const handleDelete = async (product) => {
-    const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.")
+    const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
 
     if (!result) {
-      return
+      return;
     }
 
     try {
-      const deleteDataModelServicePayload = {
-        UserName: userData.currentUserLogin,
+      const payload = {
+        UserName: userData.userEmail,
         DataModelName: "INVT_SUBMATERIAL_MASTER",
         WhereCondition: `ITEM_CODE = '${formDataProps?.ITEM_CODE}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
-      }
-      const deleteDataModelServiceResponse = await deleteDataModelService(deleteDataModelServicePayload, userData.currentUserLogin, userData.clientURL);
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+
       toast({
         variant: "destructive",
-        title: deleteDataModelServiceResponse,
-      })
+        title: response,
+      });
       await handleImageDelete(product.ITEM_CODE, product.SUB_MATERIAL_NO);
       await fetchSubProductData();
     } catch (errors) {
@@ -135,11 +134,11 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
         title: `Error fetching client: ${errors.message}`,
       });
     }
-  }
+  };
 
   const handleImageDelete = async (itemCode, subMaterialNo) => {
     try {
-      const email = encodeURIComponent(userData.currentUserLogin);
+      const email = encodeURIComponent(userData.userEmail);
       const fileName = encodeURIComponent(`SUB_PRODUCT_IMAGE_${itemCode}_${subMaterialNo}`);
       const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
 
@@ -155,15 +154,11 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
           title: `Image delete failed with status: ${response.status}`,
         });
       }
-
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error deleting image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        description: error?.response?.data?.message || error?.message || "Unknown error occurred.",
       });
     }
   };
@@ -182,36 +177,40 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     setIsEditMode(false);
     setSelectedSubProduct({
       ITEM_CODE: formDataProps?.ITEM_CODE,
-      ITEM_NAME: formDataProps?.ITEM_NAME
+      ITEM_NAME: formDataProps?.ITEM_NAME,
     });
     fetchSubProductData();
   };
 
   return (
-    <Card >
+    <Card>
       <CardHeader>
         <CardTitle>Create Sub Products</CardTitle>
         <CardDescription>Add and configure sub-products under your main product.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[535px] overflow-y-scroll space-y-2">
+        <div className="h-[535px] space-y-2 overflow-y-scroll">
           {isLoading ? (
-            <BarLoader color="#36d399" height={2} width="100%" />
+            <BarLoader
+              color="#36d399"
+              height={2}
+              width="100%"
+            />
           ) : (
             subProductList.map((item, index) => (
               <Card
                 className="p-3"
                 key={index}
               >
-                <div className="flex justify-between items-start w-full">
-                  <div className="flex w-full justify-start gap-2  text-start">
+                <div className="flex w-full items-start justify-between">
+                  <div className="flex w-full justify-start gap-2 text-start">
                     <img
                       src={item.previewUrl}
                       alt={item.ITEM_NAME}
-                      className="h-[50px] w-[50px] mt-1 rounded object-cover"
+                      className="mt-1 h-[50px] w-[50px] rounded object-cover"
                     />
                     <div className="flex w-full flex-col items-start">
-                      <p className="text-lg font-bold mb-1">{item.ITEM_NAME}</p>
+                      <p className="mb-1 text-lg font-bold">{item.ITEM_NAME}</p>
                       <div className="flex gap-1">
                         {item.ITEM_FINISH && <p className="text-xs text-gray-400">{item.ITEM_FINISH} |</p>}
                         {item.ITEM_SIZE && <p className="me-1 text-xs text-gray-400">{item.ITEM_SIZE} |</p>}
@@ -234,8 +233,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
                 </div>
               </Card>
             ))
-          )
-          }
+          )}
         </div>
 
         <div className="flex justify-center">
@@ -248,18 +246,18 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
           >
             {mainProductConfig?.isSubMaterialEnabled === "T" ? (
               <DialogTrigger asChild>
-                <Button variant="outline"
-                  onClick={() => setIsDialogOpen(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(true)}
+                >
                   Add Sub Product <Plus />
                 </Button>
               </DialogTrigger>
             ) : (
               <Button
                 variant="outline"
-                className="w-full mt-7"
-                onClick={() =>
-                  window.alert("Please enable sub product in the main product configuration.")
-                }
+                className="mt-7 w-full"
+                onClick={() => window.alert("Please enable sub product in the main product configuration.")}
               >
                 Add Sub Product <Plus className="ml-2 h-4 w-4" />
               </Button>
@@ -277,6 +275,6 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
       </CardContent>
     </Card>
   );
-}
+};
 
-export default AddSubProduct
+export default AddSubProduct;
