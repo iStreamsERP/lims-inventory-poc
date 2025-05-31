@@ -54,10 +54,10 @@ const initialMasterFormData = {
 };
 
 const OrderFormPage = () => {
-  const location = useLocation();
   const { id } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
 
   const [itemData, setItemData] = useState([]);
   const [categoryData, setCategoryData] = useState("ALL");
@@ -82,13 +82,13 @@ const OrderFormPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [editingDiscountRowId, setEditingDiscountRowId] = useState(null);
-  const [discountInputs, setDiscountInputs] = useState({ percentage: 0, value: 0 });
+  // const [editingDiscountRowId, setEditingDiscountRowId] = useState(null);
+  // const [discountInputs, setDiscountInputs] = useState({ percentage: 0, value: 0 });
 
   // Determine document type
-  const isQuotation = location.pathname.includes("edit-quotation");
+  const isQuotation = location.pathname.includes("quotation");
   const isEditMode = Boolean(id);
-
+  const isViewMode = location.pathname.includes("view");
   const docTypeLabel = isQuotation ? "Quotation" : "Order";
 
   // Master Form state
@@ -124,7 +124,7 @@ const OrderFormPage = () => {
     TRANSPORT_CHARGE: "",
   });
 
-  // Add this useEffect to determine order category from table items
+  // Add this useEffect to determine order category from table items and calculate financial values
   useEffect(() => {
     const orderCategories = Array.from(new Set(tableData.map((item) => item.ORDER_CATEGORY)));
 
@@ -135,14 +135,6 @@ const OrderFormPage = () => {
       finalCategory = "ALL";
     }
 
-    setMasterFormData((prev) => ({
-      ...prev,
-      ORDER_CATEGORY: finalCategory,
-    }));
-  }, [tableData]);
-
-  // Add this useEffect to calculate financial values
-  useEffect(() => {
     const totalValue = tableData.reduce((sum, item) => {
       const rate = item.SALE_RATE || item.RATE || 0;
       return sum + item.QTY * rate;
@@ -152,6 +144,7 @@ const OrderFormPage = () => {
 
     setMasterFormData((prev) => ({
       ...prev,
+      ORDER_CATEGORY: finalCategory,
       TOTAL_VALUE: totalValue,
       DISCOUNT_VALUE: totalDiscount,
       NET_VALUE: netValue,
@@ -159,34 +152,81 @@ const OrderFormPage = () => {
     }));
   }, [tableData]);
 
-  // Fetch data
+  // Fetch items and UOM
   useEffect(() => {
-    // Fetch items and UOM
-    const fetchData = async () => {
-      const baseCondition = `COST_CODE = 'MXXXX'`;
-      const itemGroupCondition = categoryData !== "ALL" ? ` AND ITEM_GROUP = '${categoryData}'` : "";
-
-      try {
-        const payload = {
-          DataModelName: "INVT_MATERIAL_MASTER_VIEW",
-          WhereCondition: baseCondition + itemGroupCondition,
-          Orderby: "",
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
-        setItemData(response || []);
-      } catch (err) {
-        console.error(err);
-        toast({ variant: "destructive", title: err?.message || "Error fetching items" });
-      }
-    };
-
-    fetchData();
+    fetchItemList();
   }, [categoryData, userData]);
+
+  // Reset state when id changes
+  useEffect(() => {
+    if (!isEditMode) {
+      setMasterFormData(initialMasterFormData);
+      setTableData([]);
+      setSelectedClient(null);
+      setCustomerValue("");
+    }
+  }, [id, isEditMode]);
+
+  // Fetch existing data only in edit mode
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    fetchExistingMasterData();
+    fetchExistingDetailData();
+  }, [id, isEditMode, userData]);
+
+  // Fetch clients
+  useEffect(() => {
+    fetchClientData();
+  }, [userData]);
+
+  const fetchItemList = async () => {
+    const baseCondition = `COST_CODE = 'MXXXX'`;
+    const itemGroupCondition = categoryData !== "ALL" ? ` AND ITEM_GROUP = '${categoryData}'` : "";
+
+    try {
+      const payload = {
+        DataModelName: "INVT_MATERIAL_MASTER_VIEW",
+        WhereCondition: baseCondition + itemGroupCondition,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
+      setItemData(response || []);
+    } catch (err) {
+      console.error(err);
+      toast({ variant: "destructive", title: err?.message || "Error fetching items" });
+    }
+  };
+
+  const fetchExistingMasterData = async () => {
+    try {
+      const payload = {
+        DataModelName: "SALES_ORDER_MASTER",
+        WhereCondition: `SALES_ORDER_SERIAL_NO = '${id}'`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
+      if (response?.[0]) {
+        setMasterFormData(response[0]);
+        setSelectedClient({
+          CLIENT_ID: response[0].CLIENT_ID,
+          CLIENT_NAME: response[0].CLIENT_NAME,
+        });
+        setCustomerValue(response[0].CLIENT_NAME);
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ variant: "destructive", title: err?.message || "Error loading order data" });
+    }
+  };
 
   const fetchExistingDetailData = async () => {
     if (!isEditMode) return;
+
     try {
       const payload = {
         DataModelName: "SALES_ORDER_DETAILS",
@@ -208,62 +248,17 @@ const OrderFormPage = () => {
     }
   };
 
-  // Reset state when id changes
-  useEffect(() => {
-    if (!isEditMode) {
-      setMasterFormData(initialMasterFormData);
-      setTableData([]);
-      setSelectedClient(null);
-      setCustomerValue("");
+  const fetchClientData = async () => {
+    try {
+      const payload = { SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO FROM CLIENT_MASTER` };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
+      setClientData(response || []);
+    } catch (error) {
+      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
     }
-  }, [id, isEditMode]);
-
-  // Fetch existing data only in edit mode
-  useEffect(() => {
-    if (!isEditMode) return;
-    const fetchExistingMasterData = async () => {
-      try {
-        const payload = {
-          DataModelName: "SALES_ORDER_MASTER",
-          WhereCondition: `SALES_ORDER_SERIAL_NO = '${id}'`,
-          Orderby: "",
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
-        if (response?.[0]) {
-          setMasterFormData(response[0]);
-          setSelectedClient({
-            CLIENT_ID: response[0].CLIENT_ID,
-            CLIENT_NAME: response[0].CLIENT_NAME,
-          });
-          setCustomerValue(response[0].CLIENT_NAME);
-        }
-      } catch (err) {
-        console.error(err);
-        toast({ variant: "destructive", title: err?.message || "Error loading order data" });
-      }
-    };
-
-    fetchExistingMasterData();
-    fetchExistingDetailData();
-  }, [id, isEditMode, userData]);
-
-  // Fetch clients
-  useEffect(() => {
-    const fetchClientData = async () => {
-      try {
-        const payload = { SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO FROM CLIENT_MASTER` };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
-        setClientData(response || []);
-      } catch (error) {
-        toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
-      }
-    };
-    fetchClientData();
-  }, [userData]);
+  };
 
   const handleSelectItem = (item) => {
     const tempId = Math.random().toString(36).substr(2, 9);
@@ -397,6 +392,7 @@ const OrderFormPage = () => {
           <Button
             variant="ghost"
             className="w-full text-right"
+            disabled={isViewMode}
           >
             <div>{row.original.DISCOUNT_VALUE.toFixed(2)}</div>
             <div className="text-xs text-red-500">({row.original.DISCOUNT_PERCENTAGE}%)</div>
@@ -442,7 +438,6 @@ const OrderFormPage = () => {
     );
   };
 
-  // Handle input change for editable fields
   const columns = [
     {
       accessorKey: "ITEM_NAME",
@@ -450,8 +445,8 @@ const OrderFormPage = () => {
       size: 180,
       cell: ({ row }) => {
         return (
-          <div className="flex w-full flex-col gap-1">
-            <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-0 leading-none">
+            <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">{row.original.ITEM_CODE}</span>
             </div>
             <p className="w-full whitespace-nowrap text-sm">{row.original.ITEM_NAME || row.original.DESCRIPTION}</p>
@@ -503,18 +498,20 @@ const OrderFormPage = () => {
       header: () => <div></div>,
       id: "actions",
       size: 65,
-      cell: ({ row }) => {
-        const product = row.original;
-        return (
-          <Button
-            onClick={() => handleDelete(product)}
-            className="flex items-center gap-1 text-red-600"
-            variant="ghost"
-          >
-            <Trash2 />
-          </Button>
-        );
-      },
+      cell: isViewMode
+        ? () => null
+        : ({ row }) => {
+            const product = row.original;
+            return (
+              <Button
+                onClick={() => handleDelete(product)}
+                className="flex items-center gap-1 text-red-600"
+                variant="ghost"
+              >
+                <Trash2 />
+              </Button>
+            );
+          },
     },
   ];
 
@@ -564,7 +561,7 @@ const OrderFormPage = () => {
           WhereCondition: `SERIAL_NO = '${product.SERIAL_NO}'`,
         };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
         toast({ title: response });
       } catch (err) {
@@ -577,7 +574,7 @@ const OrderFormPage = () => {
     }
   };
 
-  const handleSaveOrder = async () => {
+  const handleSubmit = async () => {
     if (!selectedClient) {
       return toast({ variant: "destructive", title: "Please select a customer." });
     }
@@ -618,7 +615,7 @@ const OrderFormPage = () => {
         const lineValue = item.QTY * item.SALE_RATE;
         console.log("item", item);
 
-        const detailModel = {
+        const detailModal = {
           ...detailsFormData,
           COMPANY_CODE: masterFormData.COMPANY_CODE,
           BRANCH_CODE: masterFormData.BRANCH_CODE,
@@ -650,14 +647,12 @@ const OrderFormPage = () => {
           ENT_DATE: "",
         };
 
-        const detailPayload = {
+        const payload = {
           UserName: userData.userEmail,
-          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
+          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModal),
         };
 
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
       }
 
       toast({
@@ -678,12 +673,12 @@ const OrderFormPage = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Main form */}
-        <Card className="col-span-6 md:col-span-6">
+        <Card className="col-span-12 lg:col-span-9">
           <CardHeader>
             <CardTitle>
-              <div className="flex justify-between text-lg">
+              <div className="flex justify-between text-sm">
                 <p>
                   {docTypeLabel} No :{" "}
                   <span className="text-purple-500">
@@ -707,66 +702,68 @@ const OrderFormPage = () => {
           </CardHeader>
           <CardContent>
             {/* Category & product select */}
-            <div className="mb-4 flex items-center gap-3">
-              <Select
-                value={categoryData}
-                onValueChange={setCategoryData}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="ALL">All</SelectItem>
-                    <SelectItem value="PRODUCT">Product</SelectItem>
-                    <SelectItem value="SERVICE">Service</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+            {!isViewMode && (
+              <div className="mb-4 flex items-center gap-3">
+                <Select
+                  value={categoryData}
+                  onValueChange={setCategoryData}
+                >
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="ALL">All</SelectItem>
+                      <SelectItem value="PRODUCT">Product</SelectItem>
+                      <SelectItem value="SERVICE">Service</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
 
-              <Popover
-                open={openProduct}
-                onOpenChange={setOpenProduct}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="flex-1 justify-between"
-                  >
-                    {itemValue || "Select item..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
+                <Popover
+                  open={openProduct}
+                  onOpenChange={setOpenProduct}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex-1 justify-between"
+                    >
+                      {itemValue || "Select item..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
 
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search by name or code..." />
-                    <CommandList>
-                      <CommandEmpty>No item found.</CommandEmpty>
-                      <CommandGroup>
-                        {itemData.map((item, index) => {
-                          const isSelected = itemValue === item.ITEM_NAME;
-                          const combinedValue = `${item.ITEM_CODE} ${item.ITEM_NAME}`;
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search by name or code..." />
+                      <CommandList>
+                        <CommandEmpty>No data found.</CommandEmpty>
+                        <CommandGroup>
+                          {itemData.map((item, index) => {
+                            const isSelected = itemValue === item.ITEM_NAME;
+                            const combinedValue = `${item.ITEM_CODE} ${item.ITEM_NAME}`;
 
-                          return (
-                            <CommandItem
-                              key={index}
-                              value={combinedValue}
-                              onSelect={() => handleSelectItem(item)}
-                            >
-                              <span>
-                                {item.ITEM_CODE} - <span>{item.ITEM_NAME}</span>
-                              </span>
-                              <Check className={cn("ml-auto h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+                            return (
+                              <CommandItem
+                                key={index}
+                                value={combinedValue}
+                                onSelect={() => handleSelectItem(item)}
+                              >
+                                <span>
+                                  {item.ITEM_CODE} - <span>{item.ITEM_NAME}</span>
+                                </span>
+                                <Check className={cn("ml-auto h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
 
             {/* Table */}
             <div className="mb-2 flex items-center gap-x-2">
@@ -835,7 +832,7 @@ const OrderFormPage = () => {
                       >
                         {row.getVisibleCells().map((cell) => {
                           const cid = cell.column.id;
-                          const isEditable = ["QTY", "SALE_RATE", "ITEM_RATE"].includes(cid);
+                          const isEditable = !isViewMode && ["QTY", "SALE_RATE"].includes(cid);
                           const isEditing = editingCell.rowIndex === rowIndex && editingCell.columnId === cid;
                           const cellValue = cell.getValue();
 
@@ -923,7 +920,7 @@ const OrderFormPage = () => {
         </Card>
 
         {/* Sidebar */}
-        <div className="col-span-6 space-y-4 md:col-span-2">
+        <div className="col-span-12 space-y-4 lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle>Select Customer</CardTitle>
@@ -937,6 +934,7 @@ const OrderFormPage = () => {
                   <Button
                     variant="outline"
                     className="w-full justify-between"
+                    disabled={isViewMode}
                   >
                     {customerValue || "Select..."} <ChevronsUpDown />
                   </Button>
@@ -990,18 +988,21 @@ const OrderFormPage = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleSaveOrder}
-              >
-                {loading ? "Saving…" : "Save my order"}
-              </Button>
-              <Button className="w-full">
-                <Check /> Proceed To Pay
-              </Button>
-            </CardFooter>
+
+            {!isViewMode && (
+              <CardFooter className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSubmit}
+                >
+                  {loading ? "Saving…" : "Save my order"}
+                </Button>
+                <Button className="w-full">
+                  <Check /> Proceed To Pay
+                </Button>
+              </CardFooter>
+            )}
           </Card>
         </div>
       </div>

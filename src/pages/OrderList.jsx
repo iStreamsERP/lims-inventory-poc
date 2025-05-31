@@ -64,9 +64,11 @@ const OrderList = () => {
   }, [isQuotation, userData, toast]);
 
   const handleDelete = useCallback(
-    async (item) => {
-      const isConfirmed = window.confirm("Are you sure you want to delete? This action cannot be undone.");
-      if (!isConfirmed) return;
+    async (item, isMultipleItem) => {
+      if (!isMultipleItem) {
+        const isConfirmed = window.confirm("Are you sure you want to delete? This action cannot be undone.");
+        if (!isConfirmed) return;
+      }
 
       try {
         const payload = {
@@ -77,7 +79,18 @@ const OrderList = () => {
 
         const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
-        toast({ title: response });
+        if (typeof response === "string" && response.trim().toLowerCase().startsWith("error")) {
+          toast({
+            variant: "destructive",
+            title: `Delete failed for Order No: ${item.SALES_ORDER_SERIAL_NO}`,
+            description: response,
+          });
+        } else {
+          toast({
+            title: `Deleted Order No: ${item.SALES_ORDER_SERIAL_NO}`,
+            description: response,
+          });
+        }
       } catch (error) {
         console.error("Error deleting order:", error);
 
@@ -106,7 +119,9 @@ const OrderList = () => {
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            onCheckedChange={() => {
+              row.toggleSelected();
+            }}
             aria-label="Select row"
           />
         ),
@@ -127,32 +142,32 @@ const OrderList = () => {
             </Button>
           );
         },
-        cell: ({ row }) => <div className="capitalize">{row.getValue("SALES_ORDER_SERIAL_NO") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{row.getValue("SALES_ORDER_SERIAL_NO")}</div>,
       },
       {
         accessorKey: isQuotation ? "QUOTATION_NO" : "ORDER_NO",
         header: isQuotation ? "Quotation No" : "Order No",
-        cell: ({ row }) => <div className="capitalize">{isQuotation ? row.getValue("QUOTATION_NO") || "-" : row.getValue("ORDER_NO") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{isQuotation ? row.getValue("QUOTATION_NO") : row.getValue("ORDER_NO")}</div>,
       },
       {
         accessorKey: "CLIENT_NAME",
         header: "Customer Name",
-        cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_NAME")}</div>,
       },
       {
         accessorKey: "ORDER_CATEGORY",
         header: "Category",
-        cell: ({ row }) => <div className="capitalize">{row.getValue("ORDER_CATEGORY") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{row.getValue("ORDER_CATEGORY")}</div>,
       },
       {
         accessorKey: "NET_VALUE",
         header: "Net Value",
-        cell: ({ row }) => <div className="capitalize">{row.getValue("NET_VALUE") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{row.getValue("NET_VALUE")}</div>,
       },
       {
         accessorKey: "USER_NAME",
         header: "User Name",
-        cell: ({ row }) => <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>,
+        cell: ({ row }) => <div className="capitalize">{row.getValue("USER_NAME")}</div>,
       },
       {
         accessorKey: `${isQuotation ? "QUOTATION_DATE" : "ORDER_DATE"}`,
@@ -231,6 +246,7 @@ const OrderList = () => {
     data: tableList,
     columns,
     onSortingChange: setSorting,
+    getRowSelection: true,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -278,7 +294,6 @@ const OrderList = () => {
                     return (
                       <DropdownMenuCheckboxItem
                         key={column.id}
-                        className="capitalize"
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
@@ -289,17 +304,21 @@ const OrderList = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {isQuotation ? (
-              <Button onClick={() => navigate("/new-quotation")}>
-                Create
-                <Plus />
-              </Button>
-            ) : (
-              <Button onClick={() => navigate("/new-order")}>
-                Create
-                <Plus />
-              </Button>
-            )}
+            <Button
+              variant="destructive"
+              disabled={Object.keys(rowSelection).length === 0}
+              onClick={() => {
+                const selectedItems = table.getSelectedRowModel().rows.map((row) => row.original);
+                selectedItems.forEach((item) => handleDelete(item, true));
+              }}
+            >
+              Delete Selected
+            </Button>
+
+            <Button onClick={() => navigate(`${isQuotation ? "/new-quotation" : "/new-order"}`)}>
+              Create
+              <Plus />
+            </Button>
           </div>
         </div>
         <div className="rounded-md border">
