@@ -19,7 +19,7 @@ const DEFAULT_AVATAR_URL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9
 
 const LoginFormPage = () => {
   const navigate = useNavigate();
-  const { login, setUserData } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,10 +29,10 @@ const LoginFormPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const defaultOptions = {
+  const lottieOptions = {
     loop: true,
     autoplay: true,
-    animationData: animationData,
+    animationData,
     rendererSettings: {
       preserveAspectRatio: "xMidYMid slice",
     },
@@ -55,81 +55,132 @@ const LoginFormPage = () => {
         return;
       }
 
-      let userName = "";
-      let clientURL = "";
+      const userData = {
+        user: {
+          name: getNameFromEmail(email),
+          employeeNo: "",
+          employeeImage: null,
+          isAdmin: false,
+        },
+        company: {
+          name: "",
+          logo: "",
+          code: "",
+        },
+        branch: {
+          code: "",
+          info: null,
+        },
+        currency: {
+          info: null,
+        },
+        clientURL: "",
+      };
 
       const doConnectionPayload = {
         LoginUserName: email,
       };
 
       localStorage.setItem("doConnectionPayload", JSON.stringify(doConnectionPayload));
+
       try {
-        // Step 1: Connect to public service.
         const publicDoConnectionResponse = await callSoapService(PUBLIC_SERVICE_URL, "doConnection", doConnectionPayload);
 
         if (publicDoConnectionResponse === "SUCCESS") {
-          // Step 2: Get client URL.
-          clientURL = await callSoapService(PUBLIC_SERVICE_URL, "GetServiceURL", doConnectionPayload);
+          userData.clientURL = await callSoapService(PUBLIC_SERVICE_URL, "GetServiceURL", doConnectionPayload);
 
-          const clientDoConnectionResponse = await callSoapService(clientURL, "doConnection", doConnectionPayload);
+          const clientDoConnectionResponse = await callSoapService(userData.clientURL, "doConnection", doConnectionPayload);
 
           if (clientDoConnectionResponse === "SUCCESS") {
-            // Step 1.1: Verify authentication.
-            userName = getNameFromEmail(email);
-
             const authenticationPayload = {
-              username: userName,
+              username: userData.user.name,
               password: password,
             };
 
-            const authenticationResponse = await callSoapService(clientURL, "verifyauthentication", authenticationPayload);
+            const authenticationResponse = await callSoapService(userData.clientURL, "verifyauthentication", authenticationPayload);
 
             if (authenticationResponse === "Authetication passed") {
-              // Step 1.2: Authentication passed, proceed to get employee details.
-              let employeeNo = "";
-              let employeeImage = null;
-
               const clientEmpDetailsPayload = {
-                userfirstname: userName,
+                userfirstname: userData.user.name,
               };
 
-              const getClientEmpDetails = await callSoapService(clientURL, "getemployeename_and_id", clientEmpDetailsPayload);
+              const clientEmpDetails = await callSoapService(userData.clientURL, "getemployeename_and_id", clientEmpDetailsPayload);
 
-              employeeNo = getClientEmpDetails[0]?.EMP_NO;
+              userData.user.employeeNo = clientEmpDetails[0]?.EMP_NO;
 
-              if (employeeNo) {
+              if (userData.user.employeeNo) {
                 const getEmployeeImagePayload = {
-                  EmpNo: employeeNo,
+                  EmpNo: userData.user.employeeNo,
                 };
 
-                const employeeImageResponse = await callSoapService(clientURL, "getpic_bytearray", getEmployeeImagePayload);
+                const employeeImageResponse = await callSoapService(userData.clientURL, "getpic_bytearray", getEmployeeImagePayload);
 
-                employeeImage = employeeImageResponse ? `data:image/jpeg;base64,${employeeImageResponse}` : DEFAULT_AVATAR_URL;
+                userData.user.employeeImage = employeeImageResponse ? `data:image/jpeg;base64,${employeeImageResponse}` : DEFAULT_AVATAR_URL;
               }
 
-              const organizationPayload = {
-                CompanyCode: 1,
-                BranchCode: 1,
-              };
+              userData.company.code = await callSoapService(userData.clientURL, "General_Get_DefaultCompanyCode", "");
 
-              const getOrganization = await callSoapService(clientURL, "General_Get_DefaultCompanyName", organizationPayload);
+              if (userData.company.code) {
+                const branchCodePayload = {
+                  CompanyCode: userData.company.code,
+                };
+
+                userData.branch.code = await callSoapService(userData.clientURL, "General_Get_DefaultBranchCode", branchCodePayload);
+
+                const companyNamePayload = {
+                  CompanyCode: userData.company.code,
+                  BranchCode: userData.branch.code,
+                };
+
+                userData.company.name = await callSoapService(userData.clientURL, "General_Get_DefaultCompanyName", companyNamePayload);
+
+                const companyLogoPayload = {
+                  CompanyCode: userData.company.code,
+                  BranchCode: userData.branch.code,
+                };
+
+                userData.company.logo = await callSoapService(userData.clientURL, "General_Get_CompanyLogo", companyLogoPayload);
+
+                const branchDetailsPayload = {
+                  SQLQuery: `SELECT * FROM BRANCH_MASTER WHERE COMPANY_CODE = ${userData.company.code} AND DEFAULT_STATUS = 'T'`,
+                };
+
+                const branchInfo = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", branchDetailsPayload);
+
+                userData.branch.info = branchInfo[0];
+
+                if (userData.branch.info?.CURRENCY_NAME) {
+                  const currencyDetailsPayload = {
+                    SQLQuery: `SELECT * FROM COUNTRY_MASTER WHERE CURRENCY_NAME = '${userData.branch.info.CURRENCY_NAME}'`,
+                  };
+
+                  const currencyInfo = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", currencyDetailsPayload);
+                  userData.currency.info = currencyInfo[0];
+                }
+              }
 
               const isAdminPayload = {
-                UserName: getClientEmpDetails[0]?.USER_NAME,
+                UserName: clientEmpDetails[0]?.USER_NAME,
               };
 
-              const isAdminResponse = await callSoapService(clientURL, "DMS_Is_Admin_User", isAdminPayload);
+              const isAdminResponse = await callSoapService(userData.clientURL, "DMS_Is_Admin_User", isAdminPayload);
 
-              let isAdmin = isAdminResponse === "Yes";
+              userData.user.isAdmin = isAdminResponse === "Yes";
 
               const payload = {
-                organizationName: getOrganization,
                 userEmail: email,
-                userName: getClientEmpDetails[0]?.USER_NAME,
-                userEmployeeNo: getClientEmpDetails[0]?.EMP_NO,
-                userAvatar: employeeImage,
-                clientURL: clientURL,
-                isAdmin,
+                userName: clientEmpDetails[0]?.USER_NAME,
+                userEmployeeNo: clientEmpDetails[0]?.EMP_NO,
+                userAvatar: userData.user.employeeImage,
+                clientURL: userData.clientURL,
+                isAdmin: userData.user.isAdmin,
+                companyName: userData.company.name,
+                companyAddress: userData.branch.info?.ADDRESS_POSTAL,
+                companyLogo: userData.company.logo,
+                companyCurrName: userData.branch.info?.CURRENCY_NAME,
+                companyCurrDecimals: userData.currency.info?.NO_OF_DECIMALS,
+                companyCurrSymbol: userData.currency.info?.CURRENCY_CODE,
+                companyCurrIsIndianStandard: userData.currency.info?.IS_INDIANCURRENCY_FORMAT,
               };
 
               login(payload, rememberMe);
@@ -151,7 +202,7 @@ const LoginFormPage = () => {
         setLoading(false);
       }
     },
-    [email, password, login, setUserData, navigate],
+    [email, password, rememberMe, navigate, login],
   );
 
   return (
@@ -172,7 +223,7 @@ const LoginFormPage = () => {
 
         <div>
           <Lottie
-            options={defaultOptions}
+            options={lottieOptions}
             height={350}
             width={400}
           />
@@ -213,8 +264,8 @@ const LoginFormPage = () => {
               <div className="flex flex-col space-y-1.5">
                 <div className="relative flex gap-2">
                   <Input
-                    name="email"
-                    id="email"
+                    name="password"
+                    id="password"
                     placeholder="*******"
                     type={showPassword ? "text" : "password"}
                     value={password}

@@ -609,11 +609,12 @@ const OrderFormPage = () => {
 
       const itemsToSend = tableData;
 
+      console.table(tableData[0]);
+      
       // 2) now send each item as a DETAIL record
       for (let i = 0; i < itemsToSend.length; i++) {
         const item = itemsToSend[i];
         const lineValue = item.QTY * item.SALE_RATE;
-        console.log("item", item);
 
         const detailModal = {
           ...detailsFormData,
@@ -814,6 +815,7 @@ const OrderFormPage = () => {
                     </TableRow>
                   ))}
                 </TableHeader>
+
                 <TableBody>
                   {error ? (
                     <TableRow>
@@ -976,7 +978,7 @@ const OrderFormPage = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal (Before Discount):</span>
-                  <span>{tableData.reduce((sum, r) => sum + r.QTY * r.SALE_RATE, 0).toFixed(2)}</span>
+                  <span>{tableData.reduce((sum, r) => sum + r.QTY * r.NET_VALUE, 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Discount:</span>

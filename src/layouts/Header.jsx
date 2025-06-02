@@ -68,7 +68,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
       {/* Right Side: Actions */}
       <nav className="flex items-center gap-2">
         <div className="hidden rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium dark:border-gray-700 lg:block">
-          {userData.organizationName}
+          {userData.companyName}
         </div>
 
         {/* Theme Toggle */}

@@ -67,10 +67,9 @@ const ServiceCategoryListPage = () => {
     maximumFractionDigits: 0,
   });
 
-
   return (
     <div className="mx-auto w-full px-4">
-      <h1 className="mt-4 text-center text-5xl font-medium text-gray-200">
+      <h1 className="mt-4 text-center text-5xl font-medium text-gray-800 dark:text-gray-200">
         Simple and Affordable <br /> Pricing Plans
       </h1>
 
