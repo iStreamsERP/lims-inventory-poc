@@ -14,15 +14,16 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [subProductList, setSubProductList] = useState([]);
   const [mainProductConfig, setMainProductConfig] = useState({});
   const [selectedSubProduct, setSelectedSubProduct] = useState({
     ITEM_CODE: formDataProps?.ITEM_CODE,
     ITEM_NAME: formDataProps?.ITEM_NAME,
   });
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     setSelectedSubProduct((prev) => ({
