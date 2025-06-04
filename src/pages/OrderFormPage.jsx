@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,619 @@ import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { convertServiceDate } from "@/utils/dateUtils";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { Check, ChevronsUpDown, Settings2, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
+
+const generatePDF = async (element, fileName) => {
+  // Hide any unwanted elements during PDF generation
+  const elementsToHide = element.querySelectorAll("[data-hide-in-pdf]");
+  elementsToHide.forEach((el) => (el.style.display = "none"));
+
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 3, // Increased scale for better quality
+      logging: false,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#FFFFFF",
+      letterRendering: true,
+      dpi: 300, // High DPI for better quality
+      height: element.scrollHeight,
+      width: element.scrollWidth,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+      removeContainer: true,
+      imageTimeout: 0,
+      onclone: (clonedDoc) => {
+        // Ensure all fonts are loaded in the cloned document
+        const clonedElement = clonedDoc.querySelector('[ref="pdfRef"]') || clonedDoc.body;
+        clonedElement.style.fontFamily = "Arial, sans-serif";
+        clonedElement.style.fontSize = "12px";
+      },
+    });
+
+    // Calculate dimensions with proper aspect ratio
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    // Create PDF with proper settings
+    const pdf = new jsPDF({
+      orientation: imgHeight > pageHeight ? "portrait" : "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+      precision: 2,
+    });
+
+    // If content is longer than one page, handle multiple pages
+    if (imgHeight > pageHeight) {
+      let position = 0;
+      const pageData = canvas.toDataURL("image/jpeg", 0.95); // Use JPEG for smaller file size
+
+      pdf.addImage(pageData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+
+      let heightLeft = imgHeight - pageHeight;
+      position = -pageHeight;
+
+      while (heightLeft > 0) {
+        pdf.addPage();
+        pdf.addImage(pageData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+        heightLeft -= pageHeight;
+        position -= pageHeight;
+      }
+    } else {
+      // Single page - center the content
+      const yOffset = (pageHeight - imgHeight) / 2;
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, Math.max(0, yOffset), imgWidth, imgHeight, undefined, "FAST");
+    }
+
+    pdf.save(fileName);
+  } catch (error) {
+    console.error("PDF generation failed:", error);
+    throw error;
+  } finally {
+    // Restore hidden elements
+    elementsToHide.forEach((el) => (el.style.display = ""));
+  }
+};
+
+const OrderPDFTemplate = ({ masterData, tableData, selectedClient, selectedRows = [] }) => {
+  const pdfRef = useRef();
+
+  // Get user data from sessionStorage
+  const userData = JSON.parse(sessionStorage.getItem("userData"));
+  const companyLogo = userData?.companyLogo || "";
+  const currentUserName = userData?.currentUserName || "";
+  const companyName = userData?.companyName || "N/A";
+  const companyAddress = userData?.companyAddress || "N/A";
+  const userEmail = userData?.userEmail || "N/A";
+
+  // Filter data to only show selected rows selected
+  const displayData = selectedRows.length > 0 ? tableData.filter((item) => selectedRows.includes(item.id)) : tableData;
+
+  // Calculate financial values
+  const netValue = displayData.reduce((sum, item) => sum + (item.NET_VALUE || 0), 0);
+  const totalValue = displayData.reduce((sum, item) => sum + item.QTY * (item.SALE_RATE || item.RATE || 0), 0);
+  const discountValue = displayData.reduce((sum, item) => sum + (item.DISCOUNT_VALUE || 0), 0);
+  const taxAmount = netValue * 0.18; // 18% tax
+  const finalTotal = netValue + taxAmount;
+
+  // convert numbers to words
+  const numberToWords = (num) => {
+    if (!num || isNaN(num)) return "Zero";
+
+    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+    const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+    const thousands = ["", "Thousand", "Million", "Billion"];
+
+    if (num === 0) return "Zero";
+
+    const convert = (n) => {
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+      if (n < 1000) return ones[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " + convert(n % 100) : "");
+
+      for (let i = 0, x = 1000; i < thousands.length; i++, x *= 1000) {
+        if (n < x * 1000) {
+          return convert(Math.floor(n / x)) + " " + thousands[i] + (n % x ? " " + convert(n % x) : "");
+        }
+      }
+    };
+
+    return convert(Math.floor(num)) + " Only";
+  };
+
+  const today = new Date();
+  const formattedToday = today.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  // format dates function
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    try {
+      const timestamp = parseInt(dateString.match(/\d+/)[0]);
+      const date = new Date(timestamp);
+      return date.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch {
+      return;
+    }
+  };
+
+  return (
+    <div
+      ref={pdfRef}
+      style={{
+        width: "210mm", // A4 width
+        minHeight: "297mm", // A4 height
+        maxWidth: "210mm",
+        padding: "10mm", // Reduced padding for better space utilization
+        margin: "0 auto",
+        fontFamily: "Arial, Helvetica, sans-serif",
+        fontSize: "12px",
+        lineHeight: "1.4",
+        backgroundColor: "white",
+        color: "black",
+        boxSizing: "border-box",
+        position: "relative",
+        printColorAdjust: "exact",
+        WebkitPrintColorAdjust: "exact",
+      }}
+    >
+      {/* Header Section */}
+      <div
+        style={{
+          display: "flex",
+          marginBottom: "8mm",
+          borderBottom: "2px solid #2563eb",
+          paddingBottom: "5mm",
+          alignItems: "flex-start",
+        }}
+      >
+        <div style={{ flex: 1, display: "flex", alignItems: "flex-start" }}>
+          <div style={{ marginRight: "10mm", flexShrink: 0 }}>
+            {companyLogo && (
+              <img
+                src={`data:image/png;base64,${userData.companyLogo}`}
+                alt="Company Logo"
+                style={{
+                  maxWidth: "25mm",
+                  maxHeight: "20mm",
+                  objectFit: "contain",
+                }}
+              />
+            )}
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <h3
+              style={{
+                fontSize: "16px",
+                fontWeight: "bold",
+                color: "#1e40af",
+                margin: "0 0 3mm 0",
+                lineHeight: "1.2",
+              }}
+            >
+              {companyName}
+            </h3>
+            <div
+              style={{
+                fontSize: "11px",
+                color: "#4b5563",
+                lineHeight: "1.5",
+                whiteSpace: "pre-line",
+              }}
+            >
+              Address: {userData.companyAddress}
+              <br />
+              Email: {userEmail}
+              <br />
+              Mobile: +91 99408 61800
+              <br />
+              GSTN: 33AADC435345DF
+            </div>
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right", minWidth: "40mm" }}>
+          <h3
+            style={{
+              fontSize: "16px",
+              fontWeight: "bold",
+              color: "#1e40af",
+              margin: "0 0 3mm 0",
+            }}
+          >
+            ESTIMATE
+          </h3>
+          <div style={{ fontSize: "11px", color: "#4b5563" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1mm" }}>
+              <span style={{ fontWeight: "bold" }}>Number:</span>
+              <span>{masterData.ORDER_NO || masterData.QUOTATION_NO || "-"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1mm" }}>
+              <span style={{ fontWeight: "bold" }}>Date:</span>
+              <span>{formattedToday}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: "bold" }}>Due Date:</span>
+              <span>{formatDate(masterData.ORDER_DATE) || formatDate(masterData.QUOTATION_DATE) || "-"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Section */}
+      <div
+        style={{
+          display: "flex",
+          marginBottom: "8mm",
+          gap: "5mm",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <h4
+            style={{
+              fontSize: "13px",
+              fontWeight: "bold",
+              color: "#374151",
+              margin: "0 0 2mm 0",
+              borderBottom: "1px solid #d1d5db",
+              paddingBottom: "1mm",
+            }}
+          >
+            Customer
+          </h4>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#4b5563",
+              lineHeight: "1.3",
+            }}
+          >
+            {selectedClient?.CLIENT_NAME || "-"}
+            <br />
+            {selectedClient?.TELEPHONE_NO || "-"}
+            <br />
+            {selectedClient?.EMAIL_ADDRESS || "-"}
+            <br />
+            POS - {selectedClient?.CITY_NAME || "-"}
+          </div>
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <h4
+            style={{
+              fontSize: "13px",
+              fontWeight: "bold",
+              color: "#374151",
+              margin: "0 0 2mm 0",
+              borderBottom: "1px solid #d1d5db",
+              paddingBottom: "1mm",
+            }}
+          >
+            Billing Address
+          </h4>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#4b5563",
+              lineHeight: "1.3",
+            }}
+          >
+            {selectedClient?.STATE_NAME || "-"}
+            <br />
+            {selectedClient?.COUNTRY || "-"}
+          </div>
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <h4
+            style={{
+              fontSize: "13px",
+              fontWeight: "bold",
+              color: "#374151",
+              margin: "0 0 2mm 0",
+              borderBottom: "1px solid #d1d5db",
+              paddingBottom: "1mm",
+            }}
+          >
+            Shipping Address
+          </h4>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#4b5563",
+              lineHeight: "1.3",
+            }}
+          >
+            {selectedClient?.STATE_NAME || "-"}
+            <br />
+            {selectedClient?.COUNTRY || "-"}
+          </div>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div
+        style={{
+          width: "100%",
+          border: "1px solid #d1d5db",
+          marginBottom: "8mm",
+          fontSize: "11px",
+        }}
+      >
+        {/* Table Header */}
+        <div
+          style={{
+            display: "flex",
+            backgroundColor: "#d4d6d9",
+            borderBottom: "1px solid #d1d5db",
+            fontWeight: "bold",
+            padding: "2mm 0",
+          }}
+        >
+          <div style={{ width: "8%", textAlign: "center", padding: "0 1mm" }}>S.No.</div>
+          <div style={{ width: "42%", textAlign: "left", padding: "0 1mm" }}>Description</div>
+          <div style={{ width: "15%", textAlign: "right", padding: "0 1mm" }}>Item Code</div>
+          <div style={{ width: "10%", textAlign: "right", padding: "0 1mm" }}>Rate</div>
+          <div style={{ width: "8%", textAlign: "center", padding: "0 1mm" }}>Qty</div>
+          <div style={{ width: "17%", textAlign: "right", padding: "0 1mm" }}>Total</div>
+        </div>
+
+        {/* Table Rows */}
+        {displayData.length > 0 ? (
+          displayData.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                borderBottom: "1px solid #e5e7eb",
+                padding: "1.5mm 0",
+                minHeight: "6mm",
+              }}
+            >
+              <div style={{ width: "8%", textAlign: "center", padding: "0 1mm", alignSelf: "center" }}>{index + 1}</div>
+              <div style={{ width: "42%", textAlign: "left", padding: "0 1mm", alignSelf: "center" }}>{item.ITEM_NAME || ""}</div>
+              <div style={{ width: "15%", textAlign: "right", padding: "0 1mm", alignSelf: "center" }}>{item.ITEM_CODE || ""}</div>
+              <div style={{ width: "10%", textAlign: "right", padding: "0 1mm", alignSelf: "center" }}>{(item.SALE_RATE || 0).toFixed(2)}</div>
+              <div style={{ width: "8%", textAlign: "center", padding: "0 1mm", alignSelf: "center" }}>{item.QTY || 0}</div>
+              <div style={{ width: "17%", textAlign: "right", padding: "0 1mm", alignSelf: "center" }}>{(item.NET_VALUE || 0).toFixed(2)}</div>
+            </div>
+          ))
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              borderBottom: "1px solid #e5e7eb",
+              padding: "5mm 0",
+              justifyContent: "center",
+            }}
+          >
+            <div>No items in this order</div>
+          </div>
+        )}
+      </div>
+
+      {/* Tax Summary */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "8mm",
+        }}
+      >
+        <div style={{ width: "50mm", fontSize: "11px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "1mm 0",
+            }}
+          >
+            <span style={{ fontWeight: "bold" }}>Subtotal:</span>
+            <span>INR {totalValue.toFixed(2)}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "1mm 0",
+            }}
+          >
+            <span style={{ fontWeight: "bold" }}>Discount:</span>
+            <span>INR {discountValue.toFixed(2)}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "1mm 0",
+            }}
+          >
+            <span style={{ fontWeight: "bold" }}>Tax (18%):</span>
+            <span>INR {taxAmount.toFixed(2)}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "2mm 0 1mm 0",
+              borderTop: "1px solid #374151",
+              fontWeight: "bold",
+              fontSize: "11px",
+              color: "#1e40af",
+            }}
+          >
+            <span>Total:</span>
+            <span>INR {finalTotal.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Total in Words */}
+      <div
+        style={{
+          padding: "3mm",
+          backgroundColor: "#f9fafb",
+          border: "1px solid #d1d5db",
+          marginBottom: "8mm",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "11px",
+            fontWeight: "bold",
+            color: "#374151",
+            textAlign: "right",
+          }}
+        >
+          Total in words:
+          <span style={{ color: "#4b5563", marginLeft: "2mm" }}>Indian Rupee {numberToWords(finalTotal)}</span>
+        </div>
+      </div>
+
+      {/* Footer Signature */}
+      <div
+        style={{
+          textAlign: "right",
+          marginTop: "auto",
+          paddingTop: "3mm",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "11px",
+            fontWeight: "bold",
+            color: "#1e40af",
+          }}
+        >
+          For {userData.companyName || companyName}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PrintPreviewDialog = ({ masterData, tableData, selectedClient, rowSelection, docTypeLabel, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const pdfRef = useRef();
+
+  const selectedRows = Object.keys(rowSelection)
+    .map((rowId) => {
+      const rowIndex = parseInt(rowId);
+      return tableData[rowIndex]?.id;
+    })
+    .filter(Boolean);
+
+  const handlePreview = () => {
+    setIsOpen(true);
+  };
+
+  const handleDownload = () => {
+    const fileName = `${docTypeLabel}_${masterData.ORDER_NO || masterData.QUOTATION_NO || "New"}.pdf`;
+    generatePDF(pdfRef.current, fileName);
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={setIsOpen}
+    >
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="z-[9999] max-h-[90vh] max-w-4xl overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>Print Preview - {docTypeLabel}</DialogTitle>
+          <DialogDescription>Preview your {docTypeLabel.toLowerCase()} before downloading or printing</DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[60vh] flex-1 overflow-auto">
+          <div ref={pdfRef}>
+            <OrderPDFTemplate
+              masterData={masterData}
+              tableData={tableData}
+              selectedClient={selectedClient}
+              selectedRows={selectedRows}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+          >
+            Close Preview
+          </Button>
+          <Button onClick={handleDownload}>Download PDF</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const PDFButtons = ({ masterData, tableData, selectedClient, rowSelection, docTypeLabel }) => {
+  const pdfRef = useRef();
+
+  const handleDownload = () => {
+    const fileName = `${docTypeLabel}_${masterData.ORDER_NO || masterData.QUOTATION_NO || "New"}.pdf`;
+    generatePDF(pdfRef.current, fileName);
+  };
+
+  return (
+    <div className="flex gap-2">
+      {/* Print Preview Button */}
+      <PrintPreviewDialog
+        masterData={masterData}
+        tableData={tableData}
+        selectedClient={selectedClient}
+        rowSelection={rowSelection}
+        docTypeLabel={docTypeLabel}
+      >
+        <Button variant="outline">Print / Download PDF</Button>
+      </PrintPreviewDialog>
+
+      {/* Direct Download Button */}
+      <div style={{ display: "none" }}>
+        <div ref={pdfRef}>
+          <OrderPDFTemplate
+            masterData={masterData}
+            tableData={tableData}
+            selectedClient={selectedClient}
+            selectedRows={Object.keys(rowSelection)
+              .map((rowId) => {
+                const rowIndex = parseInt(rowId);
+                return tableData[rowIndex]?.id;
+              })
+              .filter(Boolean)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  try {
+    const timestamp = parseInt(dateString.match(/\d+/)[0]);
+    const date = new Date(timestamp);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return;
+  }
+};
 
 // Define initial master form data outside the component
 const initialMasterFormData = {
@@ -173,7 +783,7 @@ const OrderFormPage = () => {
 
     fetchExistingMasterData();
     fetchExistingDetailData();
-  }, [id, isEditMode, userData]);
+  }, [id, isEditMode, userData, clientData]);
 
   // Fetch clients
   useEffect(() => {
@@ -196,7 +806,10 @@ const OrderFormPage = () => {
       setItemData(response || []);
     } catch (err) {
       console.error(err);
-      toast({ variant: "destructive", title: err?.message || "Error fetching items" });
+      toast({
+        variant: "destructive",
+        title: err?.message || "Error fetching items",
+      });
     }
   };
 
@@ -212,10 +825,10 @@ const OrderFormPage = () => {
 
       if (response?.[0]) {
         setMasterFormData(response[0]);
-        setSelectedClient({
-          CLIENT_ID: response[0].CLIENT_ID,
-          CLIENT_NAME: response[0].CLIENT_NAME,
-        });
+
+        const fullClientDetails = clientData.find((client) => client.CLIENT_NAME === response[0].CLIENT_NAME);
+
+        setSelectedClient(fullClientDetails || null);
         setCustomerValue(response[0].CLIENT_NAME);
       }
     } catch (err) {
@@ -250,7 +863,9 @@ const OrderFormPage = () => {
 
   const fetchClientData = async () => {
     try {
-      const payload = { SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO FROM CLIENT_MASTER` };
+      const payload = {
+        SQLQuery: `SELECT * FROM CLIENT_MASTER`,
+      };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
@@ -295,6 +910,7 @@ const OrderFormPage = () => {
   // Handle selecting client
   const handleSelectClient = (name) => {
     const client = clientData.find((c) => c.CLIENT_NAME === name) || null;
+
     setSelectedClient(client);
     setMasterFormData((prev) => ({
       ...prev,
@@ -306,7 +922,7 @@ const OrderFormPage = () => {
   };
 
   // Filtered for command
-  const filteredClients = clientData.filter((c) => c.CLIENT_NAME.toLowerCase().includes(customerValue.toLowerCase()));
+  const filteredClients = clientData.filter((c) => c.CLIENT_NAME?.toLowerCase()?.includes(customerValue.toLowerCase()));
 
   const handleCellChange = (rowIndex, columnId, value) => {
     setTableData((prev) => {
@@ -610,7 +1226,7 @@ const OrderFormPage = () => {
       const itemsToSend = tableData;
 
       console.table(tableData[0]);
-      
+
       // 2) now send each item as a DETAIL record
       for (let i = 0; i < itemsToSend.length; i++) {
         const item = itemsToSend[i];
@@ -674,6 +1290,15 @@ const OrderFormPage = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
+      <div className="flex justify-end">
+        <PDFButtons
+          masterData={masterFormData}
+          tableData={tableData}
+          selectedClient={selectedClient}
+          rowSelection={rowSelection}
+          docTypeLabel={docTypeLabel}
+        />
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Main form */}
         <Card className="col-span-12 lg:col-span-9">
