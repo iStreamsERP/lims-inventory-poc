@@ -186,7 +186,7 @@ export default function ProductFormPage() {
   const fetchProductImage = async () => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
         {
           responseType: "blob",
         },
@@ -290,7 +290,7 @@ export default function ProductFormPage() {
         payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
 
         const response = await axios.put(
-          `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=PRODUCT_IMAGE_${newItemCode}`,
+          `https://apps.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=PRODUCT_IMAGE_${newItemCode}`,
           payload,
           {
             headers: {
@@ -315,7 +315,7 @@ export default function ProductFormPage() {
         payload.append("email", userData.userEmail);
         payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
 
-        const response = await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, {
+        const response = await axios.post("https://apps.istreams-erp.com:4499/api/MaterialImage/upload", payload, {
           headers: {
             "Content-Type": "multipart/form-data",
           },

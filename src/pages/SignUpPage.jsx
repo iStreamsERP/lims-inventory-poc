@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import animationData from "@/lotties/crm-animation-lotties.json";
 import { callSoapService } from "@/services/callSoapService";
@@ -16,7 +23,8 @@ import { getNameFromEmail } from "../utils/emailHelpers";
 
 // Use the proxy path for the public service.
 const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
-const DEFAULT_AVATAR_URL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s";
+const DEFAULT_AVATAR_URL =
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s";
 
 const SignUpPage = () => {
   const [email, setEmail] = useState("");
@@ -63,16 +71,31 @@ const SignUpPage = () => {
         LoginUserName: email,
       };
 
-      localStorage.setItem("doConnectionPayload", JSON.stringify(doConnectionPayload));
+      localStorage.setItem(
+        "doConnectionPayload",
+        JSON.stringify(doConnectionPayload)
+      );
       try {
         // Step 1: Connect to public service.
-        const publicDoConnectionResponse = await callSoapService(PUBLIC_SERVICE_URL, "doConnection", doConnectionPayload);
+        const publicDoConnectionResponse = await callSoapService(
+          PUBLIC_SERVICE_URL,
+          "doConnection",
+          doConnectionPayload
+        );
 
         if (publicDoConnectionResponse === "SUCCESS") {
           // Step 2: Get client URL.
-          clientURL = await callSoapService(PUBLIC_SERVICE_URL, "GetServiceURL", doConnectionPayload);
+          clientURL = await callSoapService(
+            PUBLIC_SERVICE_URL,
+            "GetServiceURL",
+            doConnectionPayload
+          );
 
-          const clientDoConnectionResponse = await callSoapService(clientURL, "doConnection", doConnectionPayload);
+          const clientDoConnectionResponse = await callSoapService(
+            clientURL,
+            "doConnection",
+            doConnectionPayload
+          );
 
           if (clientDoConnectionResponse === "SUCCESS") {
             // Step 1.1: Verify authentication.
@@ -83,7 +106,11 @@ const SignUpPage = () => {
               password: password,
             };
 
-            const authenticationResponse = await callSoapService(clientURL, "verifyauthentication", authenticationPayload);
+            const authenticationResponse = await callSoapService(
+              clientURL,
+              "verifyauthentication",
+              authenticationPayload
+            );
 
             if (authenticationResponse === "Authetication passed") {
               // Step 1.2: Authentication passed, proceed to get employee details.
@@ -94,7 +121,11 @@ const SignUpPage = () => {
                 userfirstname: userName,
               };
 
-              const getClientEmpDetails = await callSoapService(clientURL, "getemployeename_and_id", clientEmpDetailsPayload);
+              const getClientEmpDetails = await callSoapService(
+                clientURL,
+                "getemployeename_and_id",
+                clientEmpDetailsPayload
+              );
 
               employeeNo = getClientEmpDetails[0]?.EMP_NO;
 
@@ -103,9 +134,15 @@ const SignUpPage = () => {
                   EmpNo: employeeNo,
                 };
 
-                const employeeImageResponse = await callSoapService(clientURL, "getpic_bytearray", getEmployeeImagePayload);
+                const employeeImageResponse = await callSoapService(
+                  clientURL,
+                  "getpic_bytearray",
+                  getEmployeeImagePayload
+                );
 
-                employeeImage = employeeImageResponse ? `data:image/jpeg;base64,${employeeImageResponse}` : DEFAULT_AVATAR_URL;
+                employeeImage = employeeImageResponse
+                  ? `data:image/jpeg;base64,${employeeImageResponse}`
+                  : DEFAULT_AVATAR_URL;
               }
 
               const organizationPayload = {
@@ -113,13 +150,21 @@ const SignUpPage = () => {
                 BranchCode: 1,
               };
 
-              const getOrganization = await callSoapService(clientURL, "General_Get_DefaultCompanyName", organizationPayload);
+              const getOrganization = await callSoapService(
+                clientURL,
+                "General_Get_DefaultCompanyName",
+                organizationPayload
+              );
 
               const isAdminPayload = {
                 UserName: getClientEmpDetails[0]?.USER_NAME,
               };
 
-              const isAdminResponse = await callSoapService(clientURL, "DMS_Is_Admin_User", isAdminPayload);
+              const isAdminResponse = await callSoapService(
+                clientURL,
+                "DMS_Is_Admin_User",
+                isAdminPayload
+              );
 
               let isAdmin = isAdminResponse === "Yes";
 
@@ -152,52 +197,52 @@ const SignUpPage = () => {
         setLoading(false);
       }
     },
-    [email, password, login, setUserData, navigate],
+    [email, password, login, setUserData, navigate]
   );
   return (
     <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-slate-200 p-10 dark:bg-slate-900 lg:flex">
-        <div>
+        <div className="flex gap-x-3 h-20">
           <img
             src={logoLight}
             alt="iStreams ERP Solutions | CRM"
-            className="dark:hidden"
+            className="dark:hidden object-fill"
           />
           <img
             src={logoDark}
             alt="iStreams ERP Solutions | CRM"
-            className="hidden dark:block"
+            className="hidden dark:block object-fill"
           />
         </div>
 
         <div>
-          <Lottie
-            options={defaultOptions}
-            height={350}
-            width={400}
-          />
+          <Lottie options={defaultOptions} />
         </div>
 
         <div>
           <blockquote className="space-y-2">
             <p className="text-lg">
-              &ldquo;Manage your customers efficiently and streamline your business operations with our powerful CRM system.&rdquo;
+              &ldquo;Manage your customers efficiently and streamline your
+              business operations with our powerful CRM system.&rdquo;
             </p>
 
-            <footer className="text-sm text-gray-400">- iStreams ERP Solutions</footer>
+            <footer className="text-sm text-gray-400">
+              - iStreams ERP Solutions
+            </footer>
           </blockquote>
         </div>
       </div>
       <div className="flex flex-col justify-center overflow-y-auto bg-slate-100 px-6 dark:bg-slate-950 lg:p-8">
         <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
-            <p className="text-sm text-muted-foreground">Enter your details below to create your account</p>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Create an account
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Enter your details below to create your account
+            </p>
           </div>
-          <form
-            onSubmit={handleSignup}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSignup} className="space-y-4">
             <div className="grid w-full items-center gap-4">
               {/* Name Field */}
               <div className="flex flex-col space-y-1.5">
@@ -295,14 +340,14 @@ const SignUpPage = () => {
             </div>
 
             {/* Error Message */}
-            {error && <div className="mb-4 rounded bg-red-500 p-2 text-white">{error}</div>}
+            {error && (
+              <div className="mb-4 rounded bg-red-500 p-2 text-white">
+                {error}
+              </div>
+            )}
 
             {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? (
                 <>
                   <Loader2 className="animate-spin" />
@@ -314,10 +359,7 @@ const SignUpPage = () => {
             </Button>
             <p className="text-center text-xs text-gray-400">
               Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-blue-500"
-              >
+              <Link to="/login" className="text-blue-500">
                 Log in
               </Link>
             </p>

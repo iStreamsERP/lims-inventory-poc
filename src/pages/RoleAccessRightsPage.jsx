@@ -1,14 +1,32 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { Check, CheckSquare, ChevronDown, ChevronRight, ChevronsUpDown, Square } from "lucide-react";
+import {
+  Check,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUpDown,
+  Square,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 const TreeNode = ({
@@ -87,9 +105,9 @@ const TreeNode = ({
     <div>
       <div
         className={cn(
-          "flex cursor-pointer select-none items-center rounded-sm px-2 py-1",
+          "flex items-center py-1 px-2 rounded-sm cursor-pointer select-none",
           level > 0 && "ml-4",
-          areAllChildrenSelected && hasChildren && "font-medium",
+          areAllChildrenSelected && hasChildren && "font-medium"
         )}
         onClick={() => {
           if (hasChildren) {
@@ -100,14 +118,20 @@ const TreeNode = ({
         }}
       >
         {hasChildren ? (
-          <div className="mr-1">{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</div>
+          <div className="mr-1">
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </div>
         ) : (
           <div className="w-5"></div>
         )}
 
         {useCheckbox && (
           <div
-            className="mr-2 flex cursor-pointer items-center justify-center"
+            className="mr-2 flex items-center justify-center cursor-pointer"
             onClick={handleCheckboxClick}
           >
             {hasChildren ? (
@@ -124,9 +148,18 @@ const TreeNode = ({
           </div>
         )}
 
-        <span className={cn("flex-grow text-sm", !hasChildren && !useCheckbox && "ml-1")}>{node.label}</span>
+        <span
+          className={cn(
+            "text-sm flex-grow",
+            !hasChildren && !useCheckbox && "ml-1"
+          )}
+        >
+          {node.label}
+        </span>
 
-        {!hasChildren && !isRemovable && isSelected && !useCheckbox && <Check className="h-4 w-4 text-green-500" />}
+        {!hasChildren && !isRemovable && isSelected && !useCheckbox && (
+          <Check className="h-4 w-4 text-green-500" />
+        )}
       </div>
 
       {isOpen && hasChildren && (
@@ -272,18 +305,29 @@ const RoleAccessRightsPage = () => {
                 .map((formTypeNode) => {
                   const newFormTypeNode = { ...formTypeNode };
 
-                  if (newFormTypeNode.children && newFormTypeNode.children.length > 0) {
+                  if (
+                    newFormTypeNode.children &&
+                    newFormTypeNode.children.length > 0
+                  ) {
                     newFormTypeNode.children = newFormTypeNode.children.filter(
-                      (formNode) => !selectedForms.some((selectedForm) => selectedForm.id === formNode.id),
+                      (formNode) =>
+                        !selectedForms.some(
+                          (selectedForm) => selectedForm.id === formNode.id
+                        )
                     );
                   }
 
                   return newFormTypeNode;
                 })
-                .filter((formTypeNode) => formTypeNode.children && formTypeNode.children.length > 0);
+                .filter(
+                  (formTypeNode) =>
+                    formTypeNode.children && formTypeNode.children.length > 0
+                );
             }
 
-            return newModuleNode.children && newModuleNode.children.length > 0 ? newModuleNode : null;
+            return newModuleNode.children && newModuleNode.children.length > 0
+              ? newModuleNode
+              : null;
           })
           .filter(Boolean);
       };
@@ -345,13 +389,17 @@ const RoleAccessRightsPage = () => {
   const fetchRolesData = async () => {
     setLoadingRoles(true);
     try {
-      const payload = {
+      const rolesdetailsData = {
         DataModelName: "general_roles_master",
-        WhereCondition: "IS_FOR_APPROVAL = 'F'",
+        WhereCondition: "NVL(IS_FOR_APPROVAL, 'F') = 'F'",
         Orderby: "ROLE_ID",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        rolesdetailsData
+      );
 
       const formattedRoles = response.map((role) => ({
         roleName: role.ROLE_NAME?.trim(),
@@ -374,15 +422,21 @@ const RoleAccessRightsPage = () => {
   const fetchFormsData = async () => {
     setLoadingForms(true);
     try {
-      const payload = {
+      const formsRequestData = {
         DataModelName: "FORMS_MASTER",
-        WhereCondition: "",
+        WhereCondition: "MODULE_NAME = 'DMS'",
         Orderby: "MODULE_NAME, FORM_TYPE",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        formsRequestData
+      );
 
-      const formsArray = Array.isArray(response) ? response : response?.data || [];
+      const formsArray = Array.isArray(response)
+        ? response
+        : response?.data || [];
       setFormsList(formsArray);
     } catch (error) {
       setFormsList([]);
@@ -401,21 +455,25 @@ const RoleAccessRightsPage = () => {
 
     setLoading(true);
     try {
-      const payload = {
+      const rightRequestData = {
         DataModelName: "USER_RIGHTS_ROLES",
         WhereCondition: `ROLE_ID = '${roleId}'`,
         Orderby: "MODULE_NAME, FORM_NAME",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const rightsResponse = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        rightRequestData
+      );
 
-      if (!Array.isArray(response)) {
+      if (!Array.isArray(rightsResponse)) {
         setSelectedForms([]);
         setLoading(false);
         return;
       }
 
-      const formItems = response.map((right) => ({
+      const formItems = rightsResponse.map((right) => ({
         id: right.FORM_NAME,
         label: right.FORM_NAME,
         formData: {
@@ -429,25 +487,33 @@ const RoleAccessRightsPage = () => {
       setSelectedForms(formItems);
 
       try {
-        const formNames = response.map((right) => `'${right.FORM_NAME}'`).join(",");
+        const formNames = rightsResponse
+          .map((right) => `'${right.FORM_NAME}'`)
+          .join(",");
         if (formNames) {
-          const payload = {
+          const formsRequestData = {
             DataModelName: "FORMS_MASTER",
             WhereCondition: `FORM_NAME IN (${formNames})`,
             Orderby: "MODULE_NAME, FORM_NAME",
           };
 
-          const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+          const formsResponse = await callSoapService(
+            userData.clientURL,
+            "DataModel_GetData",
+            formsRequestData
+          );
 
-          if (Array.isArray(response)) {
+          if (Array.isArray(formsResponse)) {
             const updatedFormItems = formItems.map((item) => {
-              const formDetails = response.find((f) => f.FORM_NAME === item.id) || {};
+              const formDetails =
+                formsResponse.find((f) => f.FORM_NAME === item.id) || {};
               return {
                 ...item,
                 label: formDetails.DESCRIPTION || item.label,
                 formData: {
                   ...item.formData,
-                  DESCRIPTION: formDetails.DESCRIPTION || item.formData.DESCRIPTION,
+                  DESCRIPTION:
+                    formDetails.DESCRIPTION || item.formData.DESCRIPTION,
                   FORM_TYPE: formDetails.FORM_TYPE || item.formData.FORM_TYPE,
                 },
               };
@@ -501,7 +567,10 @@ const RoleAccessRightsPage = () => {
 
   const handleBulkFormsSelection = (forms, shouldSelect) => {
     if (shouldSelect) {
-      const formsToAdd = forms.filter((form) => !selectedForms.some((selectedForm) => selectedForm.id === form.id));
+      const formsToAdd = forms.filter(
+        (form) =>
+          !selectedForms.some((selectedForm) => selectedForm.id === form.id)
+      );
 
       if (formsToAdd.length > 0) {
         setSelectedForms((prev) => [...prev, ...formsToAdd]);
@@ -511,7 +580,11 @@ const RoleAccessRightsPage = () => {
         });
       }
     } else {
-      setSelectedForms((prev) => prev.filter((selectedForm) => !forms.some((form) => form.id === selectedForm.id)));
+      setSelectedForms((prev) =>
+        prev.filter(
+          (selectedForm) => !forms.some((form) => form.id === selectedForm.id)
+        )
+      );
 
       toast({
         title: "Forms removed",
@@ -538,7 +611,11 @@ const RoleAccessRightsPage = () => {
             WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
           };
 
-          const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+          const response = await callSoapService(
+            userData.clientURL,
+            "DataModel_DeleteData",
+            payload
+          );
         } catch (deleteError) {
           console.error("Error removing from database:", deleteError);
         }
@@ -555,7 +632,11 @@ const RoleAccessRightsPage = () => {
 
   const handleRemoveMultipleSelectedForms = async (forms) => {
     try {
-      setSelectedForms((prev) => prev.filter((selectedForm) => !forms.some((form) => form.id === selectedForm.id)));
+      setSelectedForms((prev) =>
+        prev.filter(
+          (selectedForm) => !forms.some((form) => form.id === selectedForm.id)
+        )
+      );
 
       toast({
         title: "Forms removed",
@@ -572,9 +653,16 @@ const RoleAccessRightsPage = () => {
               WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
             };
 
-            const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+            const response = await callSoapService(
+              userData.clientURL,
+              "DataModel_DeleteData",
+              payload
+            );
           } catch (deleteError) {
-            console.error(`Error removing form ${node.id} from database:`, deleteError);
+            console.error(
+              `Error removing form ${node.id} from database:`,
+              deleteError
+            );
           }
         }
       }
@@ -608,18 +696,30 @@ const RoleAccessRightsPage = () => {
           CAN_CUSTOMIZE: "F",
         };
 
-        const data = convertDataModelToStringData("USER_RIGHTS_ROLES", formAccessData);
+        const data = convertDataModelToStringData(
+          "USER_RIGHTS_ROLES",
+          formAccessData
+        );
 
-        const payload = {
+        const savePayload = {
           UserName: userData.userEmail,
           DModelData: data,
         };
-        console.log(savePayload);
 
-        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+        const saveResponse = await callSoapService(
+          userData.clientURL,
+          "DataModel_SaveData",
+          savePayload
+        );
 
-        if (saveResponse === null || saveResponse === undefined || (typeof saveResponse === "object" && saveResponse.error)) {
-          throw new Error(`Failed to save category ${form.label} to role ${roleDetails.roleName}`);
+        if (
+          saveResponse === null ||
+          saveResponse === undefined ||
+          (typeof saveResponse === "object" && saveResponse.error)
+        ) {
+          throw new Error(
+            `Failed to save category ${form.label} to role ${roleDetails.roleName}`
+          );
         }
       }
 
@@ -648,13 +748,17 @@ const RoleAccessRightsPage = () => {
     setSelectedForms([]);
   };
 
+     if (!userData?.isAdmin) {
+      return <AccessDenied />;
+    }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col items-start gap-4 md:flex-row">
+      <div className="flex flex-col md:flex-row gap-4 items-start">
         {/* Role Details */}
         <div className="flex-grow">
           <div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Role Selector - Full width on mobile, 40% on desktop */}
               <div className="md:col-span-2">
                 <Label>Select Roles:</Label>
@@ -666,13 +770,13 @@ const RoleAccessRightsPage = () => {
                     <Button
                       variant="outline"
                       role="combobox"
-                      className="ml-2 w-full justify-between font-normal"
+                      className="ml-2 justify-between font-normal w-full"
                     >
                       {roleDetails.roleName || "Select role name"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="z-50 h-[200px] w-[var(--radix-popover-trigger-width)] p-0">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] h-[200px] p-0 z-50">
                     <Command>
                       <CommandInput
                         placeholder="Search role name"
@@ -683,10 +787,16 @@ const RoleAccessRightsPage = () => {
                         {/* <CommandEmpty>No roles found.</CommandEmpty> */}
                         <CommandGroup>
                           {loadingRoles ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Loading roles...</div>
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Loading roles...
+                            </div>
                           ) : (
                             rolesList
-                              .filter((role) => role.roleName.toLowerCase().includes(roleSearchInput.toLowerCase()))
+                              .filter((role) =>
+                                role.roleName
+                                  .toLowerCase()
+                                  .includes(roleSearchInput.toLowerCase())
+                              )
                               .map((role) => (
                                 <CommandItem
                                   key={`role-${role.roleId}`}
@@ -694,7 +804,14 @@ const RoleAccessRightsPage = () => {
                                   onSelect={() => handleRoleSelect(role)}
                                 >
                                   {role.roleName}
-                                  <Check className={cn("ml-auto h-4 w-4", roleDetails.roleId === role.roleId ? "opacity-100" : "opacity-0")} />
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      roleDetails.roleId === role.roleId
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
                                 </CommandItem>
                               ))
                           )}
@@ -706,9 +823,10 @@ const RoleAccessRightsPage = () => {
               </div>
 
               {/* Description - Full width on mobile (appears below), 60% on desktop */}
-              <div className="mt-2 flex items-center text-left md:col-span-3 md:mt-7">
+              <div className="md:col-span-3 flex items-center text-left mt-2 md:mt-7">
                 <Label className="text-gray-500 md:ml-3">
-                  <span className="truncate font-medium">Description:</span> {roleDetails.description || "-"}
+                  <span className="font-medium truncate">Description:</span>{" "}
+                  {roleDetails.description || "-"}
                 </Label>
               </div>
             </div>
@@ -716,18 +834,24 @@ const RoleAccessRightsPage = () => {
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
         {/* Add Rights */}
-        <div className={cn(!roleDetails.roleId && "pointer-events-none opacity-50")}>
-          <div className="mb-2 flex items-center justify-between">
+        <div
+          className={cn(
+            !roleDetails.roleId && "opacity-50 pointer-events-none"
+          )}
+        >
+          <div className="flex justify-between items-center mb-2">
             <Label className="text-sm font-semibold">Add Access Rights</Label>
             <span className="text-xs text-gray-500"></span>
           </div>
           <div className="flex flex-col space-y-4">
-            <div className="h-80 overflow-hidden rounded-md border">
+            <div className="border rounded-md h-80 overflow-hidden">
               {loadingForms ? (
-                <div className="flex h-full items-center justify-center">
-                  <span className="text-sm text-muted-foreground">Loading forms...</span>
+                <div className="flex items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">
+                    Loading forms...
+                  </span>
                 </div>
               ) : filteredTreeData.length > 0 ? (
                 <ScrollArea className="h-full w-full p-2">
@@ -741,8 +865,10 @@ const RoleAccessRightsPage = () => {
                   />
                 </ScrollArea>
               ) : (
-                <div className="flex h-full items-center justify-center">
-                  <span className="text-sm text-muted-foreground">All available forms are already added</span>
+                <div className="flex items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">
+                    All available forms are already added
+                  </span>
                 </div>
               )}
             </div>
@@ -750,16 +876,26 @@ const RoleAccessRightsPage = () => {
         </div>
 
         {/* Remove Rights */}
-        <div className={cn(!roleDetails.roleId && "pointer-events-none opacity-50")}>
-          <div className="mb-2 flex items-center justify-between">
-            <Label className="text-sm font-semibold">Remove Access Rights</Label>
-            <span className="text-xs text-gray-500">Assigned Forms ({selectedForms.length})</span>
+        <div
+          className={cn(
+            !roleDetails.roleId && "opacity-50 pointer-events-none"
+          )}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <Label className="text-sm font-semibold">
+              Remove Access Rights
+            </Label>
+            <span className="text-xs text-gray-500">
+              Assigned Forms ({selectedForms.length})
+            </span>
           </div>
           <div className="flex flex-col space-y-4">
-            <div className="h-80 overflow-hidden rounded-md border">
+            <div className="border rounded-md h-80 overflow-hidden">
               {loading ? (
-                <div className="flex h-full items-center justify-center">
-                  <span className="text-sm text-muted-foreground">Loading assigned forms...</span>
+                <div className="flex items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">
+                    Loading assigned forms...
+                  </span>
                 </div>
               ) : assignedFormsTreeData.length > 0 ? (
                 <ScrollArea className="h-full w-full p-2">
@@ -773,8 +909,10 @@ const RoleAccessRightsPage = () => {
                   />
                 </ScrollArea>
               ) : (
-                <div className="flex h-full items-center justify-center">
-                  <span className="text-sm text-muted-foreground">No forms assigned to this role</span>
+                <div className="flex items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">
+                    No forms assigned to this role
+                  </span>
                 </div>
               )}
             </div>

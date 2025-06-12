@@ -28,6 +28,7 @@ const CustomerListPage = () => {
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
+
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -85,80 +86,179 @@ const CustomerListPage = () => {
 
   const columns = [
     {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
+      accessorKey: "CLIENT_ID",
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 60 }}
+        >
+          Client ID
+        </p>
       ),
       cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
+        <div
+          className="capitalize"
+          style={{
+            width: 60,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("CLIENT_ID") || "-"}
+        >
+          {row.getValue("CLIENT_ID") || "-"}
+        </div>
       ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "CLIENT_ID",
-      header: "Client ID",
-      cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_ID")}</div>,
     },
     {
       accessorKey: "CLIENT_NAME",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
-          >
-            Client Name
-            <ArrowUpDown />
-          </Button>
-        );
-      },
-      cell: ({ row }) => <div className="capitalize">{row.getValue("CLIENT_NAME") || "-"}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 200 }}
+        >
+          Client Name
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 200,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("CLIENT_NAME") || "-"}
+        >
+          {row.getValue("CLIENT_NAME") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "TELEPHONE_NO",
-      header: "Telephone No",
-      cell: ({ row }) => <div className="capitalize">{row.getValue("TELEPHONE_NO") || "-"}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 120 }}
+        >
+          Telephone No
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 120,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("TELEPHONE_NO") || "-"}
+        >
+          {row.getValue("TELEPHONE_NO") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "EMAIL_ADDRESS",
-      header: "Email ID",
-      cell: ({ row }) => <div className="capitalize">{row.getValue("EMAIL_ADDRESS")}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 200 }}
+        >
+          Email ID
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 200,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("EMAIL_ADDRESS") || "-"}
+        >
+          {row.getValue("EMAIL_ADDRESS") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "COUNTRY",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
-          >
-            Country
-            <ArrowUpDown />
-          </Button>
-        );
-      },
-      cell: ({ row }) => <div>{row.getValue("COUNTRY") || "-"}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 100 }}
+        >
+          Country
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 100,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("COUNTRY") || "-"}
+        >
+          {row.getValue("COUNTRY") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "GROUP_NAME",
-      header: () => <div>Group Name</div>,
-      cell: ({ row }) => <div>{row.getValue("GROUP_NAME") || "-"}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 100 }}
+        >
+          Group Name
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 100,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("GROUP_NAME") || "-"}
+        >
+          {row.getValue("GROUP_NAME") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "NATURE_OF_BUSINESS",
-      header: () => <div>Nature of Business</div>,
-      cell: ({ row }) => <div>{row.getValue("NATURE_OF_BUSINESS") || "-"}</div>,
+      header: () => (
+        <p
+          className="truncate"
+          style={{ width: 100 }}
+        >
+          Nature of Business
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 100,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("NATURE_OF_BUSINESS") || "-"}
+        >
+          {row.getValue("NATURE_OF_BUSINESS") || "-"}
+        </div>
+      ),
     },
     {
       accessorKey: "action",

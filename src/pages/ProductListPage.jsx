@@ -65,7 +65,7 @@ const ProductListPage = () => {
     try {
       const email = encodeURIComponent(userData.userEmail);
       const fileName = encodeURIComponent(`PRODUCT_IMAGE_${newItemCode}`);
-      const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+      const url = `https://apps.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
 
       const response = await axios.delete(url);
 

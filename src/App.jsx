@@ -3,7 +3,6 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import EnquiryForm from "./components/form/EnquiryForm";
 import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
-import CategoryAccessPage from "./pages/CategoryAccessPage";
 import CategoryListPage from "./pages/CategoryListPage";
 import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import CustomerFormPage from "./pages/CustomerFormPage";
@@ -19,17 +18,18 @@ import ProductCardListPage from "./pages/ProductCardListPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import ProductFormPage from "./pages/ProductFormPage";
 import ProductListPage from "./pages/ProductListPage";
-import RoleAccessRightsPage from "./pages/RoleAccessRightsPage";
 import ServiceCategoryListPage from "./pages/ServiceCategoryListPage";
 import ServiceFormPage from "./pages/ServiceFormPage";
 import ServiceListPage from "./pages/ServiceListPage";
 import SignUpPage from "./pages/SignUpPage";
-import UserAccessRights from "./pages/UserAccessRights";
 import UserListPage from "./pages/UserListPage";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
-import UserRole from "./pages/UserRole";
+import UserRolePage from "./pages/UserRolePage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import UserAccessRightsPage from "./pages/UserAccessRightsPage";
+import RoleAccessRightsPage from "./pages/RoleAccessRightsPage";
+import CategoryAccessRightsPage from "./pages/CategoryAccessRightsPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -85,18 +85,14 @@ const App = () => {
             { path: "enquiry-form", element: <EnquiryForm /> },
 
             { path: "users", element: <UserListPage /> },
-            { path: "user-role", element: <UserRole /> },
-
-            { path: "user-access-rights", element: <UserAccessRights /> },
-
+            { path: "user-role", element: <UserRolePage /> },
+            { path: "user-access-rights", element: <UserAccessRightsPage /> },
             { path: "role-access-rights", element: <RoleAccessRightsPage /> },
-            
-            { path: "role-access-rights", element: <RoleAccessRightsPage /> },
-
-            { path: "category-access", element: <CategoryAccessPage /> },
+            { path: "category-access-rights", element: <CategoryAccessRightsPage /> },
 
             { path: "user-preferences", element: <UserPreferences /> },
             { path: "account-settings", element: <AccountSettings /> },
+
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
           ],

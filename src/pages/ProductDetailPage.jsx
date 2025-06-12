@@ -131,7 +131,7 @@ const ProductDetailPage = () => {
   const fetchProductImage = async (code) => {
     try {
       const { data } = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
           userData.userEmail,
         )}&fileName=PRODUCT_IMAGE_${code}`,
         { responseType: "blob" },
@@ -145,7 +145,7 @@ const ProductDetailPage = () => {
   const fetchSubProductImage = async (code, no) => {
     try {
       const { data } = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
           userData.userEmail,
         )}&fileName=SUB_PRODUCT_IMAGE_${code}_${no}`,
         { responseType: "blob" },

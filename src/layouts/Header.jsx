@@ -59,7 +59,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
             to="/"
             className="whitespace-nowrap text-sm font-semibold transition-colors hover:text-primary"
           >
-            iStreams ERP Solutions - DMS
+            iStreams ERP Solutions - CRM
           </Link>
           <Badge>{userData.isAdmin ? "Admin Mode" : "User Mode"}</Badge>
         </div>

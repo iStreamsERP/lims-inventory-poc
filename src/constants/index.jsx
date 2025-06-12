@@ -74,9 +74,9 @@ export const getNavbarLinks = (isAdmin) => [
             path: "/role-access-rights",
           },
           {
-            label: "Category Access",
+            label: "Category Access Rights",
             icon: LibraryBig,
-            path: "/category-access",
+            path: "/category-access-rights",
           },
         ],
       },

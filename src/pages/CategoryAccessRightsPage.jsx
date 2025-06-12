@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -8,12 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 import { Check, ChevronsUpDown, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const CategoryAccessPage = () => {
+const CategoryAccessRightsPage = () => {
   const [roleDetails, setRoleDetails] = useState({ ROLE_NAME: "", ROLE_ID: "", ROLE_DESCRIPTION: "" });
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [rolesList, setRolesList] = useState([]);
@@ -40,12 +42,12 @@ const CategoryAccessPage = () => {
   const { userData } = useAuth();
 
   useEffect(() => {
-    if (!hasFetchedData && userData?.currentUserLogin && userData?.clientURL) {
+    if (!hasFetchedData && userData.clientURL) {
       fetchRolesData();
       fetchCategoriesData();
       setHasFetchedData(true);
     }
-  }, [userData?.currentUserLogin, userData?.clientURL, hasFetchedData]);
+  }, [, userData.clientURL, hasFetchedData]);
 
   const fetchRolesData = async () => {
     setLoadingRoles(true);
@@ -280,6 +282,11 @@ const CategoryAccessPage = () => {
     setSelectedCategoryItems([]);
   };
 
+  
+     if (!userData?.isAdmin) {
+      return <AccessDenied />;
+    }
+
   return (
     <div className="flex flex-col gap-3">
       {/* <h1 className="text-2xl font-semibold">Category Form</h1> */}
@@ -491,4 +498,4 @@ const CategoryAccessPage = () => {
   );
 };
 
-export default CategoryAccessPage;
+export default CategoryAccessRightsPage;

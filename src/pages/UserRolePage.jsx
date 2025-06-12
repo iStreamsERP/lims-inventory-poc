@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -15,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover
 import { AlertTriangle, Check, ChevronsUpDown, Edit, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-const UserRole = () => {
+const UserRolePage = () => {
   const [roleDetails, setRoleDetails] = useState({ ROLE_NAME: "", ROLE_ID: "New", ROLE_DESCRIPTION: "" });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [rolesList, setRolesList] = useState([]);
@@ -38,12 +39,12 @@ const UserRole = () => {
   const { userData } = useAuth();
 
   useEffect(() => {
-    if (!hasFetchedUsers && userData?.currentUserLogin && userData?.clientURL) {
+    if (!hasFetchedUsers && userData.clientURL) {
       fetchRolesData();
       fetchUsersData();
       setHasFetchedUsers(true);
     }
-  }, [userData?.currentUserLogin, userData?.clientURL, hasFetchedUsers]);
+  }, [userData.clientURL, hasFetchedUsers]);
 
   const fetchRolesData = async () => {
     setLoadingRoles(true);
@@ -439,6 +440,10 @@ const UserRole = () => {
 
   const canSaveConfiguration = isRoleSaved && selectedUsers.length > 0;
 
+     if (!userData?.isAdmin) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
@@ -773,4 +778,4 @@ const UserRole = () => {
   );
 };
 
-export default UserRole;
+export default UserRolePage;

@@ -47,9 +47,7 @@ const CategoryListPage = () => {
   const fetchProductImage = async (id, groupLevel) => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
-          userData.userEmail,
-        )}&fileName=PRODUCT_IMAGE_${id}`,
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
         { responseType: "blob" },
       );
 

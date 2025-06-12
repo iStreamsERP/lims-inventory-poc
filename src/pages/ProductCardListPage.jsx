@@ -23,7 +23,7 @@ export default function ProductCardListPage() {
   const fetchProductImage = async (itemCode) => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${itemCode}`,
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${itemCode}`,
         {
           responseType: "blob",
         },

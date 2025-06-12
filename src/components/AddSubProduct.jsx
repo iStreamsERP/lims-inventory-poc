@@ -72,7 +72,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const fetchSubProductImage = async (itemcode, subMaterialNo) => {
     try {
       const response = await axios.get(
-        `https://cloud.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
         { responseType: "blob" },
       );
 
@@ -141,7 +141,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     try {
       const email = encodeURIComponent(userData.userEmail);
       const fileName = encodeURIComponent(`SUB_PRODUCT_IMAGE_${itemCode}_${subMaterialNo}`);
-      const url = `https://cloud.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+      const url = `https://apps.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
 
       const response = await axios.delete(url);
 
