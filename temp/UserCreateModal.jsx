@@ -26,15 +26,16 @@ const validateForm = (data) => {
   if (!data.NEW_USER_NAME || data.NEW_USER_NAME.trim().length < 2) {
     errors.NEW_USER_NAME = "Username must be at least 2 characters.";
   }
-  if (!data.PASSWORD || data.PASSWORD.trim().length < 6) {
+  // Only validate password when creating new user
+  if (!data.user && (!data.PASSWORD || data.PASSWORD.trim().length < 6)) {
     errors.PASSWORD = "Password must be at least 6 characters.";
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!data.EMAIL_ADDRESS || !emailRegex.test(data.EMAIL_ADDRESS)) {
     errors.EMAIL_ADDRESS = "Please enter a valid email address.";
   }
-  if (!data.MOBILE_NUMBER || data.MOBILE_NUMBER.trim().length < 10) {
-    errors.MOBILE_NUMBER = "Mobile number must be at least 10 digits.";
+  if (!data.MOBILE_NUMBER || !/^\d{10}$/.test(data.MOBILE_NUMBER)) {
+    errors.MOBILE_NUMBER = "Mobile number must be exactly 10 digits.";
   }
   if (!data.FULL_NAME || data.FULL_NAME.trim().length < 2) {
     errors.FULL_NAME = "Full name is required.";
@@ -91,10 +92,12 @@ const validateInput = (name, value) => {
 const UserCreateModal = ({ user, open, onClose }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+
   const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormData = {
     LOGIN_USER_NAME: userData.currentUserName,
@@ -106,7 +109,7 @@ const UserCreateModal = ({ user, open, onClose }) => {
     FULL_NAME: "",
     EMP_NO: "",
     DOMAIN_NAME: DOMAIN_NAME,
-    employeeImage: "",
+    employeeImage: null,
     accountExpired: false,
     accountLocked: false,
   };
@@ -127,30 +130,33 @@ const UserCreateModal = ({ user, open, onClose }) => {
   });
 
   useEffect(() => {
-    if (user) {
-      const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
+    if (user && open) {
+      const domain = getDomainFromEmail(user?.EMAIL_ADDRESS);
       setFormData({
         LOGIN_USER_NAME: userData.currentUserName,
         NEW_USER_NAME: user?.USER_NAME || "",
         PASSWORD: "",
         isAdminUser: user?.USER_TYPE || false,
-        DOMAIN_NAME: DOMAIN_NAME,
+        DOMAIN_NAME: domain || DOMAIN_NAME,
         EMAIL_ADDRESS: user?.EMAIL_ADDRESS || "",
         MOBILE_NUMBER: user?.MOBILE_NO || "",
         FULL_NAME: user?.FULL_NAME || "",
         EMP_NO: user?.EMP_NO || "",
-        employeeImage: user?.employeeImage || "",
+        employeeImage: null,
         accountExpired: user?.ACCOUNT_EXPIRED || false,
         accountLocked: user?.ACCOUNT_LOCKED || false,
       });
       fetchUserImage();
     } else {
       setFormData(initialFormData);
+      setPreviewUrl(null);
     }
   }, [user, open]);
 
   const fetchUserImage = async () => {
     try {
+      if (!user?.EMP_NO) return;
+
       const response = await axios.get(
         `https://cloud.istreams-erp.com:4498/api/empImage/view?email=${encodeURIComponent(
           userData.currentUserLogin
@@ -161,30 +167,15 @@ const UserCreateModal = ({ user, open, onClose }) => {
       );
 
       const blob = response.data;
-
-      const mimeType = blob.type;
-      const extension = mimeType.split("/")[1] || "png";
-      const filename = `EMPLOYEE_IMAGE_${user.EMP_NO}.${extension}`;
-
-      const file = new File([blob], filename, { type: mimeType });
-
-      setFormData((prev) => ({
-        ...prev,
-        employeeImage: file,
-      }));
-
-      // Optional: Preview the image
-      const imagePreviewUrl = URL.createObjectURL(file);
+      const imagePreviewUrl = URL.createObjectURL(blob);
       setPreviewUrl(imagePreviewUrl);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: `Error fetching user image: ${error.message}`,
-      });
+      console.error("Error fetching user image:", error);
+      setPreviewUrl(null);
     }
   };
 
-  const handleChange = async (eventOrValue, fieldName) => {
+  const handleChange = (eventOrValue, fieldName) => {
     if (eventOrValue && eventOrValue.target) {
       const { name, value, type, checked, files } = eventOrValue.target;
 
@@ -196,14 +187,14 @@ const UserCreateModal = ({ user, open, onClose }) => {
 
           setFormData((prevData) => ({
             ...prevData,
-            [name]: file,
+            employeeImage: file,
           }));
-
-          if (user) {
-            await handleUpdatedImage(formData.EMP_NO);
-          }
         } else {
           setPreviewUrl(null);
+          setFormData((prevData) => ({
+            ...prevData,
+            employeeImage: null,
+          }));
         }
       } else {
         setFormData((prevData) => ({
@@ -221,11 +212,15 @@ const UserCreateModal = ({ user, open, onClose }) => {
         setIsFocused((prev) => ({ ...prev, [name]: true }));
       }
     } else {
-      // For custom components (like Select or toggle switch)
+      // For custom components
       setFormData((prevData) => ({
         ...prevData,
         [fieldName]: eventOrValue,
       }));
+
+      if (user) {
+        setIsFocused((prev) => ({ ...prev, [fieldName]: true }));
+      }
     }
   };
 
@@ -240,6 +235,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
   };
 
   const handleUpdate = async (key, value) => {
+    // Validate before update
+    const errorMessage = validateInput(key, value);
+    if (errorMessage) {
+      setErrors((prev) => ({ ...prev, [key]: errorMessage }));
+      return;
+    }
+
     try {
       setLoading((prev) => ({ ...prev, [key]: true }));
       const payload = {
@@ -255,16 +257,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
         payload
       );
 
-      console.log(response);
-
-      toast({
-        title: response,
-      });
+      toast({ title: response });
+      setErrors((prev) => ({ ...prev, [key]: "" }));
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error updating user:",
-        error,
+        description: error.message,
       });
     } finally {
       setIsFocused((prev) => ({ ...prev, [key]: false }));
@@ -273,11 +272,10 @@ const UserCreateModal = ({ user, open, onClose }) => {
   };
 
   const handleUploadImage = async (EMP_NO) => {
-    setLoading(true);
+    if (!formData.employeeImage) return;
 
-    const file = formData.employeeImage;
     const form = new FormData();
-    form.append("file", file);
+    form.append("file", formData.employeeImage);
     form.append("email", userData.currentUserLogin);
     form.append("fileName", `EMPLOYEE_IMAGE_${EMP_NO}`);
 
@@ -289,114 +287,90 @@ const UserCreateModal = ({ user, open, onClose }) => {
       });
 
       if (response.status === 200) {
-        toast({ title: "Employee saved and image uploaded!" });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `Upload failed (status ${response.status})`,
-        });
+        toast({ title: "Image uploaded successfully!" });
       }
     } catch (error) {
       console.error("Image upload error:", error);
-
       toast({
         variant: "destructive",
         title: "Error saving image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        description: error.message,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleUpdatedImage = async (EMP_NO) => {
-    setLoading(true);
+  const handleUpdatedImage = async () => {
+    if (!user?.EMP_NO || !formData.employeeImage) return;
 
-    const file = formData.employeeImage;
+    setLoading((prev) => ({ ...prev, image: true }));
+
+    const form = new FormData();
+    form.append("file", formData.employeeImage);
+    form.append("email", userData.currentUserLogin);
+    form.append("fileName", `EMPLOYEE_IMAGE_${user.EMP_NO}`);
 
     try {
-      const payload = new FormData();
-      payload.append("file", file);
-      payload.append("email", userData.currentUserLogin);
-      payload.append("fileName", `EMPLOYEE_IMAGE_${EMP_NO}`);
-      console.log(
-        `https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${EMP_NO}`
-      );
-
-      debugger;
-
       const response = await axios.put(
-        `https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${EMP_NO}`,
-        payload,
+        `https://cloud.istreams-erp.com:4498/api/empImage/update`,
+        form,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
 
       if (response.status === 200) {
-        toast({
-          title: "User saved and image updated!",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `image update failed with status: ${response.status}`,
-        });
+        toast({ title: "Image updated successfully!" });
       }
     } catch (error) {
-      console.error("Image upload error:", error);
-
+      console.error("Image update error:", error);
       toast({
         variant: "destructive",
-        title: "Error saving image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        title: "Error updating image.",
+        description: error.message,
       });
     } finally {
-      setLoading(false);
+      setLoading((prev) => ({ ...prev, image: false }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm(formData);
+    const validationErrors = validateForm({ ...formData, user });
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
+
     setErrors({});
+    setIsSubmitting(true);
 
-    setLoading(true);
+    console.log(formData);
+    
     try {
+      const response = await callSoapService(
+        userData.clientURL,
+        "UM_Create_New_User",
+        formData
+      );
 
-            const response = await callSoapService(userData.clientURL, "UM_Create_New_User", formData);
-
-
-      if (!user) {
+      // Upload image only for new users
+      if (formData.employeeImage) {
         await handleUploadImage(formData.EMP_NO);
       }
 
-      toast({
-        title: "Employee saved successfully!",
-        description: response,
-      });
-
+      toast({ title: "User created successfully!" });
       setFormData(initialFormData);
+      setPreviewUrl(null);
       onClose();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error creating user:",
-        error,
+        description: error.message,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -436,14 +410,16 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["USER_NAME"] || (isFocused.NEW_USER_NAME && user) ? (
+                {user &&
+                (loading["NEW_USER_NAME"] || isFocused.NEW_USER_NAME) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
                       handleUpdate("USER_NAME", formData.NEW_USER_NAME)
                     }
+                    type="button"
                   >
-                    {loading["USER_NAME"] ? (
+                    {loading["NEW_USER_NAME"] ? (
                       <BeatLoader color="#000" size={8} />
                     ) : (
                       <Check className="h-5 w-5" />
@@ -458,11 +434,11 @@ const UserCreateModal = ({ user, open, onClose }) => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="PASSWORD" className="text-left">
-                Password
-              </Label>
-              <div className="flex items-center gap-1">
+            {!user && (
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="PASSWORD" className="text-left">
+                  Password
+                </Label>
                 <Input
                   name="PASSWORD"
                   id="PASSWORD"
@@ -474,23 +450,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["PASSWORD"] || (isFocused.PASSWORD && user) ? (
-                  <Button
-                    className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
-                    onMouseDown={handleUpdate}
-                  >
-                    {loading["PASSWORD"] ? (
-                      <BeatLoader color="#000" size={8} />
-                    ) : (
-                      <Check className="h-5 w-5" />
-                    )}
-                  </Button>
-                ) : null}
+                {errors.PASSWORD && (
+                  <span className="text-xs text-red-500">
+                    {errors.PASSWORD}
+                  </span>
+                )}
               </div>
-              {errors.PASSWORD && (
-                <span className="text-xs text-red-500">{errors.PASSWORD}</span>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-1 gap-2">
               <Label htmlFor="isAdminUser" className="text-left">
@@ -501,10 +467,7 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   type="single"
                   value={formData.isAdminUser ? "true" : "false"}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isAdminUser: value === "true",
-                    }))
+                    handleChange(value === "true", "isAdminUser")
                   }
                   className="flex justify-start"
                 >
@@ -515,12 +478,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
                     Admin
                   </ToggleGroupItem>
                 </ToggleGroup>
-                {loading["USER_TYPE"] || (isFocused.isAdminUser && user) ? (
+                {user && (loading["USER_TYPE"] || isFocused.isAdminUser) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
                       handleUpdate("USER_TYPE", formData.isAdminUser)
                     }
+                    type="button"
                   >
                     {loading["USER_TYPE"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -548,13 +512,14 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["EMAIL_ADDRESS"] ||
-                (isFocused.EMAIL_ADDRESS && user) ? (
+                {user &&
+                (loading["EMAIL_ADDRESS"] || isFocused.EMAIL_ADDRESS) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
                       handleUpdate("EMAIL_ADDRESS", formData.EMAIL_ADDRESS)
                     }
+                    type="button"
                   >
                     {loading["EMAIL_ADDRESS"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -586,14 +551,16 @@ const UserCreateModal = ({ user, open, onClose }) => {
                     value={formData.MOBILE_NUMBER}
                     onChange={handleChange}
                     onBlur={handleBlur}
+                    maxLength={10}
                     tabIndex={-1}
                   />
-                  {loading["MOBILE_NO"] || (isFocused.MOBILE_NUMBER && user) ? (
+                  {user && (loading["MOBILE_NO"] || isFocused.MOBILE_NUMBER) ? (
                     <Button
                       className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                       onMouseDown={() =>
                         handleUpdate("MOBILE_NO", formData.MOBILE_NUMBER)
                       }
+                      type="button"
                     >
                       {loading["MOBILE_NO"] ? (
                         <BeatLoader color="#000" size={8} />
@@ -627,12 +594,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["FULL_NAME"] || (isFocused.FULL_NAME && user) ? (
+                {user && (loading["FULL_NAME"] || isFocused.FULL_NAME) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
                       handleUpdate("FULL_NAME", formData.FULL_NAME)
                     }
+                    type="button"
                   >
                     {loading["FULL_NAME"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -663,10 +631,11 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["EMP_NO"] || (isFocused.EMP_NO && user) ? (
+                {user && (loading["EMP_NO"] || isFocused.EMP_NO) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() => handleUpdate("EMP_NO", formData.EMP_NO)}
+                    type="button"
                   >
                     {loading["EMP_NO"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -692,10 +661,10 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 htmlFor="employeeImage"
                 className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
-                {formData.employeeImage ? (
+                {previewUrl ? (
                   <img
                     src={previewUrl}
-                    alt={formData.FULL_NAME}
+                    alt={formData.FULL_NAME || "Preview"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -712,8 +681,20 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 onChange={handleChange}
                 className="hidden"
               />
-              {errors.employeeImage && (
-                <p className="text-xs text-red-500">{errors.employeeImage}</p>
+              {user && formData.employeeImage && (
+                <div className="mt-2">
+                  <Button
+                    onClick={handleUpdatedImage}
+                    disabled={loading.image}
+                    type="button"
+                  >
+                    {loading.image ? (
+                      <BeatLoader color="#fff" size={8} />
+                    ) : (
+                      "Update Image"
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -728,16 +709,9 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 placeholder="Enter domain name"
                 className="w-full"
                 value={formData.DOMAIN_NAME}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                readOnly={true}
+                readOnly
                 tabIndex={-1}
               />
-              {errors.DOMAIN_NAME && (
-                <span className="text-xs text-red-500">
-                  {errors.DOMAIN_NAME}
-                </span>
-              )}
             </div>
 
             <div className="flex flex-col space-y-1">
@@ -758,41 +732,35 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 </label>
               </div>
 
-              <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    name="accountLocked"
-                    id="accountLocked"
-                    checked={formData.accountLocked}
-                    onCheckedChange={(checked) =>
-                      handleChange(checked, "accountLocked")
-                    }
-                  />
-                  <label
-                    htmlFor="accountLocked"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Account Locked
-                  </label>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  name="accountLocked"
+                  id="accountLocked"
+                  checked={formData.accountLocked}
+                  onCheckedChange={(checked) =>
+                    handleChange(checked, "accountLocked")
+                  }
+                />
+                <label
+                  htmlFor="accountLocked"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Account Locked
+                </label>
               </div>
             </div>
           </div>
         </div>
 
-        {!user ? (
-          <>
-            <Separator />
-            <div className="mt-2 flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={() => onClose()}>
-                Cancel
-              </Button>
-              <Button variant="default" type="submit">
-                Save
-              </Button>
-            </div>
-          </>
-        ) : null}
+        <Separator />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="default" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <BeatLoader color="#fff" size={8} /> : "Save"}
+          </Button>
+        </div>
       </form>
     </DialogContent>
   );

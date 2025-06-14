@@ -200,9 +200,9 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       };
 
       const response = isNew
-        ? await axios.post("https://cloud.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
+        ? await axios.post("https://apps.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
         : await axios.put(
-            `https://cloud.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=${filename}`,
+            `https://apps.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=${filename}`,
             payload,
             config,
           );
