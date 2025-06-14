@@ -150,6 +150,9 @@ export default function ServiceFormPage() {
         DModelData: convertedDataModel,
       };
 
+      console.log(convertedDataModel);
+      
+
       const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
 
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);

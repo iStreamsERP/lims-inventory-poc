@@ -18,7 +18,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
-  const { addItem } = useCart();
+  const { cart, addItem } = useCart();
 
   const [loading, setLoading] = useState(false);
   const [variants, setVariants] = useState([]);
@@ -131,9 +131,7 @@ const ProductDetailPage = () => {
   const fetchProductImage = async (code) => {
     try {
       const { data } = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
-          userData.userEmail,
-        )}&fileName=PRODUCT_IMAGE_${code}`,
+        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${code}`,
         { responseType: "blob" },
       );
       return URL.createObjectURL(data);
@@ -178,11 +176,13 @@ const ProductDetailPage = () => {
             (s) => s.itemColor === c && (!selectedSize || s.itemSize === selectedSize) && (!selectedVariant || s.itemVariant === selectedVariant),
           ),
         );
+
         const availableSizes = allSizes.filter((sz) =>
           subs.some(
             (s) => s.itemSize === sz && (!selectedColor || s.itemColor === selectedColor) && (!selectedVariant || s.itemVariant === selectedVariant),
           ),
         );
+
         const availableVariants = allVariants.filter((v) =>
           subs.some(
             (s) => s.itemVariant === v && (!selectedColor || s.itemColor === selectedColor) && (!selectedSize || s.itemSize === selectedSize),
@@ -224,6 +224,16 @@ const ProductDetailPage = () => {
           }
         };
 
+        const existingCartItem = cart.find(
+          (item) =>
+            item.itemCode === chosen.itemCode &&
+            (item.itemColor || "") === (chosen.itemColor || "") &&
+            (item.itemSize || "") === (chosen.itemSize || "") &&
+            (item.itemVariant || "") === (chosen.itemVariant || ""),
+        );
+
+        const quantityInCart = existingCartItem ? existingCartItem.itemQty : 0;
+
         const handleAddToCart = () => {
           addItem({
             ...chosen,
@@ -231,6 +241,7 @@ const ProductDetailPage = () => {
             itemGroup: item.itemGroup,
             itemQty: 1,
           });
+          toast({ title: "Added to cart" });
         };
 
         return (
@@ -358,6 +369,9 @@ const ProductDetailPage = () => {
                     Buy Now
                   </Button>
                 </div>
+
+                {/* Add quantity display here */}
+                {quantityInCart > 0 && <p className="mt-2 text-sm text-gray-500">Quantity in cart: {quantityInCart}</p>}
 
                 <p className="mt-4 text-2xl font-bold">{formatPrice(chosen.finalSaleRate)}</p>
               </div>

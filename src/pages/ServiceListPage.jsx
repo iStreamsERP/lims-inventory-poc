@@ -45,7 +45,7 @@ const ServiceListPage = () => {
       const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
         WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
-        Orderby: "",
+        Orderby: "ITEM_CODE DESC",
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
