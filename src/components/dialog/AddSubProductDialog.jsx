@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useImageAPI } from "@/hooks/useImageAPI";
 import { callSoapService } from "@/services/callSoapService";
 import { cartesianProduct } from "@/utils/cartesian";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
@@ -16,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [] }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { saveImage } = useImageAPI();
 
   const [errors, setErrors] = useState({});
   const [isSalePriceChecked, setIsSalePriceChecked] = useState(false);
@@ -183,50 +185,6 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
     }
   };
 
-  const handleUploadImage = async (serialNo, isNew) => {
-    const file = subProductFormData.rawImage;
-
-    if (!file) return;
-
-    const payload = new FormData();
-    payload.append("file", file);
-    payload.append("email", userData.userEmail);
-    const filename = `SUB_PRODUCT_IMAGE_${subProduct?.ITEM_CODE}_${serialNo}`;
-    payload.append("fileName", filename);
-
-    try {
-      const config = {
-        headers: { "Content-Type": "multipart/form-data" },
-      };
-
-      const response = isNew
-        ? await axios.post("https://apps.istreams-erp.com:4499/api/MaterialImage/upload", payload, config)
-        : await axios.put(
-            `https://apps.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=${filename}`,
-            payload,
-            config,
-          );
-
-      if (response.status === 200) {
-        toast({
-          title: `Image ${isNew ? "uploaded" : "updated"} successfully!`,
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `Error ${isNew ? "uploading" : "updating"} image.`,
-          description: errors?.response?.data?.message || errors?.message,
-        });
-      }
-    } catch (errors) {
-      toast({
-        variant: "destructive",
-        title: "Error saving image.",
-        description: errors?.response?.data?.message || errors?.message || "Unknown errors occurred.",
-      });
-    }
-  };
-
   const fetchExistingProduct = async (itemName) => {
     try {
       const payload = {
@@ -258,7 +216,6 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
   };
 
   const handleSingleSubmit = async () => {
-    // 1. validate dynamic fields & image
     if (!validateDynamicFields()) {
       toast({ variant: "destructive", title: "Please fill all required fields." });
       return;
@@ -268,7 +225,6 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       return;
     }
 
-    // capture original vs new name
     const originalName = subProduct?.ITEM_NAME;
     const isNewProduct = subProductFormData.SUB_MATERIAL_NO === -1;
     const updatedFormData = {
@@ -278,7 +234,6 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
     const newName = updatedFormData.ITEM_NAME;
 
     try {
-      // only check for duplicates if it's not the same record
       const existingProductName = await fetchExistingProduct(newName);
       if (existingProductName && existingProductName.trim() !== "" && existingProductName !== originalName) {
         toast({
@@ -302,8 +257,10 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
       // extract serialNo & upload image
       const serialNo = response.match(/\/(\d+)'/)?.[1];
       toast({ title: response });
-      if (serialNo) await handleUploadImage(serialNo, isNewProduct);
 
+      if (serialNo && subProductFormData.rawImage) {
+        await saveImage("subproduct", subProduct?.ITEM_CODE, subProductFormData.rawImage, serialNo, isNewProduct);
+      }
       // reset & close
       setSubProductFormData(initialFormData);
       onClose();
@@ -359,7 +316,12 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
     const startedWithExisting = subProductFormData.SUB_MATERIAL_NO >= 0;
 
     // 5. Process each combo sequentially
-    const summary = { created: 0, duplicates: [], failed: [] };
+    const summary = {
+      created: 0,
+      duplicates: [],
+      failed: [],
+      imageFailures: [],
+    };
 
     for (let i = 0; i < combos.length; i++) {
       const combo = combos[i];
@@ -389,13 +351,17 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
         };
 
         const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
         const serialNo = response.match(/\/(\d+)'/)?.[1];
         const shouldUpload = serialNo && (useSameImage || i === 0);
+
         if (shouldUpload) {
           // when editing, only uploads for new items (i>0); when fresh, always new
           const isNewUpload = startedWithExisting ? i > 0 : true;
-          await handleUploadImage(serialNo, isNewUpload);
+          try {
+            await saveImage("subproduct", subProduct?.ITEM_CODE, subProductFormData.rawImage, serialNo, isNewUpload);
+          } catch (imageError) {
+            summary.imageFailures.push(data.ITEM_NAME);
+          }
         }
 
         summary.created++;
@@ -413,8 +379,13 @@ const AddSubProductDialog = ({ open, onClose, subProduct, isEditMode, config = [
     if (summary.duplicates.length) {
       message += ` Skipped duplicates: ${summary.duplicates.join(", ")}.`;
     }
+
     if (summary.failed.length) {
       message += ` Errors: ${summary.failed.join(", ")}.`;
+    }
+
+    if (summary.imageFailures.length) {
+      message += ` Image upload failures: ${summary.imageFailures.join(", ")}.`;
     }
     toast({ title: message });
   };

@@ -11,32 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useImageAPI } from "@/hooks/useImageAPI";
 import { cn } from "@/lib/utils";
 import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { toTitleCase } from "@/utils/stringUtils";
 import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BeatLoader } from "react-spinners";
 
 export default function ProductFormPage() {
-  const { id } = useParams();
-  const { userData } = useAuth();
-  const { toast } = useToast();
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState({});
-  const [commandInputValue, setCommandInputValue] = useState("");
-  const [categoryData, setCategoryData] = useState([]);
-  const [openCategoryData, setOpenCategoryData] = useState(false);
-  const [uomList, setUomList] = useState([]);
-  const [opened, setOpened] = useState(false);
-  const [openSubMaterialDetails, setOpenSubMaterialDetails] = useState(false);
-  const [subProductCount, setSubProductCount] = useState(0);
-  const [submitCount, setSubmitCount] = useState(0);
-
   const initialFormData = {
     COMPANY_CODE: 1,
     BRANCH_CODE: 1,
@@ -63,6 +49,23 @@ export default function ProductFormPage() {
     GROUP_LEVEL2: "Consumables",
     GROUP_LEVEL3: "Consumables",
   };
+
+  const { id } = useParams();
+  const { userData } = useAuth();
+  const { toast } = useToast();
+  const { fetchImageFile, saveImage } = useImageAPI();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState({});
+  const [commandInputValue, setCommandInputValue] = useState("");
+  const [categoryData, setCategoryData] = useState([]);
+  const [openCategoryData, setOpenCategoryData] = useState(false);
+  const [uomList, setUomList] = useState([]);
+  const [opened, setOpened] = useState(false);
+  const [openSubMaterialDetails, setOpenSubMaterialDetails] = useState(false);
+  const [subProductCount, setSubProductCount] = useState(0);
+  const [submitCount, setSubmitCount] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const [subMaterialBasedOnList, setSubMaterialBasedOnList] = useState([
     { name: "Color", value: "Color" },
@@ -105,15 +108,37 @@ export default function ProductFormPage() {
   ];
 
   const [formData, setFormData] = useState(initialFormData);
-  const [previewUrl, setPreviewUrl] = useState(null);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
-    if (id) {
-      fetchProductData();
-      fetchProductImage();
-    }
-    fetchCategoryUsingQuery();
-    fetchUom();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        await fetchCategoryUsingQuery();
+        await fetchUom();
+
+        if (id) {
+          await fetchProductData();
+          await fetchProductImage();
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Initialization error",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id]);
 
   useEffect(() => {
@@ -140,7 +165,7 @@ export default function ProductFormPage() {
     return newError;
   };
 
-  const fetchCategoryUsingQuery = async () => {
+  const fetchCategoryUsingQuery = useCallback(async () => {
     try {
       const payload = {
         SQLQuery:
@@ -156,9 +181,9 @@ export default function ProductFormPage() {
         title: `Error fetching client: ${error.message}`,
       });
     }
-  };
+  }, [userData, toast]);
 
-  const fetchProductData = async () => {
+  const fetchProductData = useCallback(async () => {
     try {
       const payload = {
         DataModelName: "INVT_MATERIAL_MASTER",
@@ -181,41 +206,28 @@ export default function ProductFormPage() {
         title: `Error fetching main product: ${err.message}`,
       });
     }
-  };
+  }, [id, userData, toast]);
 
-  const fetchProductImage = async () => {
+  const fetchProductImage = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
-        {
-          responseType: "blob",
-        },
-      );
-      const blob = response.data;
-
-      const mimeType = blob.type;
-      const extension = mimeType.split("/")[1] || "png";
-      const filename = `PRODUCT_IMAGE_${id}.${extension}`;
-
-      const file = new File([blob], filename, { type: mimeType });
-
-      setFormData((prev) => ({
-        ...prev,
-        image_file: file,
-      }));
-
-      // Optional: Preview the image
-      const imagePreviewUrl = URL.createObjectURL(file);
-      setPreviewUrl(imagePreviewUrl);
+      const imageData = await fetchImageFile("product", id);
+      if (imageData) {
+        setFormData((prev) => ({
+          ...prev,
+          image_file: imageData.file,
+        }));
+        setPreviewUrl(imageData.previewUrl);
+      }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: `Error fetching product image: ${error.message}`,
+        title: "Image fetch error",
+        description: error.message,
       });
     }
-  };
+  }, [id, fetchImageFile, toast]);
 
-  const fetchSubProductCount = async () => {
+  const fetchSubProductCount = useCallback(async () => {
     try {
       const payload = {
         SQLQuery: `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
@@ -233,9 +245,9 @@ export default function ProductFormPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData.ITEM_CODE, userData, toast]);
 
-  const fetchUom = async () => {
+  const fetchUom = useCallback(async () => {
     try {
       const payload = {
         DataModelName: "INVT_UOM_MASTER",
@@ -255,7 +267,7 @@ export default function ProductFormPage() {
         title: `Error fetching uom: ${error?.message}`,
       });
     }
-  };
+  }, [userData, toast]);
 
   const handleChange = (e) => {
     const { name, type, value, files } = e.target;
@@ -277,73 +289,24 @@ export default function ProductFormPage() {
     }
   };
 
-  const handleImage = async (newItemCode) => {
-    setLoading(true);
+  const handleSaveImage = useCallback(
+    async (itemCode) => {
+      if (!formData.image_file) return;
 
-    const file = formData.image_file;
-
-    try {
-      if (id) {
-        const payload = new FormData();
-        payload.append("file", file);
-        payload.append("email", userData.userEmail);
-        payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
-
-        const response = await axios.put(
-          `https://apps.istreams-erp.com:4499/api/MaterialImage/update?email=${userData.userEmail}&fileName=PRODUCT_IMAGE_${newItemCode}`,
-          payload,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          },
+      try {
+        await saveImage(
+          "product",
+          itemCode,
+          formData.image_file,
+          null,
+          !id, // isNew: true if creating, false if updating
         );
-
-        if (response.status === 200) {
-          toast({
-            title: "Product saved and image updated!",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: `image update failed with status: ${response.status}`,
-          });
-        }
-      } else if (newItemCode) {
-        const payload = new FormData();
-        payload.append("file", file);
-        payload.append("email", userData.userEmail);
-        payload.append("fileName", `PRODUCT_IMAGE_${newItemCode}`);
-
-        const response = await axios.post("https://apps.istreams-erp.com:4499/api/MaterialImage/upload", payload, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-        if (response.status === 200) {
-          toast({
-            title: "Product saved and image uploaded!",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: `image upload failed with status: ${response.status}`,
-          });
-        }
+      } catch (error) {
+        throw new Error(`Image save failed: ${error.message}`);
       }
-    } catch (error) {
-      console.error("Image upload error:", error);
-
-      toast({
-        variant: "destructive",
-        title: "Error saving image.",
-        description: error?.response?.data?.message || error?.message || "Unknown error occurred.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [formData.image_file, id, saveImage],
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -355,15 +318,13 @@ export default function ProductFormPage() {
     }
     try {
       setLoading(true);
-      debugger;
+
       const normalizedData = {
         ...formData,
         ITEM_NAME: toTitleCase(formData.ITEM_NAME),
         SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
         // if you persist SUB_MATERIAL_BASED_ON as CSV:
-        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
-          ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
-          : toTitleCase(formData.SUB_MATERIAL_BASED_ON),
+        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON) ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",") : "",
       };
 
       const payload = {
@@ -376,9 +337,10 @@ export default function ProductFormPage() {
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
 
-      await handleImage(newItemCode);
+      // Save image with the new item code
+      await handleSaveImage(newItemCode);
 
-      if (newItemCode !== "(NEW)") {
+      if (!id && newItemCode !== "(NEW)") {
         setFormData((prev) => ({
           ...prev,
           ITEM_CODE: newItemCode,
@@ -387,14 +349,15 @@ export default function ProductFormPage() {
         setSubmitCount((c) => c + 1);
 
         toast({
-          title: response,
+          title: "Product saved successfully!",
+          description: response,
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error saving data. Please try again.",
-        error,
+        title: "Save failed",
+        description: error.message,
       });
     } finally {
       setLoading(false);

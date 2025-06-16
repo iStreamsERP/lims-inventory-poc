@@ -1,74 +1,65 @@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useImageAPI } from "@/hooks/useImageAPI";
 import { callSoapService } from "@/services/callSoapService";
-import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 
 const CategoryListPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { fetchImageUrl } = useImageAPI();
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const payload = {
-          SQLQuery:
-            "SELECT GROUP_LEVEL1, COUNT(ITEM_CODE) AS productCount, MIN(ITEM_CODE) AS firstItemCode FROM INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT' GROUP BY GROUP_LEVEL1 ORDER BY GROUP_LEVEL1",
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
-        setCategories(response);
-
-        // Fetch images for each category
-        response.forEach((category) => {
-          fetchProductImage(category.firstItemCode, category.GROUP_LEVEL1);
-        });
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching categories",
-          description: err?.message || "Unknown error",
-        });
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      categories.forEach((category) => {
+        if (category.imageUrl) URL.revokeObjectURL(category.imageUrl);
+      });
     };
+  }, [categories]);
 
-    fetchAll();
-  }, [userData, toast]);
-
-  const fetchProductImage = async (id, groupLevel) => {
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${id}`,
-        { responseType: "blob" },
+      const payload = {
+        SQLQuery:
+          "SELECT GROUP_LEVEL1, COUNT(ITEM_CODE) AS productCount, MIN(ITEM_CODE) AS firstItemCode FROM INVT_MATERIAL_MASTER WHERE GROUP_LEVEL1 IS NOT NULL AND GROUP_LEVEL1 &lt;&gt; '' AND COST_CODE = 'MXXXX' AND ITEM_GROUP = 'PRODUCT' GROUP BY GROUP_LEVEL1 ORDER BY GROUP_LEVEL1",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
+      // Fetch images in parallel
+      const categoriesWithImages = await Promise.all(
+        response.map(async (category) => {
+          try {
+            const imageUrl = await fetchImageUrl("product", category.firstItemCode);
+            return { ...category, imageUrl };
+          } catch (error) {
+            console.error(`Error fetching image for ${category.GROUP_LEVEL1}`, error);
+            return { ...category, imageUrl: null };
+          }
+        }),
       );
 
-      const blob = response.data;
-
-      const mimeType = blob.type;
-      const extension = mimeType.split("/")[1] || "png";
-      const filename = `PRODUCT_IMAGE_${id}.${extension}`;
-      const file = new File([blob], filename, { type: mimeType });
-
-      const imageUrl = URL.createObjectURL(file);
-
-      setCategories((prevCategories) => prevCategories.map((cat) => (cat.GROUP_LEVEL1 === groupLevel ? { ...cat, imageUrl } : cat)));
-    } catch (error) {
+      setCategories(categoriesWithImages);
+    } catch (err) {
       toast({
         variant: "destructive",
-        title: `Error fetching product image for ${groupLevel}`,
-        description: error?.message || "Unknown error",
+        title: "Error fetching categories",
+        description: err?.message || "Unknown error",
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [userData, fetchImageUrl, toast]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   return (
     <div className="flex flex-col gap-y-4">

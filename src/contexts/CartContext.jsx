@@ -21,6 +21,13 @@ function cartReducer(state, action) {
   switch (action.type) {
     case ADD_ITEM: {
       const { payload } = action;
+
+      // Only store identifiers, not blob URLs
+      const newItem = {
+        ...payload,
+        image: undefined, // Remove blob URL from stored item
+      };
+      
       const idx = state.findIndex(
         (item) =>
           item.itemCode === payload.itemCode &&

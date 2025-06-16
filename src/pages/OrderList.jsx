@@ -1,42 +1,33 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
+import { convertServiceDate } from "@/utils/dateUtils";
+import DataTable from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
-import { convertServiceDate } from "@/utils/dateUtils";
-import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import { ArrowUpDown, Eye, MoreHorizontal, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { PacmanLoader } from "react-spinners";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const OrderList = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-
   const isQuotation = pathname.includes("quotations");
 
   const [tableList, setTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
-  const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState("");
 
   useEffect(() => {
     fetchClientList();
@@ -46,25 +37,26 @@ const OrderList = () => {
     setLoading(true);
     try {
       const payload = {
-        SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE ${isQuotation ? "QUOTATION_NO IS NOT NULL AND QUOTATION_NO != ''" : "ORDER_NO IS NOT NULL AND ORDER_NO != ''"} ORDER BY SALES_ORDER_SERIAL_NO DESC`,
+        SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE ${
+          isQuotation ? "QUOTATION_NO IS NOT NULL AND QUOTATION_NO != ''" : "ORDER_NO IS NOT NULL AND ORDER_NO != ''"
+        } ORDER BY SALES_ORDER_SERIAL_NO DESC`,
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
       setTableList(response || []);
     } catch (error) {
+      setError(error.message);
       toast({
         variant: "destructive",
-        title: `Error fetching client list: ${error.message}`,
+        title: `Error fetching ${isQuotation ? "quotations" : "orders"}: ${error.message}`,
       });
-      setError(error.message);
     } finally {
       setLoading(false);
     }
   }, [isQuotation, userData, toast]);
 
   const handleDelete = useCallback(
-    async (item, isMultipleItem) => {
+    async (item, isMultipleItem = false) => {
       if (!isMultipleItem) {
         const isConfirmed = window.confirm("Are you sure you want to delete? This action cannot be undone.");
         if (!isConfirmed) return;
@@ -77,32 +69,21 @@ const OrderList = () => {
           WhereCondition: `SALES_ORDER_SERIAL_NO = ${item.SALES_ORDER_SERIAL_NO}`,
         };
 
-        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
-
-        if (typeof response === "string" && response.trim().toLowerCase().startsWith("error")) {
-          toast({
-            variant: "destructive",
-            title: `Delete failed for Order No: ${item.SALES_ORDER_SERIAL_NO}`,
-            description: response,
-          });
-        } else {
-          toast({
-            title: `Deleted Order No: ${item.SALES_ORDER_SERIAL_NO}`,
-            description: response,
-          });
-        }
-      } catch (error) {
-        console.error("Error deleting order:", error);
+        await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
         toast({
+          title: `Deleted ${isQuotation ? "Quotation" : "Order"} No: ${item.SALES_ORDER_SERIAL_NO}`,
+        });
+      } catch (error) {
+        toast({
           variant: "destructive",
-          title: error?.message || "Unknown error occurred.",
+          title: error?.message || "Delete failed",
         });
       } finally {
         fetchClientList();
       }
     },
-    [userData, fetchClientList, toast],
+    [userData, fetchClientList, toast, isQuotation],
   );
 
   const columns = useMemo(
@@ -235,175 +216,30 @@ const OrderList = () => {
     [isQuotation, navigate, handleDelete],
   );
 
-  const fuzzyFilter = (row, columnId, filterValue) => {
-    const value = row.getValue(columnId);
-    return String(value || "")
-      .toLowerCase()
-      .includes(filterValue.toLowerCase());
-  };
-
-  const table = useReactTable({
-    data: tableList,
-    columns,
-    onSortingChange: setSorting,
-    getRowSelection: true,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: fuzzyFilter,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-      globalFilter,
-    },
-  });
+  const additionalButtons = (
+    <Button
+      variant="destructive"
+      disabled={Object.keys(rowSelection).length === 0}
+      onClick={() => {
+        const selectedItems = table.getSelectedRowModel().rows.map((row) => row.original);
+        selectedItems.forEach((item) => handleDelete(item, true));
+      }}
+    >
+      Delete Selected
+    </Button>
+  );
 
   return (
-    <div className="flex flex-col gap-y-4">
-      <h1 className="title">All {isQuotation ? "Quotations" : "Orders"}</h1>
-      <div className="w-full">
-        <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">
-          <Input
-            placeholder="Global Search..."
-            value={table.getState().globalFilter ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)}
-            className="max-w-sm"
-          />
-          <div className="flex items-center gap-x-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="ml-auto"
-                >
-                  <Settings2 /> View
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant="destructive"
-              disabled={Object.keys(rowSelection).length === 0}
-              onClick={() => {
-                const selectedItems = table.getSelectedRowModel().rows.map((row) => row.original);
-                selectedItems.forEach((item) => handleDelete(item, true));
-              }}
-            >
-              Delete Selected
-            </Button>
-
-            <Button onClick={() => navigate(`${isQuotation ? "/new-quotation" : "/new-order"}`)}>
-              Create
-              <Plus />
-            </Button>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    <PacmanLoader color="#6366f1" />
-                  </TableCell>
-                </TableRow>
-              ) : error ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center text-red-500"
-                  >
-                    {error}
-                  </TableCell>
-                </TableRow>
-              ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      title={`All ${isQuotation ? "Quotations" : "Orders"}`}
+      columns={columns}
+      data={tableList}
+      loading={loading}
+      error={error}
+      onCreate={() => navigate(isQuotation ? "/new-quotation" : "/new-order")}
+      noResultsText={`No ${isQuotation ? "quotations" : "orders"} found.`}
+      additionalToolbarButtons={additionalButtons}
+    />
   );
 };
 

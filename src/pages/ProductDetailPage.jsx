@@ -7,10 +7,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useImageAPI } from "@/hooks/useImageAPI";
 import { callSoapService } from "@/services/callSoapService";
 import { formatPrice } from "@/utils/formatPrice";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 
@@ -19,6 +20,7 @@ const ProductDetailPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
   const { cart, addItem } = useCart();
+  const { fetchImageUrl } = useImageAPI();
 
   const [loading, setLoading] = useState(false);
   const [variants, setVariants] = useState([]);
@@ -27,26 +29,34 @@ const ProductDetailPage = () => {
   const [selectedVariant, setSelectedVariant] = useState("");
   const [error, setError] = useState("");
 
+  // Cleanup object URLs when component unmounts or variants change
   useEffect(() => {
-    fetchProductVariants();
-  }, [id]);
+    return () => {
+      variants.forEach((variant) => {
+        if (variant.image) URL.revokeObjectURL(variant.image);
+        variant.subProducts.forEach((sub) => {
+          if (sub.image) URL.revokeObjectURL(sub.image);
+        });
+      });
+    };
+  }, [variants]);
 
+  // Set default selections when variants change
   useEffect(() => {
     if (variants.length) {
       const subs = variants[0].subProducts;
 
-      const allColors = Array.from(new Set(subs.map((s) => s.itemColor))).filter(Boolean);
-      const allSizes = Array.from(new Set(subs.map((s) => s.itemSize))).filter(Boolean);
-      const allVariants = Array.from(new Set(subs.map((s) => s.itemVariant))).filter(Boolean);
+      const allColors = [...new Set(subs.map((s) => s.itemColor))].filter(Boolean);
+      const allSizes = [...new Set(subs.map((s) => s.itemSize))].filter(Boolean);
+      const allVariants = [...new Set(subs.map((s) => s.itemVariant))].filter(Boolean);
 
-      // pick the first of each (or leave blank if none)
       setSelectedColor(allColors[0] || "");
       setSelectedSize(allSizes[0] || "");
       setSelectedVariant(allVariants[0] || "");
     }
   }, [variants]);
 
-  const fetchProductVariants = async () => {
+  const fetchProductVariants = useCallback(async () => {
     setLoading(true);
     try {
       const payload = {
@@ -77,12 +87,13 @@ const ProductDetailPage = () => {
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
+      // Process variants with images
       const normalized = await Promise.all(
         response.map(async (item) => {
           const parsed = item.subProducts && typeof item.subProducts === "string" ? JSON.parse(item.subProducts) : [];
 
           // Fetch main image once per item
-          const mainImage = await fetchProductImage(item.itemCode);
+          const mainImage = await fetchImageUrl("product", item.itemCode);
 
           const subs = parsed.length
             ? parsed
@@ -100,15 +111,15 @@ const ProductDetailPage = () => {
 
           const subsWithImages = await Promise.all(
             subs.map(async (sub) => {
-              let image;
-              if (sub.subProductNo && String(sub.subProductNo).trim() !== "") {
-                // Attempt to fetch sub-product image, fallback to main image if it fails
-                try {
-                  image = await fetchSubProductImage(sub.ITEM_CODE, sub.subProductNo);
-                } catch {
+              let image = null;
+
+              try {
+                if (sub.subProductNo && String(sub.subProductNo).trim() !== "") {
+                  image = await fetchImageUrl("subproduct", sub.ITEM_CODE, sub.subProductNo);
+                } else {
                   image = mainImage;
                 }
-              } else {
+              } catch (error) {
                 image = mainImage;
               }
               return { ...sub, image };
@@ -126,33 +137,11 @@ const ProductDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, userData, fetchImageUrl, toast]);
 
-  const fetchProductImage = async (code) => {
-    try {
-      const { data } = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=PRODUCT_IMAGE_${code}`,
-        { responseType: "blob" },
-      );
-      return URL.createObjectURL(data);
-    } catch {
-      return null;
-    }
-  };
-
-  const fetchSubProductImage = async (code, no) => {
-    try {
-      const { data } = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(
-          userData.userEmail,
-        )}&fileName=SUB_PRODUCT_IMAGE_${code}_${no}`,
-        { responseType: "blob" },
-      );
-      return URL.createObjectURL(data);
-    } catch {
-      return null;
-    }
-  };
+  useEffect(() => {
+    fetchProductVariants();
+  }, [fetchProductVariants]);
 
   if (loading)
     return (
@@ -237,6 +226,7 @@ const ProductDetailPage = () => {
         const handleAddToCart = () => {
           addItem({
             ...chosen,
+            image: undefined,
             uomStock: item.uomStock,
             itemGroup: item.itemGroup,
             itemQty: 1,

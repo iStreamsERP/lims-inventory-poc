@@ -6,13 +6,15 @@ import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import AddSubProductDialog from "./dialog/AddSubProductDialog";
+import { useImageAPI } from "@/hooks/useImageAPI";
 
 const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { fetchImageFile, deleteImage } = useImageAPI();
 
   const [subProductList, setSubProductList] = useState([]);
   const [mainProductConfig, setMainProductConfig] = useState({});
@@ -25,6 +27,15 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Cleanup image preview URLs
+  useEffect(() => {
+    return () => {
+      subProductList.forEach((product) => {
+        if (product.previewUrl) URL.revokeObjectURL(product.previewUrl);
+      });
+    };
+  }, [subProductList]);
+
   useEffect(() => {
     setSelectedSubProduct((prev) => ({
       ...prev,
@@ -34,9 +45,9 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
     fetchSubProductData();
     fetchMainProductData();
-  }, [onSubmitTrigger, formDataProps.ITEM_CODE]);
+  }, [onSubmitTrigger, formDataProps?.ITEM_CODE]);
 
-  const fetchSubProductData = async () => {
+  const fetchSubProductData = useCallback(async () => {
     setIsLoading(true);
     try {
       const payload = {
@@ -47,14 +58,25 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
 
+      // Fetch all images in parallel
       const updated = await Promise.all(
         response.map(async (product) => {
-          const { file, previewUrl } = await fetchSubProductImage(product.ITEM_CODE, product.SUB_MATERIAL_NO);
-          return {
-            ...product,
-            rawImage: file,
-            previewUrl,
-          };
+          try {
+            const imageData = await fetchImageFile("subproduct", product.ITEM_CODE, product.SUB_MATERIAL_NO);
+
+            return {
+              ...product,
+              rawImage: imageData?.file || null,
+              previewUrl: imageData?.previewUrl || null,
+            };
+          } catch (error) {
+            console.error(`Image fetch failed for ${product.SUB_MATERIAL_NO}`, error);
+            return {
+              ...product,
+              rawImage: null,
+              previewUrl: null,
+            };
+          }
         }),
       );
 
@@ -62,35 +84,15 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     } catch (errors) {
       toast({
         variant: "destructive",
-        title: `Error Fetching Sub Product: ${errors.message}`,
+        title: "Error Fetching Sub Products",
+        description: error.message || "Failed to load sub-products",
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formDataProps?.ITEM_CODE, userData, toast, fetchImageFile]);
 
-  const fetchSubProductImage = async (itemcode, subMaterialNo) => {
-    try {
-      const response = await axios.get(
-        `https://apps.istreams-erp.com:4499/api/MaterialImage/view?email=${encodeURIComponent(userData.userEmail)}&fileName=SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}`,
-        { responseType: "blob" },
-      );
-
-      const blob = response.data;
-      const mimeType = blob.type;
-      const extension = mimeType.split("/")[1] || "png";
-      const filename = `SUB_PRODUCT_IMAGE_${itemcode}_${subMaterialNo}.${extension}`;
-      const file = new File([blob], filename, { type: mimeType });
-      const previewUrl = URL.createObjectURL(file);
-
-      return { file, previewUrl };
-    } catch (error) {
-      console.error(`Failed to fetch image for ${subMaterialNo}`, error);
-      return { file: null, previewUrl: null };
-    }
-  };
-
-  const fetchMainProductData = async () => {
+  const fetchMainProductData = useCallback(async () => {
     try {
       const payload = {
         SQLQuery: `SELECT ITEM_NAME AS itemName, SUB_MATERIAL_BASED_ON AS subMaterialBasedOn, SUB_MATERIALS_MODE AS isSubMaterialEnabled FROM INVT_MATERIAL_MASTER WHERE ITEM_CODE = '${formDataProps?.ITEM_CODE}'`,
@@ -102,78 +104,63 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: "Error Fetching Product Config",
+        description: error.message || "Failed to load product configuration",
       });
     }
-  };
+  }, [formDataProps?.ITEM_CODE, userData, toast]);
 
-  const handleDelete = async (product) => {
-    const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
+  const handleDelete = useCallback(
+    async (product) => {
+      const result = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
 
-    if (!result) {
-      return;
-    }
+      if (!result) {
+        return;
+      }
 
-    try {
-      const payload = {
-        UserName: userData.userEmail,
-        DataModelName: "INVT_SUBMATERIAL_MASTER",
-        WhereCondition: `ITEM_CODE = '${formDataProps?.ITEM_CODE}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
-      };
+      try {
+        const payload = {
+          UserName: userData.userEmail,
+          DataModelName: "INVT_SUBMATERIAL_MASTER",
+          WhereCondition: `ITEM_CODE = '${formDataProps?.ITEM_CODE}' AND SUB_MATERIAL_NO = ${product.SUB_MATERIAL_NO}`,
+        };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
-      toast({
-        variant: "destructive",
-        title: response,
-      });
-      await handleImageDelete(product.ITEM_CODE, product.SUB_MATERIAL_NO);
-      await fetchSubProductData();
-    } catch (errors) {
-      toast({
-        variant: "destructive",
-        title: `Error fetching client: ${errors.message}`,
-      });
-    }
-  };
+        // Delete image from storage
+        await deleteImage("subproduct", product.ITEM_CODE, product.SUB_MATERIAL_NO);
 
-  const handleImageDelete = async (itemCode, subMaterialNo) => {
-    try {
-      const email = encodeURIComponent(userData.userEmail);
-      const fileName = encodeURIComponent(`SUB_PRODUCT_IMAGE_${itemCode}_${subMaterialNo}`);
-      const url = `https://apps.istreams-erp.com:4499/api/MaterialImage/delete?email=${email}&fileName=${fileName}`;
+        // Optimistic UI update
+        setSubProductList((prev) => prev.filter((p) => p.SUB_MATERIAL_NO !== product.SUB_MATERIAL_NO));
 
-      const response = await axios.delete(url);
-
-      if (response.status === 200) {
-        toast({
-          title: response.data.message,
-        });
-      } else {
         toast({
           variant: "destructive",
-          title: `Image delete failed with status: ${response.status}`,
+          title: "Sub-product deleted successfully!",
+          description: response,
+        });
+      } catch (errors) {
+        toast({
+          variant: "destructive",
+          title: `Error fetching client: ${errors.message}`,
         });
       }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error deleting image.",
-        description: error?.response?.data?.message || error?.message || "Unknown error occurred.",
-      });
-    }
-  };
+    },
+    [formDataProps?.ITEM_CODE, userData, deleteImage, toast],
+  );
 
-  const handleEdit = async (subProduct) => {
-    setIsEditMode(true);
-    setSelectedSubProduct((prev) => ({
-      ...prev,
-      ...subProduct,
-    }));
-    setIsDialogOpen(true);
-  };
+  const handleEdit = useCallback(
+    (subProduct) => {
+      setIsEditMode(true);
+      setSelectedSubProduct((prev) => ({
+        ...prev,
+        ...subProduct,
+      }));
+      setIsDialogOpen(true);
+    },
+    [formDataProps],
+  );
 
-  const handleDialogClose = () => {
+  const handleDialogClose = useCallback(() => {
     setIsDialogOpen(false);
     setIsEditMode(false);
     setSelectedSubProduct({
@@ -181,7 +168,7 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
       ITEM_NAME: formDataProps?.ITEM_NAME,
     });
     fetchSubProductData();
-  };
+  }, [formDataProps, fetchSubProductData]);
 
   return (
     <Card>
@@ -279,6 +266,5 @@ const AddSubProduct = ({ formDataProps, onSubmitTrigger }) => {
 };
 
 export default AddSubProduct;
-
 
 // Case sensitive updated

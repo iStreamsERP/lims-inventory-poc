@@ -1,3 +1,4 @@
+import CartItemImage from "@/components/CartItemImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -272,13 +273,9 @@ const CartPage = () => {
                 >
                   <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={item.image}
-                        alt={item.itemName}
-                        width={80}
-                        height={80}
-                        className="rounded-md object-cover"
-                        style={{ aspectRatio: "1/1" }}
+                      <CartItemImage
+                        itemCode={item.itemCode}
+                        subProductNo={item.subProductNo}
                       />
                       <div>
                         <Badge variant="outline">{item.itemGroup && <p className="text-xs text-gray-500">{item.itemGroup}</p>}</Badge>
@@ -427,8 +424,22 @@ const CartPage = () => {
                 >
                   {loading ? "Saving…" : "Save my order"}
                 </Button>
-                <Link to="proceed-to-check">
-                  <Button className="w-full">Proceed to Checkout</Button>
+                <Link
+                  to="proceed-to-check"
+                  state={{
+                    cart,
+                    selectedClient,
+                    subtotal,
+                    totalItem,
+                    discount: masterFormData.DISCOUNT_VALUE,
+                  }}
+                >
+                  <Button
+                    className="w-full"
+                    disabled={cart.length === 0 || !selectedClient}
+                  >
+                    Proceed to Checkout
+                  </Button>
                 </Link>
               </div>
             </Card>
