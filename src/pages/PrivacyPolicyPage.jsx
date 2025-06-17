@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const PrivacyPolicyPage = () => {
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-sm leading-relaxed p-4">
       <h1 className="mb-4 text-lg font-semibold underline">Privacy Policy</h1>
 
       <h2 className="mb-2 text-base font-medium">Introduction</h2>

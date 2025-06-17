@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const TermsAndConditionPage = () => {
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-sm leading-relaxed p-4">
       <h1 className="mb-4 text-lg font-semibold underline">Terms & Conditions</h1>
       <ol className="list-decimal space-y-2 pl-6">
         <li>

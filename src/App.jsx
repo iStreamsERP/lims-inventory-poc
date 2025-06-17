@@ -51,6 +51,12 @@ const App = () => {
       path: "/forgot-password",
       element: <ForgetPasswordPage />,
     },
+
+    { path: "/T&C", element: <TermsAndConditionPage /> },
+    { path: "/refund_policy", element: <RefundPolicyPage /> },
+    { path: "/privacy_policy", element: <PrivacyPolicyPage /> },
+    { path: "/return_policy", element: <ReturnPolicyPage /> },
+    { path: "/shipping_policy", element: <ShippingPolicyPage /> },
     {
       path: "/",
       element: <ProtectedRoute />,
@@ -101,13 +107,6 @@ const App = () => {
 
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
-
-            // Policies
-            { path: "/T&C", element: <TermsAndConditionPage /> },
-            { path: "/refund_policy", element: <RefundPolicyPage /> },
-            { path: "/privacy_policy", element: <PrivacyPolicyPage /> },
-            { path: "/return_policy", element: <ReturnPolicyPage /> },
-            { path: "/shipping_policy", element: <ShippingPolicyPage /> },
           ],
         },
       ],

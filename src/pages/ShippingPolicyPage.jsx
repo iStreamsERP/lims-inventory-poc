@@ -2,7 +2,7 @@ import React from "react";
 
 const ShippingPolicyPage = () => {
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-sm leading-relaxed p-4">
       <h1 className="mb-4 text-lg font-semibold underline">Shipping Policy</h1>
       <p className="space-y-2">
         The orders for the user are shipped through registered domestic courier companies and/or speed post only. Orders are shipped within 7 days

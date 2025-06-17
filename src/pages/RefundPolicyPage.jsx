@@ -2,7 +2,7 @@ import React from "react";
 
 const RefundPolicyPage = () => {
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-sm leading-relaxed p-4">
       <h1 className="mb-4 text-lg font-semibold underline">Refund and Cancellation policy</h1>
 
       <p className="mb-2">
