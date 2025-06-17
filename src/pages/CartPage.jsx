@@ -14,12 +14,13 @@ import { formatPrice } from "@/utils/formatPrice";
 import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const CartPage = () => {
   const navigate = useNavigate();
   const { userData } = useAuth();
   const { toast } = useToast();
+
   const { cart, removeItem, updateItemQuantity, clearCart } = useCart();
 
   const [clientData, setClientData] = useState([]);
@@ -28,18 +29,18 @@ const CartPage = () => {
   const [openCustomer, setOpenCustomer] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Cart totals
-  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
-  const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
-
+  // Initialize masterFormData with default values
   const [masterFormData, setMasterFormData] = useState({
-    COMPANY_CODE: 1,
-    BRANCH_CODE: 1,
+    COMPANY_CODE: userData.companyCode,
+    BRANCH_CODE: userData.branchCode,
     SALES_ORDER_SERIAL_NO: -1,
     ORDER_NO: "",
     ORDER_DATE: new Date().toISOString().split("T")[0],
-    CLIENT_ID: selectedClient?.CLIENT_ID,
-    CLIENT_NAME: selectedClient?.CLIENT_NAME,
+    CLIENT_ID: selectedClient?.CLIENT_ID || null,
+    CLIENT_NAME: selectedClient?.CLIENT_NAME || "",
+    CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
+    CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
+    EMP_NO: userData?.userEmployeeNo || "",
     ORDER_CATEGORY: "",
     TOTAL_VALUE: 0,
     DISCOUNT_VALUE: 10,
@@ -92,22 +93,25 @@ const CartPage = () => {
     TRANSPORT_CHARGE: "",
   });
 
+  // Cart totals
+  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
+  const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
+
+  // Industry standard calculations
+  const discount = masterFormData.DISCOUNT_VALUE;
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const deliveryCharge = 20;
+  const otherCharges = 20;
+  const grandTotal = taxableAmount + deliveryCharge + otherCharges;
+
   const getOrderCategoryFromCart = () => {
     const categories = cart.map((item) => item.itemGroup);
-
     const category = Array.from(new Set(categories));
 
     if (category.length === 1) {
-      setMasterFormData((prev) => ({
-        ...prev,
-        ORDER_CATEGORY: category[0],
-      }));
-    } else {
-      setMasterFormData((prev) => ({
-        ...prev,
-        ORDER_CATEGORY: "ALL",
-      }));
+      return category[0];
     }
+    return "ALL";
   };
 
   useEffect(() => {
@@ -119,12 +123,14 @@ const CartPage = () => {
       ...fd,
       CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
       CLIENT_NAME: selectedClient?.CLIENT_NAME ?? "",
+      CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
+      CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
       TOTAL_VALUE: subtotal,
-      NET_VALUE: subtotal,
+      NET_VALUE: grandTotal,
       ORDER_CATEGORY: getOrderCategoryFromCart(),
-      AMOUNT_IN_WORDS: toWords(Number(subtotal)),
+      AMOUNT_IN_WORDS: toWords(Number(grandTotal)),
     }));
-  }, [selectedClient, subtotal, cart]);
+  }, [selectedClient, subtotal, cart, grandTotal]);
 
   // Filter list based on dropdown input value
   const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
@@ -139,7 +145,7 @@ const CartPage = () => {
   const fetchClientData = async () => {
     try {
       const payload = {
-        SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME, COUNTRY, CITY_NAME, TELEPHONE_NO from CLIENT_MASTER`,
+        SQLQuery: `SELECT * from CLIENT_MASTER`,
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
@@ -150,6 +156,23 @@ const CartPage = () => {
     }
   };
 
+  const handleProceed = () => {
+    if (cart.length === 0 || !selectedClient) return;
+
+    navigate("proceed-to-check", {
+      state: {
+        cart,
+        selectedClient,
+        subtotal,
+        totalItem,
+        discount: masterFormData.DISCOUNT_VALUE,
+        deliveryCharge,
+        otherCharges,
+        grandTotal,
+      },
+    });
+  };
+
   const handleSaveOrder = async () => {
     if (!selectedClient) {
       return toast({ variant: "destructive", title: "Please select a customer." });
@@ -158,13 +181,17 @@ const CartPage = () => {
     try {
       setLoading(true);
 
-      const payloadModel = {
+      // Update masterFormData with latest values before saving
+      const updatedMasterData = {
         ...masterFormData,
+        TOTAL_VALUE: subtotal,
+        NET_VALUE: grandTotal,
+        AMOUNT_IN_WORDS: toWords(Number(grandTotal)),
       };
 
       const payload = {
         UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", payloadModel),
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", updatedMasterData),
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
@@ -180,25 +207,23 @@ const CartPage = () => {
         throw new Error("Could not parse new order serial number from response");
       }
 
-      const itemsToSend = cart;
-
-      // 2) now send each cart item as a DETAIL record
-      for (let i = 0; i < itemsToSend.length; i++) {
-        const item = itemsToSend[i];
+      // Save each cart item as a DETAIL record
+      for (let i = 0; i < cart.length; i++) {
+        const item = cart[i];
         const lineValue = item.finalSaleRate * item.itemQty;
 
         const detailModel = {
           ...detailsFormData,
-          COMPANY_CODE: masterFormData.COMPANY_CODE,
-          BRANCH_CODE: masterFormData.BRANCH_CODE,
+          COMPANY_CODE: updatedMasterData.COMPANY_CODE,
+          BRANCH_CODE: updatedMasterData.BRANCH_CODE,
           SALES_ORDER_SERIAL_NO: newSerialNo,
-          ORDER_NO: masterFormData.ORDER_NO,
-          ORDER_DATE: masterFormData.ORDER_DATE,
-          SERIAL_NO: -1, // detail line number
-          ITEM_CODE: item.itemCode || item.ITEM_CODE, // or however you map
+          ORDER_NO: updatedMasterData.ORDER_NO,
+          ORDER_DATE: updatedMasterData.ORDER_DATE,
+          SERIAL_NO: -1, // Sequential line number
+          ITEM_CODE: item.itemCode || item.ITEM_CODE,
           SUB_MATERIAL_NO: item.subProductNo,
           DESCRIPTION: item.itemName || item.ITEM_NAME,
-          UOM_SALES: item.uomStock, // sales-unit (e.g. “PCS”)
+          UOM_SALES: item.uomStock,
           UOM_STOCK: item.uomStock,
           CONVERSION_RATE: 1,
           QTY: item.itemQty,
@@ -217,22 +242,22 @@ const CartPage = () => {
           ENT_DATE: "",
         };
 
-        const payload = {
+        const detailPayload = {
           UserName: userData.userEmail,
           DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
         };
 
-        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+        await callSoapService(userData.clientURL, "DataModel_SaveData", detailPayload);
       }
 
       toast({
         title: "Order Saved Successfully",
-        description: response,
+        description: `Order #${newSerialNo} has been saved`,
       });
 
       clearCart();
     } catch (error) {
-      console.error(error); // Good practice to log it
+      console.error(error);
       toast({
         variant: "destructive",
         title: "Error saving data. Please try again.",
@@ -264,11 +289,11 @@ const CartPage = () => {
           {/* Cart Items */}
           <div className="col-span-2 space-y-6">
             {cart.length === 0 ? (
-              <p className="text-center text-gray-400">Your cart is empty.</p>
+              <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
             ) : (
               cart.map((item, idx) => (
                 <div
-                  key={idx}
+                  key={`${item.itemCode}-${item.subProductNo}-${idx}`}
                   className="space-y-4"
                 >
                   <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
@@ -278,7 +303,14 @@ const CartPage = () => {
                         subProductNo={item.subProductNo}
                       />
                       <div>
-                        <Badge variant="outline">{item.itemGroup && <p className="text-xs text-gray-500">{item.itemGroup}</p>}</Badge>
+                        {item.itemGroup && (
+                          <Badge
+                            variant="outline"
+                            className="mb-1"
+                          >
+                            <p className="text-xs text-gray-500">{item.itemGroup}</p>
+                          </Badge>
+                        )}
                         <h3 className="text-lg font-medium">{item.itemName || item.ITEM_NAME}</h3>
                         {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
                         {item.itemColor && <p className="text-xs text-gray-500">Color: {item.itemColor}</p>}
@@ -296,6 +328,7 @@ const CartPage = () => {
                           const lineKey = item.subProductNo ?? item.itemCode;
                           updateItemQuantity(lineKey, item.itemQty - 1);
                         }}
+                        disabled={item.itemQty <= 1}
                       >
                         <Minus size={14} />
                       </Button>
@@ -382,14 +415,6 @@ const CartPage = () => {
                   </Command>
                 </PopoverContent>
               </Popover>
-
-              {/* {selectedClient && (
-                <div className="text-sm space-y-1 pt-2">
-                  <p><span className="font-semibold">City:</span> {selectedClient.CITY_NAME}</p>
-                  <p><span className="font-semibold">Country:</span> {selectedClient.COUNTRY}</p>
-                  <p><span className="font-semibold">Phone:</span> {selectedClient.TELEPHONE_NO}</p>
-                </div>
-              )} */}
             </Card>
 
             {/* Order Summary */}
@@ -400,20 +425,24 @@ const CartPage = () => {
               </div>
               <div className="flex justify-between text-sm text-green-500">
                 <span>Discount</span>
-                <span>{formatPrice(masterFormData.DISCOUNT_VALUE)}</span>
+                <span>-{formatPrice(discount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Taxable Amount</span>
+                <span>{formatPrice(taxableAmount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Delivery Charge</span>
-                <span>20</span>
+                <span>{formatPrice(deliveryCharge)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Other Charges</span>
-                <span>20</span>
+                <span>{formatPrice(otherCharges)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold">
-                <span>Total</span>
-                <span>{formatPrice(subtotal)}</span>
+                <span>Grand Total</span>
+                <span>{formatPrice(grandTotal)}</span>
               </div>
               <div className="space-y-3 pt-4">
                 <Button
@@ -424,23 +453,13 @@ const CartPage = () => {
                 >
                   {loading ? "Saving…" : "Save my order"}
                 </Button>
-                <Link
-                  to="proceed-to-check"
-                  state={{
-                    cart,
-                    selectedClient,
-                    subtotal,
-                    totalItem,
-                    discount: masterFormData.DISCOUNT_VALUE,
-                  }}
+                <Button
+                  className="w-full"
+                  onClick={handleProceed}
+                  disabled={cart.length === 0 || !selectedClient}
                 >
-                  <Button
-                    className="w-full"
-                    disabled={cart.length === 0 || !selectedClient}
-                  >
-                    Proceed to Checkout
-                  </Button>
-                </Link>
+                  Proceed to Checkout
+                </Button>
               </div>
             </Card>
           </div>

@@ -294,13 +294,15 @@ export default function ProductFormPage() {
       if (!formData.image_file) return;
 
       try {
-        await saveImage(
+        const response = await saveImage(
           "product",
           itemCode,
           formData.image_file,
           null,
           !id, // isNew: true if creating, false if updating
         );
+
+        console.log(response);
       } catch (error) {
         throw new Error(`Image save failed: ${error.message}`);
       }
@@ -311,11 +313,11 @@ export default function ProductFormPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateInput();
-    if (Object.keys(validationErrors).length > 0) {
-      setError(validationErrors);
-      console.log("Validation failed", validationErrors);
-      return;
-    }
+    // if (Object.keys(validationErrors).length > 0) {
+    //   setError(validationErrors);
+    //   console.log("Validation failed", validationErrors);
+    //   return;
+    // }
     try {
       setLoading(true);
 
@@ -324,7 +326,9 @@ export default function ProductFormPage() {
         ITEM_NAME: toTitleCase(formData.ITEM_NAME),
         SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
         // if you persist SUB_MATERIAL_BASED_ON as CSV:
-        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON) ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",") : "",
+        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
+          ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
+          : toTitleCase(formData.SUB_MATERIAL_BASED_ON),
       };
 
       const payload = {
@@ -356,7 +360,7 @@ export default function ProductFormPage() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Save failed",
+        title: "Error saving data. Please try again.",
         description: error.message,
       });
     } finally {

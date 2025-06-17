@@ -9,6 +9,8 @@ const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
 const defaultUserData = {
   serviceUrl: PUBLIC_SERVICE_URL,
   clientURL: "",
+  companyCode: null,
+  branchCode: null,
   userEmail: "",
   userName: "",
   userEmployeeNo: "",

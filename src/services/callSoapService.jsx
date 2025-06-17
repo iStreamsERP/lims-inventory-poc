@@ -51,20 +51,14 @@ const callSoapServiceforMethods = async (url, methodName, parameterDetails) => {
 
 export const callSoapService = async (url, methodName, parameterDetails) => {
   try {
-    const storedPayload = JSON.parse(
-      localStorage.getItem("doConnectionPayload")
-    );
+    const storedPayload = JSON.parse(localStorage.getItem("doConnectionPayload"));
     if (storedPayload && typeof storedPayload === "object") {
       await callSoapServiceforMethods(url, "doConnection", storedPayload);
     } else {
       console.warn("⚠️ doConnectionParameter is missing or invalid.");
     }
 
-    const response = await callSoapServiceforMethods(
-      url,
-      methodName,
-      parameterDetails
-    );
+    const response = await callSoapServiceforMethods(url, methodName, parameterDetails);
 
     let parsedResponse;
 

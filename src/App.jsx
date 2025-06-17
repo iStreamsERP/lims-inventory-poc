@@ -30,6 +30,12 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import UserAccessRightsPage from "./pages/UserAccessRightsPage";
 import RoleAccessRightsPage from "./pages/RoleAccessRightsPage";
 import CategoryAccessRightsPage from "./pages/CategoryAccessRightsPage";
+import TermsAndConditionPage from "./pages/TermsAndConditionPage";
+import RefundPolicyPage from "./pages/RefundPolicyPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import ReturnPolicy from "./pages/ReturnPolicyPage";
+import ReturnPolicyPage from "./pages/ReturnPolicyPage";
+import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -95,6 +101,13 @@ const App = () => {
 
             { path: "cart-page", element: <CartPage /> },
             { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
+
+            // Policies
+            { path: "/T&C", element: <TermsAndConditionPage /> },
+            { path: "/refund_policy", element: <RefundPolicyPage /> },
+            { path: "/privacy_policy", element: <PrivacyPolicyPage /> },
+            { path: "/return_policy", element: <ReturnPolicyPage /> },
+            { path: "/shipping_policy", element: <ShippingPolicyPage /> },
           ],
         },
       ],
