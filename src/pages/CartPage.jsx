@@ -299,7 +299,7 @@ const CartPage = () => {
                   <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
                     <div className="flex items-center gap-3">
                       <CartItemImage
-                        itemCode={item.itemCode}
+                        itemCode={item.itemCode || item.ITEM_CODE}
                         subProductNo={item.subProductNo}
                       />
                       <div>

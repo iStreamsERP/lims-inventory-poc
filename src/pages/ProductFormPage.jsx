@@ -289,43 +289,20 @@ export default function ProductFormPage() {
     }
   };
 
-  const handleSaveImage = useCallback(
-    async (itemCode) => {
-      if (!formData.image_file) return;
-
-      try {
-        const response = await saveImage(
-          "product",
-          itemCode,
-          formData.image_file,
-          null,
-          !id, // isNew: true if creating, false if updating
-        );
-
-        console.log(response);
-      } catch (error) {
-        throw new Error(`Image save failed: ${error.message}`);
-      }
-    },
-    [formData.image_file, id, saveImage],
-  );
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateInput();
-    // if (Object.keys(validationErrors).length > 0) {
-    //   setError(validationErrors);
-    //   console.log("Validation failed", validationErrors);
-    //   return;
-    // }
+    if (Object.keys(validationErrors).length > 0) {
+      setError(validationErrors);
+      return;
+    }
+
     try {
       setLoading(true);
-
       const normalizedData = {
         ...formData,
         ITEM_NAME: toTitleCase(formData.ITEM_NAME),
         SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
-        // if you persist SUB_MATERIAL_BASED_ON as CSV:
         SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
           ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
           : toTitleCase(formData.SUB_MATERIAL_BASED_ON),
@@ -337,25 +314,29 @@ export default function ProductFormPage() {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
       const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
       const newItemCode = match ? match[1] : "(NEW)";
 
-      // Save image with the new item code
-      await handleSaveImage(newItemCode);
+      // Handle image using custom hook
+      if (formData.image_file) {
+        try {
+          await saveImage(
+            "product",
+            newItemCode,
+            formData.image_file,
+            null,
+            !id, // isNew = true for create, false for update
+          );
+        } catch (imageError) {
+          // Error toast is already shown by hook
+          console.error("Image processing error:", imageError);
+        }
+      }
 
-      if (!id && newItemCode !== "(NEW)") {
-        setFormData((prev) => ({
-          ...prev,
-          ITEM_CODE: newItemCode,
-        }));
-
+      if (newItemCode !== "(NEW)") {
+        setFormData((prev) => ({ ...prev, ITEM_CODE: newItemCode }));
         setSubmitCount((c) => c + 1);
-
-        toast({
-          title: "Product saved successfully!",
-          description: response,
-        });
+        toast({ title: response });
       }
     } catch (error) {
       toast({

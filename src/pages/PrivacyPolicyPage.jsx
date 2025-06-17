@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const PrivacyPolicyPage = () => {
   return (
-    <div className="text-sm leading-relaxed p-4">
+    <div className="p-4 text-sm leading-relaxed">
       <h1 className="mb-4 text-lg font-semibold underline">Privacy Policy</h1>
 
       <h2 className="mb-2 text-base font-medium">Introduction</h2>
@@ -108,11 +108,20 @@ const PrivacyPolicyPage = () => {
       </p>
 
       <p className="mb-4 font-bold">Grievance Officer</p>
-      <p className="mb-4">Insert Name of the Office:</p>
-      <p className="mb-4">Designation:</p>
-      <p className="mb-4">Insert Name and Address of the Company:</p>
-      <p className="mb-4">Contact us:</p>
-      <p className="mb-4">Phone: Time: Monday - Friday(9:00 - 18:00)</p>
+      <p className="mb-2 font-medium">
+        Insert Name of the Office: <span className="font-semibold">Mubarak Ali</span>
+      </p>
+      <p className="mb-2 font-medium">
+        Designation: <span className="font-semibold">CEO</span>
+      </p>
+      <p className="mb-2 font-medium">
+        Name and Address of the Company: <span className="font-semibold">iStreams Software Solutions | Pollachi</span>
+      </p>
+      <p className="mb-2 font-medium">
+        Contact us: <span className="font-semibold">support@istreams-erp.com</span>
+      </p>
+
+      <p className="mb-2">Phone: Time: Monday - Friday(9:00 - 18:00)</p>
     </div>
   );
 };

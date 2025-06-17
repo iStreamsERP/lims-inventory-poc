@@ -74,7 +74,6 @@ const ProductListPage = () => {
         setProductTableList((prev) => prev.filter((p) => p.ITEM_CODE !== product.ITEM_CODE));
 
         toast({
-          variant: "success",
           title: "Product deleted successfully",
         });
       } catch (error) {
