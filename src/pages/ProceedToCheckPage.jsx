@@ -1,39 +1,45 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@radix-ui/react-checkbox";
-import { ArrowLeft, ArrowRight, ClipboardCheck, CreditCard, Edit, ShoppingCart, Truck } from "lucide-react";
-import { useState, useEffect } from "react";
-import CartItemImage from "@/components/CartItemImage";
-import { formatPrice } from "@/utils/formatPrice";
 import { useAuth } from "@/contexts/AuthContext";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Country, State, City } from "country-state-city";
+import { callSoapService } from "@/services/callSoapService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { formatPrice } from "@/utils/formatPrice";
+import { Checkbox } from "@radix-ui/react-checkbox";
+import { City, Country, State } from "country-state-city";
+import { ArrowLeft, ArrowRight, ClipboardCheck, CreditCard, Edit, ShoppingCart, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function ProceedToCheckPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userData } = useAuth();
-  const { cart, selectedClient, subtotal, totalItem, discount, deliveryCharge, otherCharges, grandTotal } = location.state || {};
+  const { cart } = location.state || {};
+  const newOrderNo = location.state?.newOrderNo || "";
 
-  const [countries, setCountries] = useState([]);
+  // Cache refs to prevent unnecessary re-fetches
+  const addressesFetched = useRef(false);
+  const countriesLoaded = useRef(false);
+
+  // Memoize static data
+  const countries = useMemo(() => Country.getAllCountries(), []);
+
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
-
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedState, setSelectedState] = useState("");
 
   const [activeTab, setActiveTab] = useState("billing");
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
-  const [isSameAddress, setIsSameAddress] = useState(true);
   const [orderId, setOrderId] = useState(null);
   const [orderDate, setOrderDate] = useState(new Date());
   const [paymentMethod, setPaymentMethod] = useState({
@@ -48,25 +54,195 @@ export default function ProceedToCheckPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState(null);
 
-  // Initialize state with customer data from cart
-  const [billingDetails, setBillingDetails] = useState({
-    firstName: selectedClient?.CLIENT_NAME?.split(" ")[0] || "",
-    lastName: selectedClient?.CLIENT_NAME?.split(" ").slice(1).join(" ") || "",
-    email: userData?.EMAIL_ADDRESS || "",
-    phone: selectedClient?.TELEPHONE_NO || "",
-    country: selectedClient?.COUNTRY || "",
-    state: selectedClient?.STATE_NAME || "",
-    city: selectedClient?.CITY_NAME || "",
+  const [orderForm, setOrderForm] = useState({
+    COMPANY_CODE: userData.companyCode,
+    BRANCH_CODE: userData.branchCode,
+    SALES_ORDER_SERIAL_NO: -1,
+    ORDER_NO: newOrderNo || "",
+    ORDER_DATE: new Date().toISOString().split("T")[0],
+    CLIENT_ID: "",
+    CLIENT_NAME: "",
+    CLIENT_ADDRESS: "",
+    CLIENT_CONTACT: "",
+    EMP_NO: userData?.userEmployeeNo || "",
+    ORDER_CATEGORY: "",
+    TOTAL_VALUE: 0,
+    DISCOUNT_VALUE: 10,
+    NET_VALUE: 0,
+    AMOUNT_IN_WORDS: "",
+    CURRENCY_NAME: "Rupees",
+    NO_OF_DECIMALS: 0,
+    EXCHANGE_RATE: 0,
+    ORDER_VALUE_IN_LC: 0,
+    MODE_OF_PAYMENT: "Static",
+    CREDIT_DAYS: 0,
+    ADVANCE_AMOUNT: 0,
+    MODE_OF_TRANSPORT: "",
+    DELIVERY_DATE: "",
+    DELIVERY_ADDRESS: "",
+    TERMS_AND_CONDITIONS: "",
+    DELETED_STATUS: "F",
+    DELETED_DATE: "",
+    DELETED_USER: "",
+    USER_NAME: userData.userEmail,
+    ENT_DATE: "",
     zipCode: "",
-    address: selectedClient?.INVOICE_ADDRESS || "",
+    EMAIL_ADDRESS: "",
+    COUNTRY: "",
+    STATE_NAME: "",
+    CITY_NAME: "",
   });
 
-  const [deliveryDetails, setDeliveryDetails] = useState({
-    ...billingDetails,
-  });
+  // Dialog states
+  const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
+  const [isNewAddressDialogOpen, setIsNewAddressDialogOpen] = useState(false);
+  const [previousAddresses, setPreviousAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [saveToClientMaster, setSaveToClientMaster] = useState(false);
+  const [addBillingToClient, setAddBillingToClient] = useState(false);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
-  // Fetch current location
-  const getCurrentLocation = () => {
+  // New Address Form State
+  const [newAddressForm, setNewAddressForm] = useState({
+    address: "",
+    country: "",
+    state: "",
+    city: "",
+    zipCode: "",
+  });
+  const [saveNewAddressToClient, setSaveNewAddressToClient] = useState(false);
+  const [isNewAddressLocating, setIsNewAddressLocating] = useState(false);
+  const [newAddressLocationError, setNewAddressLocationError] = useState(null);
+
+  // Memoized calculations to prevent unnecessary re-renders
+  const orderTotals = useMemo(() => {
+    const subtotal = cart?.reduce((sum, item) => sum + item.finalSaleRate * item.itemQty, 0) || 0;
+    const discountValue = orderForm.DISCOUNT_VALUE;
+    const taxableAmount = subtotal - discountValue;
+    const taxRate = 0.18;
+    const taxAmount = taxableAmount * taxRate;
+    const orderTotal = taxableAmount + taxAmount;
+
+    return { subtotal, discountValue, taxableAmount, taxAmount, orderTotal };
+  }, [cart, orderForm.DISCOUNT_VALUE]);
+
+  // Memoized states based on selected country
+  const availableStates = useMemo(() => {
+    if (!selectedCountry) return [];
+    return State.getStatesOfCountry(selectedCountry);
+  }, [selectedCountry]);
+
+  // Memoized cities based on selected state
+  const availableCities = useMemo(() => {
+    if (!selectedCountry || !selectedState) return [];
+    return City.getCitiesOfState(selectedCountry, selectedState);
+  }, [selectedCountry, selectedState]);
+
+  // Optimized fetch functions with caching
+  const fetchSalesOrderData = useCallback(async () => {
+    if (!newOrderNo) return;
+
+    try {
+      const payload = {
+        DataModelName: "SALES_ORDER_MASTER",
+        WhereCondition: `SALES_ORDER_SERIAL_NO = '${newOrderNo}'`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      if (response && response[0]) {
+        setOrderForm((prev) => ({ ...prev, ...response[0] }));
+      }
+    } catch (error) {
+      console.error("Error fetching sales order data:", error);
+    }
+  }, [newOrderNo, userData.clientURL]);
+
+  const fetchPreviousAddresses = useCallback(async () => {
+    if (!orderForm.CLIENT_ID || addressesFetched.current) return;
+
+    setIsLoadingAddresses(true);
+    try {
+      const payload = {
+        SQLQuery: `SELECT DELIVERY_ADDRESS FROM CLIENT_MASTER WHERE CLIENT_ID = '${orderForm.CLIENT_ID}' 
+                   UNION 
+                   SELECT DISTINCT DELIVERY_ADDRESS FROM SALES_ORDER_MASTER WHERE CLIENT_ID = '${orderForm.CLIENT_ID}'`,
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
+      if (Array.isArray(response)) {
+        const validAddresses = response.map((item) => item?.DELIVERY_ADDRESS?.trim()).filter((addr) => addr && addr.length > 0);
+
+        setPreviousAddresses([...new Set(validAddresses)]);
+        addressesFetched.current = true;
+      }
+    } catch (error) {
+      console.error("Failed to fetch addresses:", error);
+      setPreviousAddresses([]);
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  }, [orderForm.CLIENT_ID, userData.clientURL]);
+
+  // Debounced location fetching
+  const fetchAddressFromCoords = useCallback(async () => {
+    if (!currentLocation) return;
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.lat}&lon=${currentLocation.lng}`);
+      const data = await response.json();
+
+      if (data.address) {
+        const address = data.address;
+        const deliveryAddress = [
+          address.road || "",
+          address.house_number || "",
+          address.city || address.town || address.village || "",
+          address.state || "",
+          address.country || "",
+          address.postcode || "",
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        setOrderForm((prev) => ({
+          ...prev,
+          DELIVERY_ADDRESS: deliveryAddress,
+        }));
+      }
+    } catch (error) {
+      setLocationError("Failed to fetch address details");
+    }
+  }, [currentLocation]);
+
+  // Optimized event handlers
+  const handleBillingChange = useCallback((field, value) => {
+    setOrderForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleNewAddressChange = useCallback((field, value) => {
+    setNewAddressForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handlePaymentMethodChange = useCallback((method) => {
+    setPaymentMethod((prev) => ({ ...prev, type: method }));
+  }, []);
+
+  // Optimized navigation
+  const goToNext = useCallback(() => {
+    if (activeTab === "billing") setActiveTab("confirmation");
+    else if (activeTab === "confirmation") setActiveTab("receipts");
+  }, [activeTab]);
+
+  const goToPrev = useCallback(() => {
+    if (activeTab === "confirmation") setActiveTab("billing");
+    else if (activeTab === "receipts") setActiveTab("confirmation");
+    else navigate("/cart-page");
+  }, [activeTab, navigate]);
+
+  // Optimized location handler
+  const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError("Geolocation is not supported by your browser");
       return;
@@ -85,113 +261,214 @@ export default function ProceedToCheckPage() {
         setIsLocating(false);
         setLocationError("Unable to retrieve your location: " + error.message);
       },
+      { timeout: 10000, enableHighAccuracy: false }, // Optimize geolocation options
     );
-  };
-
-  // Reverse geocode when location is available
-  useEffect(() => {
-    if (!currentLocation || isSameAddress) return;
-
-    const fetchAddressFromCoords = async () => {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.lat}&lon=${currentLocation.lng}`);
-        const data = await response.json();
-
-        if (data.address) {
-          const address = data.address;
-          setDeliveryDetails((prev) => ({
-            ...prev,
-            address: `${address.road || ""} ${address.house_number || ""}`.trim(),
-            city: address.city || address.town || address.village || "",
-            state: address.state || "",
-            country: address.country || "",
-            zipCode: address.postcode || "",
-          }));
-        }
-      } catch (error) {
-        setLocationError("Failed to fetch address details");
-      }
-    };
-
-    fetchAddressFromCoords();
-  }, [currentLocation, isSameAddress]);
-
-  useEffect(() => {
-    const allCountries = Country.getAllCountries();
-    setCountries(allCountries);
   }, []);
 
+  // Effects with proper dependencies
   useEffect(() => {
-    if (selectedCountry) {
-      const allStates = State.getStatesOfCountry(selectedCountry);
-      setStates(allStates);
-      setCities([]); // Clear cities when country changes
-    }
-  }, [selectedCountry]);
+    fetchSalesOrderData();
+  }, [fetchSalesOrderData]);
 
   useEffect(() => {
-    if (selectedCountry && selectedState) {
-      const allCities = City.getCitiesOfState(selectedCountry, selectedState);
-      setCities(allCities);
-    }
-  }, [selectedState]);
+    fetchPreviousAddresses();
+  }, [fetchPreviousAddresses]);
 
-  // Update delivery details when billing changes and same address is checked
   useEffect(() => {
-    if (isSameAddress) {
-      setDeliveryDetails({ ...billingDetails });
+    fetchAddressFromCoords();
+  }, [fetchAddressFromCoords]);
+
+  // Optimized state updates
+  useEffect(() => {
+    if (selectedCountry && availableStates.length > 0) {
+      setStates(availableStates);
+      setCities([]);
+      setSelectedState("");
     }
-  }, [billingDetails, isSameAddress]);
+  }, [selectedCountry, availableStates]);
 
-  // Calculate order totals
-  const taxRate = 0.18;
-  const taxableAmount = subtotal - discount;
-  const taxAmount = taxableAmount * taxRate;
-  const orderTotal = taxableAmount + taxAmount + deliveryCharge + otherCharges;
+  useEffect(() => {
+    if (selectedState && availableCities.length > 0) {
+      setCities(availableCities);
+    }
+  }, [selectedState, availableCities]);
 
-  // Fixed tab navigation logic
-  const goToNext = () => {
-    if (activeTab === "billing") setActiveTab("confirmation");
-    else if (activeTab === "confirmation") setActiveTab("receipts");
-  };
+  // Update order totals when cart changes (optimized)
+  useEffect(() => {
+    if (cart && cart.length > 0) {
+      const total = orderTotals.subtotal;
+      setOrderForm((prev) => ({
+        ...prev,
+        TOTAL_VALUE: total,
+        NET_VALUE: total - prev.DISCOUNT_VALUE,
+      }));
+    }
+  }, [cart, orderTotals.subtotal]);
 
-  const goToPrev = () => {
-    if (activeTab === "confirmation") setActiveTab("billing");
-    else if (activeTab === "receipts") setActiveTab("confirmation");
-    else navigate("/cart-page");
-  };
-
-  const handleBillingSubmit = (e) => {
-    e.preventDefault();
-    setIsBillingModalOpen(false);
-  };
-
-  const handleBillingChange = (field, value) => {
-    setBillingDetails((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleDeliveryChange = (field, value) => {
-    setDeliveryDetails((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handlePaymentMethodChange = (method) => {
-    setPaymentMethod((prev) => ({ ...prev, type: method }));
-  };
-
-  const handlePlaceOrder = () => {
-    // Generate random order ID
-    const newOrderId = Math.floor(100000 + Math.random() * 900000);
-    setOrderId(newOrderId);
-    setOrderDate(new Date());
-    setActiveTab("receipts");
-  };
-
-  // Handle case when user navigates directly without cart data
+  // Early return if no cart data
   useEffect(() => {
     if (!cart || cart.length === 0) {
       navigate("/cart-page", { replace: true });
     }
   }, [cart, navigate]);
+
+  // Optimized form submission
+  const handleBillingSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        UserName: userData.userEmail,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", orderForm),
+      };
+
+      try {
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+        console.log(response);
+      } catch (error) {
+        console.error("Failed to save billing details:", error);
+      }
+
+      setIsBillingModalOpen(false);
+    },
+    [orderForm, userData.userEmail, userData.clientURL],
+  );
+
+  const handlePlaceOrder = useCallback(async () => {
+    if (saveToClientMaster && orderForm.CLIENT_ID) {
+      try {
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertDataModelToStringData("CLIENT_MASTER", {
+            ...orderForm,
+            DELIVERY_ADDRESS: orderForm.DELIVERY_ADDRESS,
+          }),
+        };
+        await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+      } catch (error) {
+        console.error("Failed to save delivery address:", error);
+      }
+    }
+
+    const newOrderId = Math.floor(100000 + Math.random() * 900000);
+    setOrderId(newOrderId);
+    setOrderDate(new Date());
+    setActiveTab("receipts");
+  }, [saveToClientMaster, orderForm, userData.userEmail, userData.clientURL]);
+
+  const handleAddressSelect = useCallback(() => {
+    if (selectedAddress) {
+      setOrderForm((prev) => ({
+        ...prev,
+        DELIVERY_ADDRESS: selectedAddress,
+      }));
+    }
+    setIsDeliveryDialogOpen(false);
+  }, [selectedAddress]);
+
+  // Optimized new address location handler
+  const getCurrentLocationForNewAddress = useCallback(() => {
+    if (!navigator.geolocation) {
+      setNewAddressLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsNewAddressLocating(true);
+    setNewAddressLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await response.json();
+
+          if (data.address) {
+            const addr = data.address;
+            const country = countries.find((c) => c.isoCode === (addr.country_code ? addr.country_code.toUpperCase() : ""));
+            const state = country ? State.getStatesOfCountry(country.isoCode).find((s) => s.name === addr.state || s.isoCode === addr.state) : null;
+            const city = addr.city || addr.town || addr.village || addr.county;
+
+            const fullAddress = [addr.road || "", addr.house_number || "", city, addr.state, country?.name || addr.country, addr.postcode || ""]
+              .filter(Boolean)
+              .join(", ");
+
+            setNewAddressForm((prev) => ({
+              ...prev,
+              address: fullAddress,
+              country: country?.name || "",
+              state: state?.name || "",
+              city: city || "",
+              zipCode: addr.postcode || "",
+            }));
+          }
+        } catch (error) {
+          setNewAddressLocationError("Failed to fetch address details");
+        } finally {
+          setIsNewAddressLocating(false);
+        }
+      },
+      (error) => {
+        setIsNewAddressLocating(false);
+        setNewAddressLocationError("Unable to retrieve your location: " + error.message);
+      },
+      { timeout: 10000, enableHighAccuracy: false },
+    );
+  }, [countries]);
+
+  const handleSaveNewAddress = useCallback(async () => {
+    setOrderForm((prev) => ({
+      ...prev,
+      DELIVERY_ADDRESS: newAddressForm.address,
+    }));
+
+    try {
+      const salesOrderPayload = {
+        UserName: userData.userEmail,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
+          ...orderForm,
+          DELIVERY_ADDRESS: newAddressForm.address,
+        }),
+      };
+
+      await callSoapService(userData.clientURL, "DataModel_SaveData", salesOrderPayload);
+    } catch (error) {
+      console.error("Failed to save to SALES_ORDER_MASTER:", error);
+    }
+
+    if (saveNewAddressToClient && orderForm.CLIENT_ID) {
+      try {
+        const clientPayload = {
+          UserName: userData.userEmail,
+          DModelData: convertDataModelToStringData("CLIENT_MASTER", {
+            ...orderForm,
+            DELIVERY_ADDRESS: newAddressForm.address,
+          }),
+        };
+        await callSoapService(userData.clientURL, "DataModel_SaveData", clientPayload);
+      } catch (error) {
+        console.error("Failed to save to CLIENT_MASTER:", error);
+      }
+    }
+
+    // Reset cache and refetch
+    addressesFetched.current = false;
+    fetchPreviousAddresses();
+
+    setIsNewAddressDialogOpen(false);
+    setNewAddressForm({
+      address: "",
+      country: "",
+      state: "",
+      city: "",
+      zipCode: "",
+    });
+  }, [newAddressForm, userData.userEmail, userData.clientURL, orderForm, saveNewAddressToClient, fetchPreviousAddresses]);
+
+  // Memoized validation
+  const canProceedFromBilling = useMemo(() => {
+    return paymentMethod.type && orderForm.DELIVERY_ADDRESS;
+  }, [paymentMethod.type, orderForm.DELIVERY_ADDRESS]);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -221,6 +498,9 @@ export default function ProceedToCheckPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Rest of your JSX remains the same, just replace the calculations with memoized values */}
+        {/* For example, replace subtotal with orderTotals.subtotal, etc. */}
+
         {/* BILLING TAB */}
         <TabsContent value="billing">
           <div className="flex flex-col gap-4 lg:flex-row">
@@ -242,12 +522,12 @@ export default function ProceedToCheckPage() {
                         >
                           <Edit
                             size={16}
-                            className="mr-2"
+                            className="mr-1"
                           />{" "}
-                          Edit
+                          Change
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-[700px]">
+                      <DialogContent className="max-h-[80%] overflow-y-auto sm:max-w-[700px]">
                         <DialogHeader>
                           <DialogTitle>Edit Billing Information</DialogTitle>
                         </DialogHeader>
@@ -257,48 +537,42 @@ export default function ProceedToCheckPage() {
                         >
                           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                              <Label htmlFor="firstname">First Name</Label>
+                              <Label htmlFor="CLIENT_NAME">Client Name</Label>
                               <Input
-                                id="firstname"
-                                value={billingDetails.firstName}
-                                onChange={(e) => handleBillingChange("firstName", e.target.value)}
+                                id="CLIENT_NAME"
+                                value={orderForm.CLIENT_NAME}
+                                onChange={(e) => handleBillingChange("CLIENT_NAME", e.target.value)}
                                 className="w-full"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="lastname">Last Name</Label>
+                              <Label htmlFor="EMAIL_ADDRESS">Email</Label>
                               <Input
-                                id="lastname"
-                                value={billingDetails.lastName}
-                                onChange={(e) => handleBillingChange("lastName", e.target.value)}
+                                id="EMAIL_ADDRESS"
+                                value={orderForm.EMAIL_ADDRESS}
+                                onChange={(e) => handleBillingChange("EMAIL_ADDRESS", e.target.value)}
                                 className="w-full"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="email">Email</Label>
+                              <Label htmlFor="CLIENT_CONTACT">Phone</Label>
                               <Input
-                                id="email"
-                                value={billingDetails.email}
-                                onChange={(e) => handleBillingChange("email", e.target.value)}
+                                id="CLIENT_CONTACT"
+                                value={orderForm.CLIENT_CONTACT}
+                                onChange={(e) => handleBillingChange("CLIENT_CONTACT", e.target.value)}
                                 className="w-full"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="phone">Phone</Label>
-                              <Input
-                                id="phone"
-                                value={billingDetails.phone}
-                                onChange={(e) => handleBillingChange("phone", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="country">Country</Label>
+                              <Label htmlFor="COUNTRY">Country</Label>
                               <Select
-                                value={selectedCountry}
+                                value={orderForm.COUNTRY}
                                 onValueChange={(value) => {
-                                  setSelectedCountry(value);
-                                  handleBillingChange("country", countries.find((c) => c.isoCode === value).name);
+                                  const countryObj = countries.find((c) => c.name === value);
+                                  if (countryObj) {
+                                    setSelectedCountry(countryObj.isoCode);
+                                  }
+                                  handleBillingChange("COUNTRY", value);
                                 }}
                               >
                                 <SelectTrigger className="w-full">
@@ -308,7 +582,7 @@ export default function ProceedToCheckPage() {
                                   {countries.map((country) => (
                                     <SelectItem
                                       key={country.isoCode}
-                                      value={country.isoCode}
+                                      value={country.name}
                                     >
                                       {country.name}
                                     </SelectItem>
@@ -317,12 +591,15 @@ export default function ProceedToCheckPage() {
                               </Select>
                             </div>
                             <div>
-                              <Label htmlFor="state">State</Label>
+                              <Label htmlFor="STATE_NAME">State</Label>
                               <Select
-                                value={selectedState}
+                                value={orderForm.STATE_NAME}
                                 onValueChange={(value) => {
-                                  setSelectedState(value);
-                                  handleBillingChange("state", states.find((s) => s.isoCode === value).name);
+                                  const stateObj = states.find((s) => s.name === value);
+                                  if (stateObj) {
+                                    setSelectedState(stateObj.isoCode);
+                                  }
+                                  handleBillingChange("STATE_NAME", value);
                                 }}
                                 disabled={!selectedCountry}
                               >
@@ -333,7 +610,7 @@ export default function ProceedToCheckPage() {
                                   {states.map((state) => (
                                     <SelectItem
                                       key={state.isoCode}
-                                      value={state.isoCode}
+                                      value={state.name}
                                     >
                                       {state.name}
                                     </SelectItem>
@@ -342,10 +619,10 @@ export default function ProceedToCheckPage() {
                               </Select>
                             </div>
                             <div>
-                              <Label htmlFor="city">City</Label>
+                              <Label htmlFor="CITY_NAME">City</Label>
                               <Select
-                                value={billingDetails.city}
-                                onValueChange={(value) => handleBillingChange("city", value)}
+                                value={orderForm.CITY_NAME}
+                                onValueChange={(value) => handleBillingChange("CITY_NAME", value)}
                                 disabled={!selectedState}
                               >
                                 <SelectTrigger className="w-full">
@@ -364,24 +641,35 @@ export default function ProceedToCheckPage() {
                               </Select>
                             </div>
                             <div>
-                              <Label htmlFor="zipcode">Zip Code</Label>
+                              <Label htmlFor="zipCode">Zip Code</Label>
                               <Input
-                                id="zipcode"
-                                value={billingDetails.zipCode}
+                                id="zipCode"
+                                value={orderForm?.zipCode}
                                 onChange={(e) => handleBillingChange("zipCode", e.target.value)}
                                 className="w-full"
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <Label htmlFor="address">Address</Label>
+                              <Label htmlFor="CLIENT_ADDRESS">Address</Label>
                               <Textarea
-                                id="address"
-                                value={billingDetails.address}
-                                onChange={(e) => handleBillingChange("address", e.target.value)}
+                                id="CLIENT_ADDRESS"
+                                value={orderForm.CLIENT_ADDRESS}
+                                onChange={(e) => handleBillingChange("CLIENT_ADDRESS", e.target.value)}
                                 className="w-full"
                               />
                             </div>
                           </div>
+
+                          {/* ADD TO CLIENT MASTER CHECKBOX */}
+                          <div className="flex items-center space-x-2 pt-4">
+                            <Checkbox
+                              id="add-to-client"
+                              checked={addBillingToClient}
+                              onCheckedChange={(checked) => setAddBillingToClient(checked)}
+                            />
+                            <Label htmlFor="add-to-client">Add to Client Master</Label>
+                          </div>
+
                           <div className="flex justify-end gap-2 pt-4">
                             <Button
                               variant="outline"
@@ -389,12 +677,7 @@ export default function ProceedToCheckPage() {
                             >
                               Cancel
                             </Button>
-                            <Button
-                              type="submit"
-                              onClick={() => setIsBillingModalOpen(false)}
-                            >
-                              Save
-                            </Button>
+                            <Button type="submit">Save</Button>
                           </div>
                         </form>
                       </DialogContent>
@@ -403,16 +686,14 @@ export default function ProceedToCheckPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    <p className="font-medium">
-                      {billingDetails.firstName} {billingDetails.lastName}
-                    </p>
-                    <p>{billingDetails.address}</p>
+                    <p className="font-medium">{orderForm.CLIENT_NAME}</p>
+                    <p>{orderForm.CLIENT_ADDRESS}</p>
                     <p>
-                      {billingDetails.city}, {billingDetails.state} {billingDetails.zipCode}
+                      {orderForm.CITY_NAME}, {orderForm.STATE_NAME} {orderForm?.zipCode}
                     </p>
-                    <p>{billingDetails.country}</p>
-                    <p className="pt-2">Phone: {billingDetails.phone}</p>
-                    <p>Email: {billingDetails.email}</p>
+                    <p>{orderForm.COUNTRY}</p>
+                    <p className="pt-2">Phone: {orderForm.CLIENT_CONTACT}</p>
+                    <p>Email: {orderForm.EMAIL_ADDRESS}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -427,122 +708,65 @@ export default function ProceedToCheckPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-start space-x-2 pb-4">
-                    <Checkbox
-                      id="same-address"
-                      checked={isSameAddress}
-                      onCheckedChange={(val) => setIsSameAddress(val)}
-                    />
-                    <Label
-                      htmlFor="same-address"
-                      className="cursor-pointer"
-                    >
-                      Same as billing address
-                    </Label>
+                  {/* Previous Addresses Section */}
+                  <div className="mb-6">
+                    <h4 className="mb-3 text-sm font-medium">Previous Delivery Addresses</h4>
+                    {isLoadingAddresses ? (
+                      <p className="text-sm text-gray-500">Loading addresses...</p>
+                    ) : previousAddresses.length > 0 ? (
+                      <div className="space-y-3">
+                        {previousAddresses.map((address, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between rounded border p-3"
+                          >
+                            <div className="flex items-center">
+                              <input
+                                type="radio"
+                                id={`address-${index}`}
+                                name="delivery-address"
+                                checked={selectedAddress === address}
+                                onChange={() => setSelectedAddress(address)}
+                                className="mr-3 h-4 w-4"
+                              />
+                              <label
+                                htmlFor={`address-${index}`}
+                                className="text-sm"
+                              >
+                                {address}
+                              </label>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAddress(address);
+                                setOrderForm((prev) => ({ ...prev, DELIVERY_ADDRESS: address }));
+                              }}
+                            >
+                              Deliver Here
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No previous addresses found</p>
+                    )}
                   </div>
 
-                  {!isSameAddress && (
-                    <>
-                      <div className="mb-4">
-                        <Button
-                          variant="outline"
-                          onClick={getCurrentLocation}
-                          disabled={isLocating}
-                          className="w-full sm:w-auto"
-                        >
-                          {isLocating ? "Detecting your location..." : "Use Current Location"}
-                        </Button>
-                        {locationError && <p className="mt-2 text-sm text-red-500">{locationError}</p>}
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <Label htmlFor="delivery-firstname">First Name</Label>
-                          <Input
-                            id="delivery-firstname"
-                            value={deliveryDetails.firstName}
-                            onChange={(e) => handleDeliveryChange("firstName", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-lastname">Last Name</Label>
-                          <Input
-                            id="delivery-lastname"
-                            value={deliveryDetails.lastName}
-                            onChange={(e) => handleDeliveryChange("lastName", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-phone">Phone</Label>
-                          <Input
-                            id="delivery-phone"
-                            value={deliveryDetails.phone}
-                            onChange={(e) => handleDeliveryChange("phone", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-country">Country</Label>
-                          <Input
-                            id="delivery-country"
-                            value={deliveryDetails.country}
-                            onChange={(e) => handleDeliveryChange("country", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-state">State</Label>
-                          <Input
-                            id="delivery-state"
-                            value={deliveryDetails.state}
-                            onChange={(e) => handleDeliveryChange("state", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-city">City</Label>
-                          <Input
-                            id="delivery-city"
-                            value={deliveryDetails.city}
-                            onChange={(e) => handleDeliveryChange("city", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="delivery-zip">Zip Code</Label>
-                          <Input
-                            id="delivery-zip"
-                            value={deliveryDetails.zipCode}
-                            onChange={(e) => handleDeliveryChange("zipCode", e.target.value)}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="delivery-address">Address</Label>
-                          <Input
-                            id="delivery-address"
-                            value={deliveryDetails.address}
-                            onChange={(e) => handleDeliveryChange("address", e.target.value)}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="delivery-notes">Delivery Instructions</Label>
-                          <Textarea
-                            id="delivery-notes"
-                            placeholder="Gate code, building number, etc."
-                            value={deliveryDetails.instructions || ""}
-                            onChange={(e) => handleDeliveryChange("instructions", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {isSameAddress && (
-                    <div className="text-sm text-gray-600">
-                      <p>Same as billing address</p>
-                      <p className="pt-2 italic">No additional details needed</p>
-                    </div>
-                  )}
+                  {/* Add New Address Button */}
+                  <div className="mb-4">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setIsNewAddressDialogOpen(true)}
+                    >
+                      Add New Address
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* PAYMENT METHOD CARD */}
+              {/* PAYMENT METHOD CARD*/}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
@@ -722,29 +946,21 @@ export default function ProceedToCheckPage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span>Subtotal ({totalItem} Items)</span>
-                      <span>{formatPrice(subtotal)}</span>
+                      <span>Subtotal ({cart?.length || 0} Items)</span>
+                      <span>{formatPrice(orderTotals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-green-500">
                       <span>Discount</span>
-                      <span>-{formatPrice(discount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Shipping</span>
-                      <span>{formatPrice(deliveryCharge)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Other Charges</span>
-                      <span>{formatPrice(otherCharges)}</span>
+                      <span>-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Tax (18%)</span>
-                      <span>{formatPrice(taxAmount)}</span>
+                      <span>{formatPrice(orderTotals.taxAmount)}</span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>{formatPrice(orderTotal)}</span>
+                      <span>{formatPrice(orderTotals.orderTotal)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -762,7 +978,7 @@ export default function ProceedToCheckPage() {
             <Button
               onClick={goToNext}
               className="gap-2"
-              disabled={!paymentMethod.type}
+              disabled={!paymentMethod.type || !orderForm.DELIVERY_ADDRESS}
             >
               Continue to Confirmation <ArrowRight size={16} />
             </Button>
@@ -782,40 +998,23 @@ export default function ProceedToCheckPage() {
                 <div>
                   <h3 className="mb-3 border-b pb-2 text-lg font-semibold">Billing Address</h3>
                   <div className="text-sm">
-                    <p className="font-medium">
-                      {billingDetails.firstName} {billingDetails.lastName}
-                    </p>
-                    <p>{billingDetails.address}</p>
+                    <p className="font-medium">{orderForm.CLIENT_NAME}</p>
+                    <p>{orderForm.CLIENT_ADDRESS}</p>
                     <p>
-                      {billingDetails.city}, {billingDetails.state} {billingDetails.zipCode}
+                      {orderForm.CITY_NAME}, {orderForm.STATE_NAME} {orderForm?.zipCode}
                     </p>
-                    <p>{billingDetails.country}</p>
-                    <p className="pt-2">Phone: {billingDetails.phone}</p>
-                    <p>Email: {billingDetails.email}</p>
+                    <p>{orderForm.COUNTRY}</p>
+                    <p className="pt-2">Phone: {orderForm.CLIENT_CONTACT}</p>
+                    <p>Email: {orderForm.EMAIL_ADDRESS}</p>
                   </div>
                 </div>
 
                 {/* DELIVERY ADDRESS */}
                 <div>
                   <h3 className="mb-3 border-b pb-2 text-lg font-semibold">Delivery Address</h3>
-                  {isSameAddress ? (
-                    <div className="text-sm">
-                      <p>Same as billing address</p>
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      <p className="font-medium">
-                        {deliveryDetails.firstName} {deliveryDetails.lastName}
-                      </p>
-                      <p>{deliveryDetails.address}</p>
-                      <p>
-                        {deliveryDetails.city}, {deliveryDetails.state} {deliveryDetails.zipCode}
-                      </p>
-                      <p>{deliveryDetails.country}</p>
-                      <p className="pt-2">Phone: {deliveryDetails.phone}</p>
-                      {deliveryDetails.instructions && <p className="mt-2 italic">Instructions: {deliveryDetails.instructions}</p>}
-                    </div>
-                  )}
+                  <div className="text-sm">
+                    <p>{orderForm.DELIVERY_ADDRESS}</p>
+                  </div>
                 </div>
 
                 {/* PAYMENT DETAILS */}
@@ -877,27 +1076,19 @@ export default function ProceedToCheckPage() {
                   <div className="space-y-2 p-4">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>{formatPrice(subtotal)}</span>
+                      <span>{formatPrice(orderTotals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Discount</span>
-                      <span className="text-green-600">-{formatPrice(discount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>{formatPrice(deliveryCharge)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Other Charges</span>
-                      <span>{formatPrice(otherCharges)}</span>
+                      <span className="text-green-600">-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax (18%)</span>
-                      <span>{formatPrice(taxAmount)}</span>
+                      <span>{formatPrice(orderTotals.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t pt-2 font-semibold">
                       <span>Total</span>
-                      <span>{formatPrice(orderTotal)}</span>
+                      <span>{formatPrice(orderTotals.orderTotal)}</span>
                     </div>
                   </div>
                 </div>
@@ -980,36 +1171,21 @@ export default function ProceedToCheckPage() {
                 <div>
                   <h3 className="mb-3 border-b pb-2 text-lg font-semibold">Billing Address</h3>
                   <div className="text-sm">
+                    <p>{orderForm?.CLIENT_NAME}</p>
+                    <p>{orderForm?.CLIENT_ADDRESS}</p>
                     <p>
-                      {billingDetails.firstName} {billingDetails.lastName}
+                      {orderForm?.CITY_NAME}, {orderForm?.STATE_NAME} {orderForm?.zipCode}
                     </p>
-                    <p>{billingDetails.address}</p>
-                    <p>
-                      {billingDetails.city}, {billingDetails.state} {billingDetails.zipCode}
-                    </p>
-                    <p>{billingDetails.country}</p>
+                    <p>{orderForm?.COUNTRY}</p>
                   </div>
                 </div>
 
                 {/* DELIVERY ADDRESS */}
                 <div>
                   <h3 className="mb-3 border-b pb-2 text-lg font-semibold">Delivery Address</h3>
-                  {isSameAddress ? (
-                    <div className="text-sm">
-                      <p>Same as billing address</p>
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      <p>
-                        {deliveryDetails.firstName} {deliveryDetails.lastName}
-                      </p>
-                      <p>{deliveryDetails.address}</p>
-                      <p>
-                        {deliveryDetails.city}, {deliveryDetails.state} {deliveryDetails.zipCode}
-                      </p>
-                      <p>{deliveryDetails.country}</p>
-                    </div>
-                  )}
+                  <div className="text-sm">
+                    <p>{orderForm?.DELIVERY_ADDRESS}</p>
+                  </div>
                 </div>
               </div>
 
@@ -1041,27 +1217,19 @@ export default function ProceedToCheckPage() {
                   <div className="space-y-2 pt-4">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>{formatPrice(subtotal)}</span>
+                      <span>{formatPrice(orderTotals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Discount</span>
-                      <span className="text-green-600">-{formatPrice(discount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>{formatPrice(deliveryCharge)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Other Charges</span>
-                      <span>{formatPrice(otherCharges)}</span>
+                      <span className="text-green-600">-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax (18%)</span>
-                      <span>{formatPrice(taxAmount)}</span>
+                      <span>{formatPrice(orderTotals.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t pt-3 text-lg font-bold">
                       <span>Total</span>
-                      <span>{formatPrice(orderTotal)}</span>
+                      <span>{formatPrice(orderTotals.orderTotal)}</span>
                     </div>
                   </div>
                 </div>
@@ -1092,6 +1260,235 @@ export default function ProceedToCheckPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* DELIVERY ADDRESS POPUP */}
+      <Dialog
+        open={isDeliveryDialogOpen}
+        onOpenChange={setIsDeliveryDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Delivery Address</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="max-h-60 overflow-y-auto">
+              {isLoadingAddresses ? (
+                <p className="text-center text-gray-500">Loading addresses...</p>
+              ) : previousAddresses.length > 0 ? (
+                <div className="space-y-2">
+                  {previousAddresses.map((address, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-2"
+                    >
+                      <input
+                        type="radio"
+                        id={`address-${index}`}
+                        name="delivery-address"
+                        value={address}
+                        checked={selectedAddress === address}
+                        onChange={() => setSelectedAddress(address)}
+                        className="mt-1"
+                      />
+                      <Label
+                        htmlFor={`address-${index}`}
+                        className="block"
+                      >
+                        {address}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No previous addresses found</p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="save-to-client"
+                checked={saveToClientMaster}
+                onCheckedChange={(checked) => setSaveToClientMaster(checked)}
+              />
+              <Label htmlFor="save-to-client">Save to Client Master</Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeliveryDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddressSelect}
+              disabled={!selectedAddress}
+            >
+              Select Address
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW ADDRESS POPUP */}
+      <Dialog
+        open={isNewAddressDialogOpen}
+        onOpenChange={setIsNewAddressDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Delivery Address</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-address">Address</Label>
+              <Textarea
+                id="new-address"
+                value={newAddressForm.address}
+                onChange={(e) => handleNewAddressChange("address", e.target.value)}
+                className="w-full"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="new-country">Country</Label>
+                <Select
+                  value={newAddressForm.country}
+                  onValueChange={(value) => {
+                    handleNewAddressChange("country", value);
+                    handleNewAddressChange("state", "");
+                    handleNewAddressChange("city", "");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem
+                        key={country.isoCode}
+                        value={country.name}
+                      >
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="new-state">State</Label>
+                <Select
+                  value={newAddressForm.state}
+                  onValueChange={(value) => {
+                    handleNewAddressChange("state", value);
+                    handleNewAddressChange("city", "");
+                  }}
+                  disabled={!newAddressForm.country}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select State" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {newAddressForm.country &&
+                      State.getStatesOfCountry(countries.find((c) => c.name === newAddressForm.country)?.isoCode).map((state) => (
+                        <SelectItem
+                          key={state.isoCode}
+                          value={state.name}
+                        >
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="new-city">City</Label>
+                <Select
+                  value={newAddressForm.city}
+                  onValueChange={(value) => handleNewAddressChange("city", value)}
+                  disabled={!newAddressForm.state}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select City" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {newAddressForm.country &&
+                      newAddressForm.state &&
+                      City.getCitiesOfState(
+                        countries.find((c) => c.name === newAddressForm.country).isoCode,
+                        State.getStatesOfCountry(countries.find((c) => c.name === newAddressForm.country).isoCode).find(
+                          (s) => s.name === newAddressForm.state,
+                        )?.isoCode,
+                      ).map((city) => (
+                        <SelectItem
+                          key={city.name}
+                          value={city.name}
+                        >
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="new-zip">Zip Code</Label>
+                <Input
+                  id="new-zip"
+                  value={newAddressForm.zipCode}
+                  onChange={(e) => handleNewAddressChange("zipCode", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={getCurrentLocationForNewAddress}
+                disabled={isNewAddressLocating}
+              >
+                {isNewAddressLocating ? "Detecting Location..." : "Use Current Location"}
+              </Button>
+              {newAddressLocationError && <p className="mt-2 text-sm text-red-500">{newAddressLocationError}</p>}
+            </div>
+
+            {orderForm.CLIENT_ID && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="save-new-address"
+                  checked={saveNewAddressToClient}
+                  onCheckedChange={(checked) => setSaveNewAddressToClient(checked)}
+                />
+                <Label htmlFor="save-new-address">Save to Client Master</Label>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewAddressDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveNewAddress}
+              disabled={!newAddressForm.address}
+            >
+              Save Address
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

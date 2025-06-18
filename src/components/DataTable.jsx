@@ -8,16 +8,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PacmanLoader } from "react-spinners";
 import { useState } from "react";
 
-export default function DataTable({ title, columns, data, loading, error, onCreate, noResultsText = "No results found.", additionalToolbarButtons }) {
+export default function DataTable({
+  title,
+  columns,
+  data,
+  loading,
+  error,
+  onCreate,
+  noResultsText = "No results found.",
+  additionalToolbarButtons,
+  rowSelection: parentRowSelection,
+  onRowSelectionChange: onParentRowSelectionChange,
+  getRowId,
+}) {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
-  const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [internalRowSelection, setInternalRowSelection] = useState({});
+
+  // Use parent's state if provided, else internal state
+  const rowSelection = parentRowSelection !== undefined ? parentRowSelection : internalRowSelection;
+  const setRowSelection = onParentRowSelectionChange || setInternalRowSelection;
 
   const table = useReactTable({
     data,
     columns,
+    getRowId,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),

@@ -55,7 +55,7 @@ const CartPage = () => {
     ADVANCE_AMOUNT: 0,
     MODE_OF_TRANSPORT: "",
     DELIVERY_DATE: "",
-    DELIVERY_ADDRESS: "",
+    DELIVERY_ADDRESS: selectedClient?.DELIVERY_ADDRESS || "",
     TERMS_AND_CONDITIONS: "",
     DELETED_STATUS: "F",
     DELETED_DATE: "",
@@ -100,9 +100,7 @@ const CartPage = () => {
   // Industry standard calculations
   const discount = masterFormData.DISCOUNT_VALUE;
   const taxableAmount = Math.max(0, subtotal - discount);
-  const deliveryCharge = 20;
-  const otherCharges = 20;
-  const grandTotal = taxableAmount + deliveryCharge + otherCharges;
+  const total = taxableAmount;
 
   const getOrderCategoryFromCart = () => {
     const categories = cart.map((item) => item.itemGroup);
@@ -125,12 +123,13 @@ const CartPage = () => {
       CLIENT_NAME: selectedClient?.CLIENT_NAME ?? "",
       CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
       CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
+      DELIVERY_ADDRESS: selectedClient?.DELIVERY_ADDRESS || "",
       TOTAL_VALUE: subtotal,
-      NET_VALUE: grandTotal,
+      NET_VALUE: total,
       ORDER_CATEGORY: getOrderCategoryFromCart(),
-      AMOUNT_IN_WORDS: toWords(Number(grandTotal)),
+      AMOUNT_IN_WORDS: toWords(Number(total)),
     }));
-  }, [selectedClient, subtotal, cart, grandTotal]);
+  }, [selectedClient, subtotal, cart, total]);
 
   // Filter list based on dropdown input value
   const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
@@ -156,19 +155,21 @@ const CartPage = () => {
     }
   };
 
-  const handleProceed = () => {
-    if (cart.length === 0 || !selectedClient) return;
+  const handleProceed = async () => {
+    if (!selectedClient) {
+      return toast({ variant: "destructive", title: "Please select a customer." });
+    }
+
+    if (cart.length === 0) {
+      return toast({ variant: "destructive", title: "Your cart is empty." });
+    }
+
+    const newOrderNo = await handleSaveOrder();
 
     navigate("proceed-to-check", {
       state: {
         cart,
-        selectedClient,
-        subtotal,
-        totalItem,
-        discount: masterFormData.DISCOUNT_VALUE,
-        deliveryCharge,
-        otherCharges,
-        grandTotal,
+        newOrderNo,
       },
     });
   };
@@ -178,6 +179,10 @@ const CartPage = () => {
       return toast({ variant: "destructive", title: "Please select a customer." });
     }
 
+    if (cart.length === 0) {
+      return toast({ variant: "destructive", title: "Your cart is empty." });
+    }
+
     try {
       setLoading(true);
 
@@ -185,8 +190,8 @@ const CartPage = () => {
       const updatedMasterData = {
         ...masterFormData,
         TOTAL_VALUE: subtotal,
-        NET_VALUE: grandTotal,
-        AMOUNT_IN_WORDS: toWords(Number(grandTotal)),
+        NET_VALUE: total,
+        AMOUNT_IN_WORDS: toWords(Number(total)),
       };
 
       const payload = {
@@ -255,7 +260,9 @@ const CartPage = () => {
         description: `Order #${newSerialNo} has been saved`,
       });
 
-      clearCart();
+      return newSerialNo;
+
+      // clearCart();
     } catch (error) {
       console.error(error);
       toast({
@@ -431,18 +438,10 @@ const CartPage = () => {
                 <span>Taxable Amount</span>
                 <span>{formatPrice(taxableAmount)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Delivery Charge</span>
-                <span>{formatPrice(deliveryCharge)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Other Charges</span>
-                <span>{formatPrice(otherCharges)}</span>
-              </div>
               <Separator />
               <div className="flex justify-between font-bold">
-                <span>Grand Total</span>
-                <span>{formatPrice(grandTotal)}</span>
+                <span>Total</span>
+                <span>{formatPrice(total)}</span>
               </div>
               <div className="space-y-3 pt-4">
                 <Button
@@ -456,7 +455,7 @@ const CartPage = () => {
                 <Button
                   className="w-full"
                   onClick={handleProceed}
-                  disabled={cart.length === 0 || !selectedClient}
+                  disabled={cart.length === 0}
                 >
                   Proceed to Checkout
                 </Button>

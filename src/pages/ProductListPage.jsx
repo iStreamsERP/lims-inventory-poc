@@ -18,9 +18,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 
 const ProductListPage = () => {
-  const [productTableList, setProductTableList] = useState([]);
+  const [tableList, setTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [rowSelection, setRowSelection] = useState({});
 
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -38,7 +39,7 @@ const ProductListPage = () => {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-      setProductTableList(response);
+      setTableList(response);
     } catch (error) {
       setError(error?.message);
     } finally {
@@ -71,7 +72,7 @@ const ProductListPage = () => {
           console.warn("Image deletion failed, but product was deleted", imageError);
         }
 
-        setProductTableList((prev) => prev.filter((p) => p.ITEM_CODE !== product.ITEM_CODE));
+        setTableList((prev) => prev.filter((p) => p.ITEM_CODE !== product.ITEM_CODE));
 
         toast({
           title: "Product deleted successfully",
@@ -191,15 +192,33 @@ const ProductListPage = () => {
     },
   ];
 
+  const additionalButtons = (
+    <Button
+      variant="destructive"
+      disabled={Object.keys(rowSelection).length === 0}
+      onClick={() => {
+        const selectedClientIds = Object.keys(rowSelection);
+        const selectedItems = tableList.filter((row) => selectedClientIds.includes(row.ITEM_CODE.toString()));
+        selectedItems.forEach((item) => handleDelete(item));
+      }}
+    >
+      Delete Selected
+    </Button>
+  );
+
   return (
     <DataTable
       title="All Products"
       columns={columns}
-      data={productTableList}
+      data={tableList}
       loading={loading}
       error={error}
       onCreate={() => navigate("/new-product")}
       noResultsText="No products found."
+      additionalToolbarButtons={additionalButtons}
+      rowSelection={rowSelection}
+      onRowSelectionChange={setRowSelection}
+      getRowId={(originalRow) => originalRow.ITEM_CODE.toString()}
     />
   );
 };

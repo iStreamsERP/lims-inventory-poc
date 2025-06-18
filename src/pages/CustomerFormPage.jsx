@@ -1,3 +1,5 @@
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import AddContact from "@/components/AddContact";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,35 +24,90 @@ const CustomerFormPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState({});
 
   const [openNatureOfBusiness, setOpenNatureOfBusiness] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
   const [openOtherNatureOfBusiness, setOpenOtherNatureOfBusiness] = useState(false);
   const [commandInputValue, setCommandInputValue] = useState("");
-  const [customerFormData, setCustomerFormData] = useState({
-    CLIENT_ID: -1,
-    CLIENT_NAME: "",
-    EMAIL_ADDRESS: "",
-    NATURE_OF_BUSINESS: "",
-    NATURE_OF_BUSINESS2: [],
-    TRN_VAT_NO: "",
-    GROUP_NAME: "",
-    TELEPHONE_NO: "",
-    WEB_ADDRESS: "",
-    COUNTRY: "",
-    STATE_NAME: "",
-    CITY_NAME: "",
-    COMMUNICATION_ADDRESS: "",
-    INVOICE_ADDRESS: "",
-    DELIVERY_ADDRESS: "",
-    ENT_DATE: "",
-    USER_NAME: userData.currentUserName,
-  });
 
   const [natureOfBusiness, setNatureOfBusiness] = useState([]);
   const [otherNatureOfBusiness, setOtherNatureOfBusiness] = useState([]);
   const [locationData, setLocationData] = useState([]);
+
+  // Validation Schema
+  const validationSchema = Yup.object({
+    CLIENT_NAME: Yup.string().required("Customer name is required"),
+    EMAIL_ADDRESS: Yup.string().email("Invalid email address").required("Email is required"),
+    NATURE_OF_BUSINESS: Yup.string().required("Primary nature of business is required"),
+    TELEPHONE_NO: Yup.string()
+      .required("Phone number is required")
+      .matches(/^\+\d{1,4}\d{7,12}$/, "Must include country code and be valid"),
+    TRN_VAT_NO: Yup.string().required("TRN/VAT is required"),
+    GROUP_NAME: Yup.string().required("Group of company is required"),
+    WEB_ADDRESS: Yup.string().trim().url("Invalid web address format").required("Web address of company is required"),
+    COUNTRY: Yup.string().required("Country is required"),
+    STATE_NAME: Yup.string().required("State is required"),
+    CITY_NAME: Yup.string().required("City is required"),
+    COMMUNICATION_ADDRESS: Yup.string().trim().required("Communication address is required"),
+    INVOICE_ADDRESS: Yup.string().trim().required("Invoice address is required"),
+
+    DELIVERY_ADDRESS: Yup.string().trim().required("Delivery address is required"),
+  });
+
+  // Formik initialization
+  const formik = useFormik({
+    initialValues: {
+      CLIENT_ID: -1,
+      CLIENT_NAME: "",
+      EMAIL_ADDRESS: "",
+      NATURE_OF_BUSINESS: "",
+      NATURE_OF_BUSINESS2: [],
+      TRN_VAT_NO: "",
+      GROUP_NAME: "",
+      TELEPHONE_NO: "",
+      WEB_ADDRESS: "",
+      COUNTRY: "",
+      STATE_NAME: "",
+      CITY_NAME: "",
+      COMMUNICATION_ADDRESS: "",
+      INVOICE_ADDRESS: "",
+      DELIVERY_ADDRESS: "",
+      ENT_DATE: "",
+      USER_NAME: userData.currentUserName,
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        setLoading(true);
+        const convertedDataModel = convertDataModelToStringData("CLIENT_MASTER", values);
+
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertedDataModel,
+        };
+
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+
+        const match = response.match(/Client ID\s*'(\d+)'/);
+        const newClientId = match ? parseInt(match[1], 10) : -1;
+
+        if (newClientId !== -1) {
+          formik.setFieldValue("CLIENT_ID", newClientId);
+          toast({
+            title: response,
+          });
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error saving data. Please try again.",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
 
   useEffect(() => {
     if (clientIDParams) {
@@ -61,6 +118,32 @@ const CustomerFormPage = () => {
     fetchNatureOfBusinessUsingQuery();
   }, [clientIDParams]);
 
+  const fetchClientData = async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        DataModelName: "CLIENT_MASTER",
+        WhereCondition: `CLIENT_ID = ${clientIDParams}`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const client = response?.[0] || {};
+
+      formik.setValues({
+        ...client,
+        NATURE_OF_BUSINESS2: client.NATURE_OF_BUSINESS2 ? client.NATURE_OF_BUSINESS2.split(",").map((item) => item.trim()) : [],
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching client: ${error.message}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchNatureOfBusinessUsingQuery = async () => {
     setLoading(true);
     try {
@@ -70,13 +153,12 @@ const CustomerFormPage = () => {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
       setNatureOfBusiness(response);
       setOtherNatureOfBusiness(response);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: `Error fetching nature of business: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -85,7 +167,6 @@ const CustomerFormPage = () => {
 
   const fetchLocationData = async () => {
     setLoading(true);
-    setError({});
     try {
       const payload = {
         DataModelName: "COUNTRY_MASTER",
@@ -95,114 +176,9 @@ const CustomerFormPage = () => {
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
       setLocationData(response);
     } catch (error) {
-      setError({ fetch: error.message });
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchClientData = async () => {
-    setLoading(true);
-    setError({});
-    try {
-      const payload = {
-        DataModelName: "CLIENT_MASTER",
-        WhereCondition: `CLIENT_ID = ${clientIDParams}`,
-        Orderby: "",
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
-      const client = response?.[0] || {};
-
-      setCustomerFormData((prev) => ({
-        ...prev,
-        ...client,
-        NATURE_OF_BUSINESS2: client.NATURE_OF_BUSINESS2 ? client.NATURE_OF_BUSINESS2.split(",").map((item) => item.trim()) : [],
-      }));
-    } catch (error) {
-      setError({ fetch: error.message });
-      toast({
-        variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const validateInput = () => {
-    const newErrors = {};
-
-    if (!customerFormData.CLIENT_NAME.trim()) {
-      newErrors.CLIENT_NAME = "Customer name is required.";
-    }
-
-    if (!customerFormData.TELEPHONE_NO.trim()) {
-      newErrors.TELEPHONE_NO = "Phone number is required.";
-    } else if (!/^\+\d{1,4}\d{7,12}$/.test(customerFormData.TELEPHONE_NO)) {
-      newErrors.TELEPHONE_NO = "Phone number must include country code and be valid.";
-    }
-
-    return newErrors;
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    setCustomerFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    setError((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const validationErrors = validateInput();
-    if (Object.keys(validationErrors).length > 0) {
-      setError(validationErrors);
-      console.log("Validation failed", validationErrors);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const convertedDataModel = convertDataModelToStringData("CLIENT_MASTER", customerFormData);
-
-      const payload = {
-        UserName: userData.userEmail,
-        DModelData: convertedDataModel,
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
-      const match = response.match(/Client ID\s*'(\d+)'/);
-      const newClientId = match ? parseInt(match[1], 10) : -1;
-
-      if (newClientId !== -1) {
-        setCustomerFormData((prev) => ({
-          ...prev,
-          CLIENT_ID: newClientId,
-        }));
-        toast({
-          title: response,
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error saving data. Please try again.",
-        error,
+        title: `Error fetching location data: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -211,12 +187,12 @@ const CustomerFormPage = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <h1 className="title">{customerFormData.CLIENT_ID === -1 ? "Create Customer" : "Edit Customer"}</h1>
+      <h1 className="title">{formik.values.CLIENT_ID === -1 ? "Create Customer" : "Edit Customer"}</h1>
       <div className="flex w-full flex-col gap-4 lg:flex-row">
         <Card className="h-fit w-full p-4 lg:w-[70%]">
           <form
             className="flex flex-wrap gap-2"
-            onSubmit={handleSubmit}
+            onSubmit={formik.handleSubmit}
           >
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="w-full md:w-1/2">
@@ -226,11 +202,11 @@ const CustomerFormPage = () => {
                   name="CLIENT_NAME"
                   type="text"
                   placeholder="Company name / Your name (If you are individual)"
-                  value={customerFormData.CLIENT_NAME}
-                  onChange={handleInputChange}
-                  required
+                  value={formik.values.CLIENT_NAME}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
-                {error.CLIENT_NAME && <p className="text-sm text-red-500">{error.CLIENT_NAME}</p>}
+                {formik.touched.CLIENT_NAME && formik.errors.CLIENT_NAME && <p className="text-sm text-red-500">{formik.errors.CLIENT_NAME}</p>}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -240,11 +216,11 @@ const CustomerFormPage = () => {
                   name="EMAIL_ADDRESS"
                   type="email"
                   placeholder="Enter your email ID"
-                  value={customerFormData.EMAIL_ADDRESS}
-                  onChange={handleInputChange}
-                  required
+                  value={formik.values.EMAIL_ADDRESS}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
-                {error.EMAIL_ADDRESS && <p className="text-sm text-red-500">{error.EMAIL_ADDRESS}</p>}
+                {formik.touched.EMAIL_ADDRESS && formik.errors.EMAIL_ADDRESS && <p className="text-sm text-red-500">{formik.errors.EMAIL_ADDRESS}</p>}
               </div>
             </div>
 
@@ -262,10 +238,14 @@ const CustomerFormPage = () => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openNatureOfBusiness}
-                      className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
+                      className={cn(
+                        "min-h-10 w-full justify-between gap-2 text-left font-normal",
+                        !formik.values.NATURE_OF_BUSINESS && "text-gray-400",
+                        formik.touched.NATURE_OF_BUSINESS && formik.errors.NATURE_OF_BUSINESS ? "border-red-500" : "",
+                      )}
                     >
-                      {customerFormData.NATURE_OF_BUSINESS
-                        ? natureOfBusiness.find((item) => item.NATURE_OF_BUSINESS === customerFormData.NATURE_OF_BUSINESS)?.NATURE_OF_BUSINESS
+                      {formik.values.NATURE_OF_BUSINESS
+                        ? natureOfBusiness.find((item) => item.NATURE_OF_BUSINESS === formik.values.NATURE_OF_BUSINESS)?.NATURE_OF_BUSINESS
                         : "Select nature of business"}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
@@ -288,15 +268,9 @@ const CustomerFormPage = () => {
                                   const newValue = toTitleCase(commandInputValue.trim());
                                   if (newValue) {
                                     setNatureOfBusiness((prev) => [...prev, { NATURE_OF_BUSINESS: newValue }]);
-                                    setCustomerFormData((prev) => ({
-                                      ...prev,
-                                      NATURE_OF_BUSINESS: newValue,
-                                    }));
+                                    formik.setFieldValue("NATURE_OF_BUSINESS", newValue);
+                                    formik.setFieldTouched("NATURE_OF_BUSINESS", true);
                                     setOpenNatureOfBusiness(false);
-                                    setError((prev) => ({
-                                      ...prev,
-                                      NATURE_OF_BUSINESS: "",
-                                    }));
                                   }
                                 }}
                               >
@@ -311,23 +285,14 @@ const CustomerFormPage = () => {
                               key={index}
                               value={item.NATURE_OF_BUSINESS}
                               onSelect={(currentValue) => {
-                                setCustomerFormData((prev) => ({
-                                  ...prev,
-                                  NATURE_OF_BUSINESS: currentValue === prev.NATURE_OF_BUSINESS ? "" : currentValue,
-                                }));
+                                formik.setFieldValue("NATURE_OF_BUSINESS", currentValue);
+                                formik.setFieldTouched("NATURE_OF_BUSINESS", true);
                                 setOpenNatureOfBusiness(false);
-                                setError((prev) => ({
-                                  ...prev,
-                                  NATURE_OF_BUSINESS: "",
-                                }));
                               }}
                             >
                               {item.NATURE_OF_BUSINESS}
                               <Check
-                                className={cn(
-                                  "ml-auto",
-                                  customerFormData.NATURE_OF_BUSINESS === item.NATURE_OF_BUSINESS ? "opacity-100" : "opacity-0",
-                                )}
+                                className={cn("ml-auto", formik.values.NATURE_OF_BUSINESS === item.NATURE_OF_BUSINESS ? "opacity-100" : "opacity-0")}
                               />
                             </CommandItem>
                           ))}
@@ -336,11 +301,13 @@ const CustomerFormPage = () => {
                     </Command>
                   </PopoverContent>
                 </Popover>
+                {formik.touched.NATURE_OF_BUSINESS && formik.errors.NATURE_OF_BUSINESS && (
+                  <p className="mt-1 text-sm text-red-500">{formik.errors.NATURE_OF_BUSINESS}</p>
+                )}
               </div>
 
               <div className="mt-3 w-full md:w-1/2">
                 <Label className="block text-sm font-medium">Select Other Nature Of Business</Label>
-
                 <Popover
                   open={openOtherNatureOfBusiness}
                   onOpenChange={setOpenOtherNatureOfBusiness}
@@ -352,12 +319,8 @@ const CustomerFormPage = () => {
                       aria-expanded={openOtherNatureOfBusiness}
                       className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
                     >
-                      {/* Display summary of selected values */}
-                      {customerFormData.NATURE_OF_BUSINESS2.length > 0
-                        ? customerFormData.NATURE_OF_BUSINESS2.map((value) => {
-                            const found = otherNatureOfBusiness.find((item) => item.NATURE_OF_BUSINESS === value);
-                            return found ? found.NATURE_OF_BUSINESS : value;
-                          }).join(", ")
+                      {formik.values.NATURE_OF_BUSINESS2.length > 0
+                        ? formik.values.NATURE_OF_BUSINESS2.join(", ")
                         : "Select other nature of business"}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
@@ -376,35 +339,23 @@ const CustomerFormPage = () => {
                               key={index}
                               value={item.NATURE_OF_BUSINESS}
                               onSelect={(currentValue) => {
-                                // Update the state array: add if not present, remove if already present
-                                setCustomerFormData((prev) => {
-                                  const currentSelections = prev.NATURE_OF_BUSINESS2 || [];
-                                  if (currentSelections.includes(currentValue)) {
-                                    // Remove the item if it's already selected
-                                    return {
-                                      ...prev,
-                                      NATURE_OF_BUSINESS2: currentSelections.filter((val) => val !== currentValue),
-                                    };
-                                  } else {
-                                    // Otherwise add the new selection
-                                    return {
-                                      ...prev,
-                                      NATURE_OF_BUSINESS2: [...currentSelections, currentValue],
-                                    };
-                                  }
-                                });
-                                setError((prev) => ({
-                                  ...prev,
-                                  NATURE_OF_BUSINESS2: "",
-                                }));
+                                const currentSelections = formik.values.NATURE_OF_BUSINESS2;
+                                let newSelections;
+
+                                if (currentSelections.includes(currentValue)) {
+                                  newSelections = currentSelections.filter((val) => val !== currentValue);
+                                } else {
+                                  newSelections = [...currentSelections, currentValue];
+                                }
+
+                                formik.setFieldValue("NATURE_OF_BUSINESS2", newSelections);
                               }}
                             >
                               {item.NATURE_OF_BUSINESS}
                               <Check
                                 className={cn(
                                   "ml-auto",
-                                  // Use a condition to check if the current item is included in the array
-                                  customerFormData.NATURE_OF_BUSINESS2.includes(item.NATURE_OF_BUSINESS) ? "opacity-100" : "opacity-0",
+                                  formik.values.NATURE_OF_BUSINESS2.includes(item.NATURE_OF_BUSINESS) ? "opacity-100" : "opacity-0",
                                 )}
                               />
                             </CommandItem>
@@ -425,10 +376,10 @@ const CustomerFormPage = () => {
                   name="TRN_VAT_NO"
                   type="text"
                   placeholder="Enter VAT/GST/TAX No"
-                  value={customerFormData.TRN_VAT_NO}
-                  onChange={handleInputChange}
+                  value={formik.values.TRN_VAT_NO}
+                  onChange={formik.handleChange}
                 />
-                {error.TRN_VAT_NO && <p className="text-sm text-red-500">{error.TRN_VAT_NO}</p>}
+                {formik.touched.TRN_VAT_NO && formik.errors.TRN_VAT_NO && <p className="mt-1 text-sm text-red-500">{formik.errors.TRN_VAT_NO}</p>}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -437,9 +388,10 @@ const CustomerFormPage = () => {
                   id="GROUP_NAME"
                   name="GROUP_NAME"
                   placeholder="Enter Group Name"
-                  value={customerFormData.GROUP_NAME}
-                  onChange={handleInputChange}
+                  value={formik.values.GROUP_NAME}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.GROUP_NAME && formik.errors.GROUP_NAME && <p className="mt-1 text-sm text-red-500">{formik.errors.GROUP_NAME}</p>}
               </div>
             </div>
 
@@ -453,10 +405,11 @@ const CustomerFormPage = () => {
                   name="TELEPHONE_NO"
                   type="text"
                   placeholder="e.g. +91XXXXXXXXXX"
-                  value={customerFormData.TELEPHONE_NO}
-                  onChange={handleInputChange}
+                  value={formik.values.TELEPHONE_NO}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
-                {error.TELEPHONE_NO && <p className="text-sm text-red-500">{error.TELEPHONE_NO}</p>}
+                {formik.touched.TELEPHONE_NO && formik.errors.TELEPHONE_NO && <p className="text-sm text-red-500">{formik.errors.TELEPHONE_NO}</p>}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -466,16 +419,16 @@ const CustomerFormPage = () => {
                   name="WEB_ADDRESS"
                   type="url"
                   placeholder="Enter your website URL"
-                  value={customerFormData.WEB_ADDRESS}
-                  onChange={handleInputChange}
+                  value={formik.values.WEB_ADDRESS}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.WEB_ADDRESS && formik.errors.WEB_ADDRESS && <p className="mt-1 text-sm text-red-500">{formik.errors.WEB_ADDRESS}</p>}
               </div>
             </div>
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="mt-3 w-full md:w-1/2">
-                <Label className="block text-sm font-medium">Select Contry</Label>
-
+                <Label className="block text-sm font-medium">Select Country</Label>
                 <Popover
                   open={openCountry}
                   onOpenChange={setOpenCountry}
@@ -485,10 +438,14 @@ const CustomerFormPage = () => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={openCountry}
-                      className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
+                      className={cn(
+                        "min-h-10 w-full justify-between gap-2 text-left font-normal",
+                        !formik.values.COUNTRY && "text-gray-400",
+                        formik.touched.COUNTRY && formik.errors.COUNTRY ? "border-red-500" : "",
+                      )}
                     >
-                      {customerFormData.COUNTRY
-                        ? locationData.find((location) => location.COUNTRY === customerFormData.COUNTRY)?.COUNTRY
+                      {formik.values.COUNTRY
+                        ? locationData.find((location) => location.COUNTRY === formik.values.COUNTRY)?.COUNTRY
                         : "Select country..."}
                       <ChevronsUpDown className="opacity-50" />
                     </Button>
@@ -507,19 +464,13 @@ const CustomerFormPage = () => {
                               key={index}
                               value={location.COUNTRY}
                               onSelect={(currentValue) => {
-                                setCustomerFormData((prev) => ({
-                                  ...prev,
-                                  COUNTRY: currentValue === prev.COUNTRY ? "" : currentValue,
-                                }));
+                                formik.setFieldValue("COUNTRY", currentValue);
+                                formik.setFieldTouched("COUNTRY", true);
                                 setOpenCountry(false);
-                                setError((prev) => ({
-                                  ...prev,
-                                  COUNTRY: "",
-                                }));
                               }}
                             >
                               {location.COUNTRY}
-                              <Check className={cn("ml-auto", customerFormData.COUNTRY === location.COUNTRY ? "opacity-100" : "opacity-0")} />
+                              <Check className={cn("ml-auto", formik.values.COUNTRY === location.COUNTRY ? "opacity-100" : "opacity-0")} />
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -527,6 +478,7 @@ const CustomerFormPage = () => {
                     </Command>
                   </PopoverContent>
                 </Popover>
+                {formik.touched.COUNTRY && formik.errors.COUNTRY && <p className="mt-1 text-sm text-red-500">{formik.errors.COUNTRY}</p>}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -536,9 +488,10 @@ const CustomerFormPage = () => {
                   name="STATE_NAME"
                   type="text"
                   placeholder="Enter State Name"
-                  value={customerFormData.STATE_NAME}
-                  onChange={handleInputChange}
+                  value={formik.values.STATE_NAME}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.STATE_NAME && formik.errors.STATE_NAME && <p className="text-sm text-red-500">{formik.errors.STATE_NAME}</p>}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -548,9 +501,10 @@ const CustomerFormPage = () => {
                   name="CITY_NAME"
                   type="text"
                   placeholder="Enter City Name"
-                  value={customerFormData.CITY_NAME}
-                  onChange={handleInputChange}
+                  value={formik.values.CITY_NAME}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.CITY_NAME && formik.errors.CITY_NAME && <p className="text-sm text-red-500">{formik.errors.CITY_NAME}</p>}
               </div>
             </div>
 
@@ -562,9 +516,12 @@ const CustomerFormPage = () => {
                   name="COMMUNICATION_ADDRESS"
                   type="text"
                   placeholder="Communication Address"
-                  value={customerFormData.COMMUNICATION_ADDRESS}
-                  onChange={handleInputChange}
+                  value={formik.values.COMMUNICATION_ADDRESS}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.COMMUNICATION_ADDRESS && formik.errors.COMMUNICATION_ADDRESS && (
+                  <p className="text-sm text-red-500">{formik.errors.COMMUNICATION_ADDRESS}</p>
+                )}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -574,10 +531,13 @@ const CustomerFormPage = () => {
                   name="INVOICE_ADDRESS"
                   type="text"
                   placeholder="Invoice Address"
-                  value={customerFormData.INVOICE_ADDRESS}
-                  onChange={handleInputChange}
+                  value={formik.values.INVOICE_ADDRESS}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
-                {error.INVOICE_ADDRESS && <p className="text-sm text-red-500">{error.INVOICE_ADDRESS}</p>}
+                {formik.touched.INVOICE_ADDRESS && formik.errors.INVOICE_ADDRESS && (
+                  <p className="text-sm text-red-500">{formik.errors.INVOICE_ADDRESS}</p>
+                )}
               </div>
 
               <div className="w-full md:w-1/2">
@@ -587,24 +547,26 @@ const CustomerFormPage = () => {
                   placeholder="Delivery Address"
                   name="DELIVERY_ADDRESS"
                   type="text"
-                  value={customerFormData.DELIVERY_ADDRESS}
-                  onChange={handleInputChange}
+                  value={formik.values.DELIVERY_ADDRESS}
+                  onChange={formik.handleChange}
                 />
+                {formik.touched.DELIVERY_ADDRESS && formik.errors.DELIVERY_ADDRESS && (
+                  <p className="text-sm text-red-500">{formik.errors.DELIVERY_ADDRESS}</p>
+                )}
               </div>
             </div>
 
-            <div
-              className="mt-4 flex w-full items-center justify-center"
-              type="submit"
-            >
-              <Button disabled={loading}>
-                {" "}
+            <div className="mt-4 flex w-full items-center justify-center">
+              <Button
+                type="submit"
+                disabled={loading}
+              >
                 {loading ? (
                   <BeatLoader
                     color="#000"
                     size={8}
                   />
-                ) : customerFormData.CLIENT_ID === -1 ? (
+                ) : formik.values.CLIENT_ID === -1 ? (
                   "Save Customer"
                 ) : (
                   "Update Customer"
@@ -614,7 +576,7 @@ const CustomerFormPage = () => {
           </form>
         </Card>
 
-        <AddContact clientId={customerFormData.CLIENT_ID} />
+        <AddContact clientId={formik.values.CLIENT_ID} />
       </div>
     </div>
   );

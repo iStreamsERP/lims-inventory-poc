@@ -18,8 +18,6 @@ const CartItemImage = ({ itemCode, subProductNo }) => {
         setError(false);
 
         const type = subProductNo ? "subproduct" : "product";
-        console.log(itemCode, subProductNo, type);
-        
         const url = await fetchImageUrl(type, itemCode, subProductNo);
 
         if (isMounted) {

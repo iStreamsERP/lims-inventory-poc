@@ -17,9 +17,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 
 const ServiceListPage = () => {
-  const [tableData, setTableData] = useState([]);
+  const [tableList, setTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [rowSelection, setRowSelection] = useState({});
+
   const { userData } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -36,7 +38,7 @@ const ServiceListPage = () => {
         };
 
         const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-        setTableData(response);
+        setTableList(response);
       } catch (error) {
         setError(error?.message);
       } finally {
@@ -60,10 +62,9 @@ const ServiceListPage = () => {
 
       await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
-      setTableData((prev) => prev.filter((s) => s.ITEM_CODE !== service.ITEM_CODE));
+      setTableList((prev) => prev.filter((s) => s.ITEM_CODE !== service.ITEM_CODE));
 
       toast({
-        variant: "success",
         title: "Service deleted successfully",
       });
     } catch (error) {
@@ -181,15 +182,33 @@ const ServiceListPage = () => {
     },
   ];
 
+  const additionalButtons = (
+    <Button
+      variant="destructive"
+      disabled={Object.keys(rowSelection).length === 0}
+      onClick={() => {
+        const selectedClientIds = Object.keys(rowSelection);
+        const selectedItems = tableList.filter((row) => selectedClientIds.includes(row.ITEM_CODE.toString()));
+        selectedItems.forEach((item) => handleDelete(item));
+      }}
+    >
+      Delete Selected
+    </Button>
+  );
+
   return (
     <DataTable
       title="All Services"
       columns={columns}
-      data={tableData}
+      data={tableList}
       loading={loading}
       error={error}
       onCreate={() => navigate("/new-service")}
       noResultsText="No services found."
+      additionalToolbarButtons={additionalButtons}
+      rowSelection={rowSelection}
+      onRowSelectionChange={setRowSelection}
+      getRowId={(originalRow) => originalRow.ITEM_CODE.toString()}
     />
   );
 };

@@ -56,11 +56,9 @@ const OrderList = () => {
   }, [isQuotation, userData, toast]);
 
   const handleDelete = useCallback(
-    async (item, isMultipleItem = false) => {
-      if (!isMultipleItem) {
-        const isConfirmed = window.confirm("Are you sure you want to delete? This action cannot be undone.");
-        if (!isConfirmed) return;
-      }
+    async (item) => {
+      const result = window.confirm("Are you sure you want to delete this customer? This action cannot be undone.");
+      if (!result) return;
 
       try {
         const payload = {
@@ -69,10 +67,10 @@ const OrderList = () => {
           WhereCondition: `SALES_ORDER_SERIAL_NO = ${item.SALES_ORDER_SERIAL_NO}`,
         };
 
-        await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
 
         toast({
-          title: `Deleted ${isQuotation ? "Quotation" : "Order"} No: ${item.SALES_ORDER_SERIAL_NO}`,
+          title: response,
         });
       } catch (error) {
         toast({
@@ -221,8 +219,9 @@ const OrderList = () => {
       variant="destructive"
       disabled={Object.keys(rowSelection).length === 0}
       onClick={() => {
-        const selectedItems = table.getSelectedRowModel().rows.map((row) => row.original);
-        selectedItems.forEach((item) => handleDelete(item, true));
+        const selectedClientIds = Object.keys(rowSelection);
+        const selectedItems = tableList.filter((row) => selectedClientIds.includes(row.SALES_ORDER_SERIAL_NO.toString()));
+        selectedItems.forEach((item) => handleDelete(item));
       }}
     >
       Delete Selected
@@ -239,6 +238,9 @@ const OrderList = () => {
       onCreate={() => navigate(isQuotation ? "/new-quotation" : "/new-order")}
       noResultsText={`No ${isQuotation ? "quotations" : "orders"} found.`}
       additionalToolbarButtons={additionalButtons}
+      rowSelection={rowSelection}
+      onRowSelectionChange={setRowSelection}
+      getRowId={(originalRow) => originalRow.SALES_ORDER_SERIAL_NO.toString()}
     />
   );
 };
