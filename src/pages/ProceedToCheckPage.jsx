@@ -2,9 +2,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,19 +17,22 @@ import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { Checkbox } from "@radix-ui/react-checkbox";
 import { City, Country, State } from "country-state-city";
-import { ArrowLeft, ArrowRight, ClipboardCheck, CreditCard, Edit, ShoppingCart, Truck } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { ArrowLeft, ArrowRight, Check, ChevronsUpDown, ClipboardCheck, CreditCard, Edit, ShoppingCart, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function ProceedToCheckPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userData } = useAuth();
-  const { cart } = location.state || {};
-  const newOrderNo = location.state?.newOrderNo || "";
+  const newOrderNo = location.state?.newSerialNo || "";
+  const [clientData, setClientData] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [value, setValue] = useState("");
+  const [orderItems, setOrderItems] = useState([]); // Replaced cart with orderItems
 
-  console.log(cart, newOrderNo);
-  
+  const [openCustomer, setOpenCustomer] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Cache refs to prevent unnecessary re-fetches
   const addressesFetched = useRef(false);
@@ -116,10 +121,28 @@ export default function ProceedToCheckPage() {
   const [saveNewAddressToClient, setSaveNewAddressToClient] = useState(false);
   const [isNewAddressLocating, setIsNewAddressLocating] = useState(false);
   const [newAddressLocationError, setNewAddressLocationError] = useState(null);
+  // Fetch order items from service
+  const fetchOrderItems = useCallback(async () => {
+    if (!newOrderNo) return;
+
+    try {
+      const payload = {
+        DataModelName: "SALES_ORDER_DETAILS",
+        WhereCondition: `SALES_ORDER_SERIAL_NO = '${newOrderNo}'`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+
+      setOrderItems(response || []);
+    } catch (error) {
+      console.error("Error fetching order items:", error);
+    }
+  }, [newOrderNo, userData.clientURL]);
 
   // Memoized calculations to prevent unnecessary re-renders
   const orderTotals = useMemo(() => {
-    const subtotal = cart?.reduce((sum, item) => sum + item.finalSaleRate * item.itemQty, 0) || 0;
+    const subtotal = orderItems?.reduce((sum, item) => sum + item.finalSaleRate * item.itemQty, 0) || 0;
     const discountValue = orderForm.DISCOUNT_VALUE;
     const taxableAmount = subtotal - discountValue;
     const taxRate = 0.18;
@@ -127,7 +150,46 @@ export default function ProceedToCheckPage() {
     const orderTotal = taxableAmount + taxAmount;
 
     return { subtotal, discountValue, taxableAmount, taxAmount, orderTotal };
-  }, [cart, orderForm.DISCOUNT_VALUE]);
+  }, [orderItems, orderForm.DISCOUNT_VALUE]);
+
+  const handleSelectClient = (clientName) => {
+    const client = clientData.find((c) => c.CLIENT_NAME === clientName);
+    setValue(clientName);
+    setSelectedClient(client || null);
+    setOrderForm((prev) => ({
+      ...prev,
+      CLIENT_ID: client?.CLIENT_ID || "",
+      CLIENT_NAME: client?.CLIENT_NAME || "",
+      INVOICE_ADDRESS: client?.INVOICE_ADDRESS || "",
+      TELEPHONE_NO: client?.TELEPHONE_NO || "",
+      DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
+      EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
+      COUNTRY: client?.COUNTRY || "",
+    }));
+    setOpenCustomer(false);
+  };
+
+  // Filter list based on dropdown input valuesetOpenCustomer
+  const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
+
+  useEffect(() => {
+    fetchClientData();
+    fetchOrderItems(); // Fetch order items on mount
+  }, []);
+
+  const fetchClientData = async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT * from CLIENT_MASTER`,
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+
+      setClientData(response || []);
+    } catch (error) {
+      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
+    }
+  };
 
   // Memoized states based on selected country
   const availableStates = useMemo(() => {
@@ -153,13 +215,17 @@ export default function ProceedToCheckPage() {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      console.log(response[0].TOTAL_VALUE);
+
       if (response && response[0]) {
-        setOrderForm((prev) => ({ ...prev, ...response[0] }));
+        setOrderForm((prev) => ({ ...prev, ...response }));
       }
     } catch (error) {
       console.error("Error fetching sales order data:", error);
     }
   }, [newOrderNo, userData.clientURL]);
+
+  console.log("final", orderForm.TOTAL_VALUE);
 
   const fetchPreviousAddresses = useCallback(async () => {
     if (!orderForm.CLIENT_ID || addressesFetched.current) return;
@@ -264,7 +330,7 @@ export default function ProceedToCheckPage() {
         setIsLocating(false);
         setLocationError("Unable to retrieve your location: " + error.message);
       },
-      { timeout: 10000, enableHighAccuracy: false }, // Optimize geolocation options
+      { timeout: 10000, enableHighAccuracy: true }, // Optimize geolocation options
     );
   }, []);
 
@@ -296,9 +362,9 @@ export default function ProceedToCheckPage() {
     }
   }, [selectedState, availableCities]);
 
-  // Update order totals when cart changes (optimized)
+  // Update order totals when order items change
   useEffect(() => {
-    if (cart && cart.length > 0) {
+    if (orderItems && orderItems.length > 0) {
       const total = orderTotals.subtotal;
       setOrderForm((prev) => ({
         ...prev,
@@ -306,7 +372,7 @@ export default function ProceedToCheckPage() {
         NET_VALUE: total - prev.DISCOUNT_VALUE,
       }));
     }
-  }, [cart, orderTotals.subtotal]);
+  }, [orderItems, orderTotals.subtotal]);
 
   // Optimized form submission
   const handleBillingSubmit = useCallback(
@@ -320,7 +386,6 @@ export default function ProceedToCheckPage() {
 
       try {
         const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-        console.log(response);
       } catch (error) {
         console.error("Failed to save billing details:", error);
       }
@@ -346,11 +411,10 @@ export default function ProceedToCheckPage() {
       }
     }
 
-    const newOrderId = Math.floor(100000 + Math.random() * 900000);
-    setOrderId(newOrderId);
+    setOrderId(newOrderNo); // Use actual order number instead of random
     setOrderDate(new Date());
     setActiveTab("receipts");
-  }, [saveToClientMaster, orderForm, userData.userEmail, userData.clientURL]);
+  }, [saveToClientMaster, orderForm, userData.userEmail, userData.clientURL, newOrderNo]);
 
   const handleAddressSelect = useCallback(() => {
     if (selectedAddress) {
@@ -408,7 +472,7 @@ export default function ProceedToCheckPage() {
         setIsNewAddressLocating(false);
         setNewAddressLocationError("Unable to retrieve your location: " + error.message);
       },
-      { timeout: 10000, enableHighAccuracy: false },
+      { timeout: 10000, enableHighAccuracy: true },
     );
   }, [countries]);
 
@@ -494,14 +558,58 @@ export default function ProceedToCheckPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Rest of your JSX remains the same, just replace the calculations with memoized values */}
-        {/* For example, replace subtotal with orderTotals.subtotal, etc. */}
-
         {/* BILLING TAB */}
         <TabsContent value="billing">
           <div className="flex flex-col gap-4 lg:flex-row">
             {/* LEFT COLUMN - ADDRESSES */}
             <div className="flex-1 space-y-4">
+              {/* Customer Selector */}
+              <Card className="space-y-2 p-6">
+                <h2 className="text-lg font-semibold">Select Customer</h2>
+
+                <Popover
+                  open={openCustomer}
+                  onOpenChange={setOpenCustomer}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCustomer}
+                      className="flex w-full justify-between"
+                    >
+                      {value || "Select customer..."}
+                      <ChevronsUpDown className="opacity-60" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search customer..."
+                        value={value}
+                        onValueChange={setValue}
+                        className="h-9 px-3"
+                      />
+                      <CommandList>
+                        <CommandEmpty>No customers found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredClients.map((client) => (
+                            <CommandItem
+                              key={client.CLIENT_ID}
+                              value={client.CLIENT_NAME}
+                              onSelect={handleSelectClient}
+                            >
+                              {client.CLIENT_NAME}
+                              <Check className={`ml-auto ${value === client.CLIENT_NAME ? "opacity-100" : "opacity-0"}`} />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </Card>
+
               {/* BILLING ADDRESS CARD */}
               <Card>
                 <CardHeader>
@@ -523,7 +631,7 @@ export default function ProceedToCheckPage() {
                           Change
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-h-[80%] overflow-y-auto sm:max-w-[700px]">
+                      <DialogContent className="z-[9999999] max-h-[80%] overflow-y-auto sm:max-w-[700px]">
                         <DialogHeader>
                           <DialogTitle>Edit Billing Information</DialogTitle>
                         </DialogHeader>
@@ -681,16 +789,20 @@ export default function ProceedToCheckPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium">{orderForm.CLIENT_NAME}</p>
-                    <p>{orderForm.CLIENT_ADDRESS}</p>
-                    <p>
-                      {orderForm.CITY_NAME}, {orderForm.STATE_NAME} {orderForm?.zipCode}
-                    </p>
-                    <p>{orderForm.COUNTRY}</p>
-                    <p className="pt-2">Phone: {orderForm.CLIENT_CONTACT}</p>
-                    <p>Email: {orderForm.EMAIL_ADDRESS}</p>
-                  </div>
+                  {orderForm.CLIENT_NAME ? (
+                    <div className="space-y-2 text-sm">
+                      <p className="font-medium">{orderForm.CLIENT_NAME}</p>
+                      <p>{orderForm.INVOICE_ADDRESS}</p>
+                      <p>
+                        {orderForm.CITY_NAME}, {orderForm.STATE_NAME}
+                      </p>
+                      <p>{orderForm.COUNTRY}</p>
+                      <p className="pt-2">Phone: {orderForm.TELEPHONE_NO}</p>
+                      <p>Email: {orderForm.EMAIL_ADDRESS}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No billing information available. Please select a client.</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -942,17 +1054,14 @@ export default function ProceedToCheckPage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span>Subtotal ({cart?.length || 0} Items)</span>
-                      <span>{formatPrice(orderTotals.subtotal)}</span>
+                      <span>Subtotal ({orderItems?.length || 0} Items)</span>
+                      <span>{formatPrice(orderForm.TOTAL_VALUE)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-green-500">
                       <span>Discount</span>
                       <span>-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Tax (18%)</span>
-                      <span>{formatPrice(orderTotals.taxAmount)}</span>
-                    </div>
+
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
@@ -1054,7 +1163,7 @@ export default function ProceedToCheckPage() {
                 <h3 className="mb-4 text-lg font-semibold">Order Summary</h3>
                 <div className="rounded-lg border text-sm">
                   <div className="max-h-[300px] overflow-y-auto p-4">
-                    {cart?.map((item, idx) => (
+                    {orderItems?.map((item, idx) => (
                       <div
                         key={idx}
                         className="flex justify-between border-b py-2 last:border-0"
@@ -1078,10 +1187,7 @@ export default function ProceedToCheckPage() {
                       <span>Discount</span>
                       <span className="text-green-600">-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Tax (18%)</span>
-                      <span>{formatPrice(orderTotals.taxAmount)}</span>
-                    </div>
+
                     <div className="flex justify-between border-t pt-2 font-semibold">
                       <span>Total</span>
                       <span>{formatPrice(orderTotals.orderTotal)}</span>
@@ -1196,7 +1302,7 @@ export default function ProceedToCheckPage() {
                     <span>Total</span>
                   </div>
 
-                  {cart?.map((item, idx) => (
+                  {orderItems?.map((item, idx) => (
                     <div
                       key={idx}
                       className="border-b py-4"
@@ -1219,10 +1325,7 @@ export default function ProceedToCheckPage() {
                       <span>Discount</span>
                       <span className="text-green-600">-{formatPrice(orderTotals.discountValue)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Tax (18%)</span>
-                      <span>{formatPrice(orderTotals.taxAmount)}</span>
-                    </div>
+
                     <div className="flex justify-between border-t pt-3 text-lg font-bold">
                       <span>Total</span>
                       <span>{formatPrice(orderTotals.orderTotal)}</span>

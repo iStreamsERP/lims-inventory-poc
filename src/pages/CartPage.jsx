@@ -2,9 +2,6 @@ import CartItemImage from "@/components/CartItemImage";
 import OrderSummary from "@/components/OrderSummary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
@@ -12,23 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
-import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
+import { Minus, MoveRight, Plus, X } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const CartPage = () => {
-  const navigate = useNavigate();
   const { userData } = useAuth();
   const { toast } = useToast();
-
-  const { cart, removeItem, updateItemQuantity, clearCart } = useCart();
-
-  const [clientData, setClientData] = useState([]);
-  const [value, setValue] = useState("");
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [openCustomer, setOpenCustomer] = useState(false);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { cart, removeItem, updateItemQuantity, clearCart } = useCart();
 
   // Initialize masterFormData with default values
   const [masterFormData, setMasterFormData] = useState({
@@ -37,26 +28,26 @@ const CartPage = () => {
     SALES_ORDER_SERIAL_NO: -1,
     ORDER_NO: "ORDER-" + new Date().getTime(),
     ORDER_DATE: new Date().toISOString().split("T")[0],
-    CLIENT_ID: selectedClient?.CLIENT_ID || null,
-    CLIENT_NAME: selectedClient?.CLIENT_NAME || "",
-    CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
-    CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
+    CLIENT_ID: null,
+    CLIENT_NAME: "",
+    CLIENT_ADDRESS: "",
+    CLIENT_CONTACT: "",
     EMP_NO: userData?.userEmployeeNo || "",
     ORDER_CATEGORY: "",
     TOTAL_VALUE: 0,
-    DISCOUNT_VALUE: 10,
+    DISCOUNT_VALUE: 0,
     NET_VALUE: 0,
     AMOUNT_IN_WORDS: "",
     CURRENCY_NAME: "Rupees",
     NO_OF_DECIMALS: 0,
     EXCHANGE_RATE: 0,
     ORDER_VALUE_IN_LC: 0,
-    MODE_OF_PAYMENT: "Static",
+    MODE_OF_PAYMENT: "",
     CREDIT_DAYS: 0,
     ADVANCE_AMOUNT: 0,
     MODE_OF_TRANSPORT: "",
     DELIVERY_DATE: "",
-    DELIVERY_ADDRESS: selectedClient?.DELIVERY_ADDRESS || "",
+    DELIVERY_ADDRESS: "",
     TERMS_AND_CONDITIONS: "",
     DELETED_STATUS: "F",
     DELETED_DATE: "",
@@ -95,13 +86,10 @@ const CartPage = () => {
   });
 
   // Cart totals
-  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
   const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
-
-  // Industry standard calculations
+  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
   const discount = masterFormData.DISCOUNT_VALUE;
-  const taxableAmount = Math.max(0, subtotal - discount);
-  const total = taxableAmount;
+  const total = subtotal - discount;
 
   const getOrderCategoryFromCart = () => {
     const categories = cart.map((item) => item.ITEM_GROUP);
@@ -114,76 +102,16 @@ const CartPage = () => {
   };
 
   useEffect(() => {
-    fetchClientData();
-  }, []);
-
-  useEffect(() => {
     setMasterFormData((fd) => ({
       ...fd,
-      CLIENT_ID: selectedClient?.CLIENT_ID ?? null,
-      CLIENT_NAME: selectedClient?.CLIENT_NAME ?? "",
-      CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
-      CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
-      DELIVERY_ADDRESS: selectedClient?.DELIVERY_ADDRESS || "",
       TOTAL_VALUE: subtotal,
       NET_VALUE: total,
       ORDER_CATEGORY: getOrderCategoryFromCart(),
       AMOUNT_IN_WORDS: toWords(Number(total)),
     }));
-  }, [selectedClient, subtotal, cart, total]);
+  }, [subtotal, cart, total]);
 
-  // Filter list based on dropdown input value
-  const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(value.toLowerCase()));
-
-  const handleSelectClient = (clientName) => {
-    const client = clientData.find((c) => c.CLIENT_NAME === clientName);
-    setValue(clientName);
-    setSelectedClient(client || null);
-    setOpenCustomer(false);
-  };
-
-  const fetchClientData = async () => {
-    try {
-      const payload = {
-        SQLQuery: `SELECT * from CLIENT_MASTER`,
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
-      setClientData(response || []);
-    } catch (error) {
-      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
-    }
-  };
-
-  const handleProceed = async () => {
-    if (!selectedClient) {
-      return toast({ variant: "destructive", title: "Please select a customer." });
-    }
-
-    if (cart.length === 0) {
-      return toast({ variant: "destructive", title: "Your cart is empty." });
-    }
-
-    const newOrderNo = await handleSaveOrder();
-
-    navigate("/proceed-to-check", {
-      state: {
-        cart,
-        newOrderNo,
-      },
-    });
-  };
-
-  const handleSaveOrder = async () => {
-    if (!selectedClient) {
-      return toast({ variant: "destructive", title: "Please select a customer." });
-    }
-
-    if (cart.length === 0) {
-      return toast({ variant: "destructive", title: "Your cart is empty." });
-    }
-
+  const handleProceedToCheckout = async () => {
     try {
       setLoading(true);
 
@@ -225,10 +153,10 @@ const CartPage = () => {
           SALES_ORDER_SERIAL_NO: newSerialNo,
           ORDER_NO: updatedMasterData.ORDER_NO,
           ORDER_DATE: updatedMasterData.ORDER_DATE,
-          SERIAL_NO: -1, // Sequential line number
-          ITEM_CODE: item.ITEM_CODE || item.ITEM_CODE,
+          SERIAL_NO: -1,
+          ITEM_CODE: item.ITEM_CODE,
           SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
-          DESCRIPTION: item.ITEM_NAME || item.ITEM_NAME,
+          DESCRIPTION: item.ITEM_NAME,
           UOM_SALES: item.UOM_STOCK,
           UOM_STOCK: item.UOM_STOCK,
           CONVERSION_RATE: 1,
@@ -257,13 +185,15 @@ const CartPage = () => {
       }
 
       toast({
-        title: "Order Saved Successfully",
+        title: "Order created Successfully",
         description: `Order #${newSerialNo} has been saved`,
       });
 
-      return newSerialNo;
-
-      // clearCart();
+      navigate("/proceed-to-check", {
+        state: {
+          newSerialNo,
+        },
+      });
     } catch (error) {
       console.error(error);
       toast({
@@ -294,7 +224,7 @@ const CartPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Cart Items */}
-        <div className="col-span-2 md:max-h-[59vh] space-y-6 md:overflow-y-auto">
+        <div className="col-span-2 space-y-6 md:max-h-[59vh] md:overflow-y-auto">
           {cart.length === 0 ? (
             <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
@@ -374,8 +304,15 @@ const CartPage = () => {
 
         {/* Order Summary */}
         <div className="col-span-2 space-y-4 lg:col-span-1">
-          {/* Order Summary */}
-          <OrderSummary />
+          <OrderSummary
+            isViewMode={false}
+            totalItem={totalItem}
+            subtotal={subtotal}
+            discount={discount}
+            total={total}
+            isLoading={loading}
+            onProceed={handleProceedToCheckout}
+          />
         </div>
       </div>
     </div>
