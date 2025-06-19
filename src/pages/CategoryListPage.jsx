@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
 import { callSoapService } from "@/services/callSoapService";
+import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
@@ -61,50 +62,57 @@ const CategoryListPage = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  return (
-    <div className="flex flex-col gap-y-4">
+ return (
+    <div className="container mx-auto flex flex-col gap-y-6">
       <h1 className="title">All Categories</h1>
+
       {loading ? (
-        <BarLoader
-          color="#36d399"
-          height={2}
-          width="100%"
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {categories.map((category, index) => (
-            <div
-              key={index}
-              className="group overflow-hidden"
-            >
-              <div className="h-36 w-full overflow-hidden rounded-lg bg-neutral-300 dark:bg-gray-900">
-                <Link
-                  to={`/product-card-list/${category.GROUP_LEVEL1}`}
-                  className="relative"
-                >
-                  {category.imageUrl ? (
-                    <img
-                      src={category.imageUrl}
-                      alt={category.GROUP_LEVEL1}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "";
-                        e.target.style.backgroundColor = "red";
-                        e.target.style.display = "none";
-                      }}
-                      className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
-                  ) : (
-                    <span className="text-sm text-white">No Image</span>
-                  )}
-                  <Badge className="absolute right-2 top-2 z-20 h-fit">{category.productCount || 0} Products</Badge>
-                </Link>
-              </div>
-              <h3 className="truncate text-lg font-semibold leading-snug group-hover:text-blue-700">{category.GROUP_LEVEL1}</h3>
-            </div>
-          ))}
+        <div className="w-full">
+          <BarLoader color="#36d399" height={2} width="100%" />
         </div>
+      ) : (
+       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {categories.map((category, idx) => (
+          <Link
+            key={idx}
+            to={`/product-card-list/${encodeURIComponent(category.GROUP_LEVEL1)}`}
+            className="group flex flex-col h-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-lg"
+          >
+            {/* Image container */}
+            <div className="w-full h-40 bg-slate-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+              {category.imageUrl ? (
+                <img
+                  src={category.imageUrl}
+                  alt={category.GROUP_LEVEL1}
+                  loading="lazy"
+                  onError={(e) => {
+                    // Hide broken images
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="w-full h-full object-contain object-center transition-transform duration-500 ease-out group-hover:scale-105"
+                />
+              ) : (
+                <span className="text-sm text-gray-500 dark:text-gray-300">No Image</span>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="p-4 flex items-center justify-between gap-5">
+              <div className="flex items-baseline gap-1 overflow-hidden">
+                <h3 className="line-clamp-2 truncate text-sm leading-snug group-hover:underline" title={category.GROUP_LEVEL1}>
+                  {category.GROUP_LEVEL1}
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-300">
+                  ({category.productCount || 0})
+                </span>
+              </div>
+              <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500" />
+            </div>
+          </Link>
+        ))}
+</div>
+
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,20 +29,69 @@ const AddContact = ({ clientId }) => {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, SetError] = useState({});
   const [isEnabled, setIsEnabled] = useState(false);
-
   const [clientContacts, setClientContacts] = useState([]);
 
-  const [contactFormData, setContactFormData] = useState(initialFormData);
+  // Validation Schema
+  const contactSchema = Yup.object({
+    NAME: Yup.string().required('Name is required'),
+    DESIGNATION: Yup.string().required('Designation is required'),
+    CONTACT_FOR: Yup.string().required('Contact purpose is required'),
+    EMAIL_ADDRESS: Yup.string()
+      .email('Invalid email address')
+      .required('Email is required'),
+    TELEPHONE_NO: Yup.string()
+      .required('Phone number is required')
+      .matches(/^\+\d{1,3}\d{6,14}$/, 'Format: +[country code][number]'),
+    ALTERNATIVE_CONTACT: Yup.string()
+      .matches(/^\+\d{1,3}\d{6,14}$|^$/, 'Format: +[country code][number]'),
+  });
+
+  // Formik initialization
+  const formik = useFormik({
+    initialValues: initialFormData,
+    validationSchema: contactSchema,
+    onSubmit: async (values) => {
+      try {
+        setLoading(true);
+        const convertedDataModel = convertDataModelToStringData(
+          "CLIENT_CONTACTS",
+          values
+        );
+
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertedDataModel,
+        };
+
+        const response = await callSoapService(
+          userData.clientURL,
+          "DataModel_SaveData",
+          payload
+        );
+
+        toast({
+          title: response,
+        });
+
+        await fetchClientContacts();
+        setIsDialogOpen(false);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error saving data. Please try again.",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
 
   useEffect(() => {
     if (clientId !== -1) {
       setIsEnabled(true);
-      setContactFormData((prev) => ({
-        ...prev,
-        CLIENT_ID: clientId,
-      }));
+      formik.setFieldValue('CLIENT_ID', clientId);
       fetchClientContacts();
     }
   }, [clientId]);
@@ -54,7 +105,6 @@ const AddContact = ({ clientId }) => {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
       setClientContacts(response);
     } catch (error) {
       toast({
@@ -62,14 +112,6 @@ const AddContact = ({ clientId }) => {
         title: `"Error fetching client contacts." ${error}`,
       });
     }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setContactFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
   };
 
   const handleDelete = async (contact) => {
@@ -97,10 +139,9 @@ const AddContact = ({ clientId }) => {
 
       await fetchClientContacts();
     } catch (error) {
-      setError({ fetch: error.message });
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: `Error deleting contact: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -108,14 +149,15 @@ const AddContact = ({ clientId }) => {
   };
 
   const handleUserDialogClose = () => {
-    setContactFormData(initialFormData);
     setIsDialogOpen(false);
+    formik.resetForm();
+    formik.setFieldValue('CLIENT_ID', clientId);
     fetchClientContacts();
   };
 
-  const handleEdit = async (contact) => {
+  const handleEdit = (contact) => {
     setIsDialogOpen(true);
-    setContactFormData({
+    formik.setValues({
       CLIENT_ID: clientId,
       SERIAL_NO: contact.SERIAL_NO,
       NAME: contact.NAME,
@@ -125,47 +167,6 @@ const AddContact = ({ clientId }) => {
       CONTACT_FOR: contact.CONTACT_FOR,
       ALTERNATIVE_CONTACT: contact.ALTERNATIVE_CONTACT,
     });
-  };
-
-  const handleSumbit = async () => {
-    try {
-      setLoading(true);
-
-      const convertedDataModel = convertDataModelToStringData("CLIENT_CONTACTS", contactFormData);
-
-      const payload = {
-        UserName: userData.userEmail,
-        DModelData: convertedDataModel,
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
-      toast({
-        title: response,
-      });
-
-      await fetchClientContacts();
-
-      setContactFormData({
-        CLIENT_ID: clientId,
-        SERIAL_NO: -1,
-        NAME: "",
-        DESIGNATION: "",
-        TELEPHONE_NO: "",
-        EMAIL_ADDRESS: "",
-        CONTACT_FOR: "",
-        ALTERNATIVE_CONTACT: "",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error saving data. Please try again.",
-        error,
-      });
-    } finally {
-      setIsDialogOpen(false);
-      setLoading(false);
-    }
   };
 
   return (
@@ -218,10 +219,7 @@ const AddContact = ({ clientId }) => {
         </div>
       </CardContent>
 
-      <CardFooter
-        className="flex items-center justify-center"
-        id="addContact"
-      >
+      <CardFooter className="flex items-center justify-center">
         <Dialog
           open={isDialogOpen}
           onOpenChange={(open) => {
@@ -231,49 +229,62 @@ const AddContact = ({ clientId }) => {
         >
           <DialogTrigger asChild>
             <Button
-              onClick={() => setIsDialogOpen(true)}
+              onClick={() => {
+                formik.resetForm();
+                formik.setFieldValue('CLIENT_ID', clientId);
+                setIsDialogOpen(true);
+              }}
               disabled={!isEnabled}
             >
               Add Contact
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <form>
+          <DialogContent className="sm:max-w-[50%] max-h-[90%] overflow-y-auto z-[999]">
+            <form onSubmit={formik.handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Contact</DialogTitle>
                 <DialogDescription>Enter the contact details and click save.</DialogDescription>
               </DialogHeader>
-              <div className="flex flex-col gap-4 py-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="NAME">Name</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+                <div className="w-full flex flex-col space-y-1.5">
+                  <Label htmlFor="NAME">Name<span className="text-red-500">*</span></Label>
                   <Input
                     id="NAME"
                     name="NAME"
                     placeholder="Contact Name"
-                    value={contactFormData.NAME}
-                    onChange={handleInputChange}
+                    value={formik.values.NAME}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
-                  {error.NAME && <p className="text-sm text-red-500">{error.NAME}</p>}
+                  {formik.touched.NAME && formik.errors.NAME && (
+                    <p className="text-sm text-red-500">{formik.errors.NAME}</p>
+                  )}
                 </div>
 
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="DESIGNATION">Designation</Label>
+                <div className="w-full flex flex-col space-y-1.5">
+                  <Label htmlFor="DESIGNATION">Designation<span className="text-red-500">*</span></Label>
                   <Input
                     id="DESIGNATION"
                     placeholder="Designation"
                     name="DESIGNATION"
-                    value={contactFormData.DESIGNATION}
-                    onChange={handleInputChange}
+                    value={formik.values.DESIGNATION}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
-                  {error.DESIGNATION && <p className="text-sm text-red-500">{error.DESIGNATION}</p>}
+                  {formik.touched.DESIGNATION && formik.errors.DESIGNATION && (
+                    <p className="text-sm text-red-500">{formik.errors.DESIGNATION}</p>
+                  )}
                 </div>
 
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="CONTACT_FOR">Contact for</Label>
+                <div className="w-full flex flex-col space-y-1.5">
+                  <Label htmlFor="CONTACT_FOR">Contact for<span className="text-red-500">*</span></Label>
                   <Select
                     id="CONTACT_FOR"
-                    value={contactFormData.CONTACT_FOR || ""}
-                    onValueChange={(value) => setContactFormData((prev) => ({ ...prev, CONTACT_FOR: value }))}
+                    value={formik.values.CONTACT_FOR || ""}
+                    onValueChange={(value) =>
+                      formik.setFieldValue("CONTACT_FOR", value)
+                    }
+                    onBlur={() => formik.setFieldTouched("CONTACT_FOR", true)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Contact for" />
@@ -284,61 +295,73 @@ const AddContact = ({ clientId }) => {
                       <SelectItem value="transportation">Transportation</SelectItem>
                     </SelectContent>
                   </Select>
-                  {error.CONTACT_FOR && <p className="text-sm text-red-500">{error.CONTACT_FOR}</p>}
+                  {formik.touched.CONTACT_FOR && formik.errors.CONTACT_FOR && (
+                    <p className="text-sm text-red-500">{formik.errors.CONTACT_FOR}</p>
+                  )}
                 </div>
 
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="EMAIL_ADDRESS">Email</Label>
+                <div className="w-full flex flex-col space-y-1.5">
+                  <Label htmlFor="EMAIL_ADDRESS">Email<span className="text-red-500">*</span></Label>
                   <Input
                     id="EMAIL_ADDRESS"
                     name="EMAIL_ADDRESS"
                     placeholder="Contact Email"
-                    value={contactFormData.EMAIL_ADDRESS}
-                    onChange={handleInputChange}
+                    value={formik.values.EMAIL_ADDRESS}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
-                  {error.EMAIL_ADDRESS && <p className="text-sm text-red-500">{error.EMAIL_ADDRESS}</p>}
+                  {formik.touched.EMAIL_ADDRESS && formik.errors.EMAIL_ADDRESS && (
+                    <p className="text-sm text-red-500">{formik.errors.EMAIL_ADDRESS}</p>
+                  )}
                 </div>
 
-                <div className="flex w-full flex-col space-y-1.5">
+                <div className="w-full flex flex-col space-y-1.5">
                   <Label htmlFor="TELEPHONE_NO">
-                    Mobile Number<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span>
+                    Mobile Number<span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="TELEPHONE_NO"
                     name="TELEPHONE_NO"
                     placeholder="e.g. +91XXXXXXXXXX"
-                    value={contactFormData.TELEPHONE_NO}
-                    onChange={handleInputChange}
+                    value={formik.values.TELEPHONE_NO}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
-                  {error.TELEPHONE_NO && <p className="text-sm text-red-500">{error.TELEPHONE_NO}</p>}
+                  {formik.touched.TELEPHONE_NO && formik.errors.TELEPHONE_NO && (
+                    <p className="text-sm text-red-500">{formik.errors.TELEPHONE_NO}</p>
+                  )}
                 </div>
 
-                <div className="flex w-full flex-col space-y-1.5">
+                <div className="w-full flex flex-col space-y-1.5">
                   <Label htmlFor="ALTERNATIVE_CONTACT">
-                    Alternative Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span>
+                    Alternative Phone
                   </Label>
                   <Input
                     id="ALTERNATIVE_CONTACT"
                     name="ALTERNATIVE_CONTACT"
                     placeholder="e.g. +91XXXXXXXXXX"
-                    value={contactFormData.ALTERNATIVE_CONTACT}
-                    onChange={handleInputChange}
+                    value={formik.values.ALTERNATIVE_CONTACT}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
+                  {formik.touched.ALTERNATIVE_CONTACT && formik.errors.ALTERNATIVE_CONTACT && (
+                    <p className="text-sm text-red-500">{formik.errors.ALTERNATIVE_CONTACT}</p>
+                  )}
                 </div>
               </div>
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={handleUserDialogClose}
                 >
                   Cancel
                 </Button>
                 <Button
-                  type="button"
-                  onClick={handleSumbit}
+                  type="submit"
+                  disabled={loading || !formik.isValid}
                 >
-                  Save
+                  {loading ? "Saving..." : "Save"}
                 </Button>
               </DialogFooter>
             </form>

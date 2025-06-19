@@ -196,7 +196,7 @@ const CustomerFormPage = () => {
           >
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="w-full md:w-1/2">
-                <Label htmlFor="CLIENT_NAME">Company / Customer Name</Label>
+                <Label htmlFor="CLIENT_NAME">Company / Customer Name<span className="text-red-500">*</span></Label>
                 <Input
                   id="CLIENT_NAME"
                   name="CLIENT_NAME"
@@ -210,7 +210,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="EMAIL_ADDRESS">Email ID</Label>
+                <Label htmlFor="EMAIL_ADDRESS">Email ID<span className="text-red-500">*</span></Label>
                 <Input
                   id="EMAIL_ADDRESS"
                   name="EMAIL_ADDRESS"
@@ -227,7 +227,7 @@ const CustomerFormPage = () => {
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="mt-3 w-full md:w-1/2">
                 <Label className="block text-sm font-medium">
-                  Select Nature Of Business <span className="font-normal text-gray-500">(Primary)</span>{" "}
+                  Select Nature Of Business <span className="font-normal text-gray-500">(Primary)</span><span className="text-red-500">*</span>
                 </Label>
                 <Popover
                   open={openNatureOfBusiness}
@@ -370,7 +370,7 @@ const CustomerFormPage = () => {
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="w-full md:w-1/2">
-                <Label htmlFor="TRN_VAT_NO">VAT/GST/TAX No</Label>
+                <Label htmlFor="TRN_VAT_NO">VAT/GST/TAX No<span className="text-red-500">*</span></Label>
                 <Input
                   id="TRN_VAT_NO"
                   name="TRN_VAT_NO"
@@ -383,7 +383,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="GROUP_NAME">Group of Company</Label>
+                <Label htmlFor="GROUP_NAME">Group of Company<span className="text-red-500">*</span></Label>
                 <Input
                   id="GROUP_NAME"
                   name="GROUP_NAME"
@@ -398,7 +398,7 @@ const CustomerFormPage = () => {
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="w-full md:w-1/2">
                 <Label htmlFor="TELEPHONE_NO">
-                  Phone<span className="text-xs text-gray-400"> (with country code, e.g., +91XXXXXXXXXX)</span>
+                  Phone Number<span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="TELEPHONE_NO"
@@ -413,7 +413,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="WEB_ADDRESS">Website</Label>
+                <Label htmlFor="WEB_ADDRESS">Website URL<span className="text-red-500">*</span></Label>
                 <Input
                   id="WEB_ADDRESS"
                   name="WEB_ADDRESS"
@@ -428,7 +428,7 @@ const CustomerFormPage = () => {
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="mt-3 w-full md:w-1/2">
-                <Label className="block text-sm font-medium">Select Country</Label>
+                <Label className="block text-sm font-medium">Select Country<span className="text-red-500">*</span></Label>
                 <Popover
                   open={openCountry}
                   onOpenChange={setOpenCountry}
@@ -482,7 +482,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="STATE_NAME">State</Label>
+                <Label htmlFor="STATE_NAME">State<span className="text-red-500">*</span></Label>
                 <Input
                   id="STATE_NAME"
                   name="STATE_NAME"
@@ -495,7 +495,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="CITY_NAME">City</Label>
+                <Label htmlFor="CITY_NAME">City<span className="text-red-500">*</span></Label>
                 <Input
                   id="CITY_NAME"
                   name="CITY_NAME"
@@ -510,7 +510,7 @@ const CustomerFormPage = () => {
 
             <div className="flex w-full flex-col gap-2 md:flex-row">
               <div className="w-full md:w-1/2">
-                <Label htmlFor="COMMUNICATION_ADDRESS">Communication Address</Label>
+                <Label htmlFor="COMMUNICATION_ADDRESS">Communication Address<span className="text-red-500">*</span></Label>
                 <Textarea
                   id="COMMUNICATION_ADDRESS"
                   name="COMMUNICATION_ADDRESS"
@@ -525,7 +525,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="INVOICE_ADDRESS">Invoice Address</Label>
+                <Label htmlFor="INVOICE_ADDRESS">Invoice Address<span className="text-red-500">*</span></Label>
                 <Textarea
                   id="INVOICE_ADDRESS"
                   name="INVOICE_ADDRESS"
@@ -541,7 +541,7 @@ const CustomerFormPage = () => {
               </div>
 
               <div className="w-full md:w-1/2">
-                <Label htmlFor="DELIVERY_ADDRESS">Delivery Address</Label>
+                <Label htmlFor="DELIVERY_ADDRESS">Delivery Address<span className="text-red-500">*</span></Label>
                 <Textarea
                   id="DELIVERY_ADDRESS"
                   placeholder="Delivery Address"
@@ -559,7 +559,7 @@ const CustomerFormPage = () => {
             <div className="mt-4 flex w-full items-center justify-center">
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !formik.isValid || !formik.dirty}
               >
                 {loading ? (
                   <BeatLoader

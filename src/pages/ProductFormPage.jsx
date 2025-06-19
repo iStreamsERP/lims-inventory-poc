@@ -1,3 +1,5 @@
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import AddSubProduct from "@/components/AddSubProduct";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { toTitleCase } from "@/utils/stringUtils";
-import axios from "axios";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -32,7 +33,7 @@ export default function ProductFormPage() {
     ITEM_SIZE: "",
     ITEM_TYPE: "",
     GROUP_LEVEL1: "",
-    SUB_MATERIAL_BASED_ON: "",
+    SUB_MATERIAL_BASED_ON: [],
     SUPPLIER_NAME: "",
     SALE_RATE: "",
     SALE_MARGIN_PTG: "",
@@ -56,7 +57,6 @@ export default function ProductFormPage() {
   const { fetchImageFile, saveImage } = useImageAPI();
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState({});
   const [commandInputValue, setCommandInputValue] = useState("");
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false);
@@ -66,8 +66,9 @@ export default function ProductFormPage() {
   const [subProductCount, setSubProductCount] = useState(0);
   const [submitCount, setSubmitCount] = useState(0);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isNewProduct, setIsNewProduct] = useState(true);
 
-  const [subMaterialBasedOnList, setSubMaterialBasedOnList] = useState([
+  const [subMaterialBasedOnList] = useState([
     { name: "Color", value: "Color" },
     { name: "Size", value: "Size" },
     { name: "Variant", value: "Variant" },
@@ -107,7 +108,114 @@ export default function ProductFormPage() {
     "YR",
   ];
 
-  const [formData, setFormData] = useState(initialFormData);
+  // Validation Schema
+  const validationSchema = Yup.object({
+    ITEM_NAME: Yup.string().required("Item name is required"),
+    SUPPLIER_NAME: Yup.string().required("Supplier name is required"),
+    SALE_RATE: Yup.number().typeError("Sale rate must be a number").positive("Sale rate must be positive").required("Sale rate is required"),
+    SALE_MARGIN_PTG: Yup.number().typeError("Margin must be a number").positive("Margin must be positive").required("Sale margin % is required"),
+    GROUP_LEVEL1: Yup.string().required("Category is required"),
+    SALE_UOM: Yup.string().required("UoM is required"),
+    image_file: Yup.mixed()
+      .test("required", "Image is required", (value) => {
+        if (isNewProduct) return value !== null && value !== "";
+        return true;
+      })
+      .test("fileType", "Unsupported file format. Supported: JPG, PNG, GIF, WEBP", (value) => {
+        if (!value) return true;
+        if (typeof value === "string") return true;
+
+        const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml", "application/octet-stream"];
+
+        return validTypes.includes(value.type.toLowerCase());
+      }),
+   SUB_MATERIALS_MODE: Yup.string().oneOf(["T", "F"]).required(),
+    SUB_MATERIAL_BASED_ON: Yup.array().test(
+    "sub-material-required",
+    "At least one option must be selected",
+    function (value) {
+      const { SUB_MATERIALS_MODE } = this.parent;
+      if (SUB_MATERIALS_MODE === "T") {
+        return value && value.length > 0;
+      }
+      return true;
+    }
+  ),
+  });
+
+  // Formik initialization
+  const formik = useFormik({
+    initialValues: initialFormData,
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        setLoading(true);
+
+        // Create a copy to avoid mutation
+        const submitValues = { ...values };
+
+        // Handle sub-material based on
+        if (submitValues.SUB_MATERIALS_MODE === "T") {
+          submitValues.SUB_MATERIAL_BASED_ON = Array.isArray(values.SUB_MATERIAL_BASED_ON)
+            ? values.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
+            : toTitleCase(values.SUB_MATERIAL_BASED_ON);
+        } else {
+          submitValues.SUB_MATERIAL_BASED_ON = "";
+        }
+
+        const normalizedData = {
+          ...submitValues,
+          ITEM_NAME: toTitleCase(submitValues.ITEM_NAME),
+          SUPPLIER_NAME: toTitleCase(submitValues.SUPPLIER_NAME),
+        };
+
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertDataModelToStringData("INVT_MATERIAL_MASTER", normalizedData),
+        };
+
+        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+        const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
+        const newItemCode = match ? match[1] : "(NEW)";
+
+        // Handle image
+        if (submitValues.image_file && typeof submitValues.image_file !== "string") {
+          try {
+            await saveImage("product", newItemCode, submitValues.image_file, null, isNewProduct);
+          } catch (imageError) {
+            console.error("Image processing error:", imageError);
+          }
+        }
+
+        if (newItemCode !== "(NEW)") {
+          formik.setFieldValue("ITEM_CODE", newItemCode);
+          setIsNewProduct(false);
+          setSubmitCount((c) => c + 1);
+          toast({ title: response });
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error saving data",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
+
+ console.log("Formik initialized with values:", formik.values);
+
+  // Get tab errors
+  const getTabErrors = (tabName) => {
+    const tabFields = {
+      productdetails: ["ITEM_NAME", "SUPPLIER_NAME", "SALE_RATE", "SALE_UOM", "image_file", "SALE_MARGIN_PTG", "GROUP_LEVEL1"],
+      productconfiguration: ["SUB_MATERIAL_BASED_ON"],
+    };
+
+    return tabFields[tabName].some((field) => formik.touched[field] && formik.errors[field]);
+  };
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -126,6 +234,9 @@ export default function ProductFormPage() {
         if (id) {
           await fetchProductData();
           await fetchProductImage();
+          setIsNewProduct(false);
+        } else {
+          setIsNewProduct(true);
         }
       } catch (error) {
         toast({
@@ -142,28 +253,10 @@ export default function ProductFormPage() {
   }, [id]);
 
   useEffect(() => {
-    if (formData.ITEM_CODE !== "(NEW)") {
+    if (formik.values.ITEM_CODE !== "(NEW)") {
       fetchSubProductCount();
     }
-  }, [formData.ITEM_CODE]);
-
-  const validateInput = () => {
-    const newError = {};
-    if (!formData.ITEM_NAME) newError.ITEM_NAME = "Item name is required.";
-    // if (!formData.ITEM_FINISH) newError.ITEM_FINISH = "Item color is required in specification.";
-    // if (!formData.ITEM_SIZE) newError.ITEM_SIZE = "Item size is required in specification.";
-    // if (!formData.ITEM_TYPE) newError.ITEM_TYPE = "Item variant is required in specification.";
-    if (!formData.SALE_RATE) newError.SALE_RATE = "Sale rate is required.";
-    else if (!/^\d+$/.test(formData.SALE_RATE)) newError.SALE_RATE = "Sale rate must be a number.";
-    if (!formData.SALE_MARGIN_PTG) newError.SALE_MARGIN_PTG = "Sale margin % is required.";
-    else if (!/^\d+$/.test(formData.SALE_MARGIN_PTG)) newError.SALE_MARGIN_PTG = "Margin must be a number.";
-    if (!formData.GROUP_LEVEL1) newError.GROUP_LEVEL1 = "Category is required.";
-    if (!formData.SUPPLIER_NAME) newError.SUPPLIER_NAME = "Supplier name is required.";
-    if (!formData.image_file) {
-      newError.image_file = "Image is required.";
-    }
-    return newError;
-  };
+  }, [formik.values.ITEM_CODE]);
 
   const fetchCategoryUsingQuery = useCallback(async () => {
     try {
@@ -173,12 +266,11 @@ export default function ProductFormPage() {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
       setCategoryData(response);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: `Error fetching client: ${error.message}`,
+        title: `Error fetching categories: ${error.message}`,
       });
     }
   }, [userData, toast]);
@@ -192,30 +284,26 @@ export default function ProductFormPage() {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
       const client = response?.[0] || {};
 
-      setFormData((prev) => ({
-        ...prev,
+      formik.setValues({
+        ...initialFormData,
         ...client,
         SUB_MATERIAL_BASED_ON: client.SUB_MATERIAL_BASED_ON ? client.SUB_MATERIAL_BASED_ON.split(",").map((item) => item.trim()) : [],
-      }));
+      });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: `Error fetching main product: ${err.message}`,
+        title: `Error fetching product: ${err.message}`,
       });
     }
-  }, [id, userData, toast]);
+  }, [id, userData, toast, formik.setValues]);
 
   const fetchProductImage = useCallback(async () => {
     try {
       const imageData = await fetchImageFile("product", id);
       if (imageData) {
-        setFormData((prev) => ({
-          ...prev,
-          image_file: imageData.file,
-        }));
+        formik.setFieldValue("image_file", imageData.file);
         setPreviewUrl(imageData.previewUrl);
       }
     } catch (error) {
@@ -225,16 +313,15 @@ export default function ProductFormPage() {
         description: error.message,
       });
     }
-  }, [id, fetchImageFile, toast]);
+  }, [id, fetchImageFile, toast, formik.setFieldValue]);
 
   const fetchSubProductCount = useCallback(async () => {
     try {
       const payload = {
-        SQLQuery: `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formData.ITEM_CODE}'`,
+        SQLQuery: `SELECT COUNT(*) AS count FROM INVT_SUBMATERIAL_MASTER WHERE ITEM_CODE = '${formik.values.ITEM_CODE}'`,
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-
       setSubProductCount(response[0]?.count || 0);
     } catch (err) {
       toast({
@@ -242,10 +329,8 @@ export default function ProductFormPage() {
         title: "Error fetching sub product count",
         description: err?.message || "Unknown error",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [formData.ITEM_CODE, userData, toast]);
+  }, [formik.values.ITEM_CODE, userData, toast]);
 
   const fetchUom = useCallback(async () => {
     try {
@@ -256,179 +341,129 @@ export default function ProductFormPage() {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-
-      setUomList((prev) => ({
-        ...prev,
-        ...response,
-      }));
+      setUomList(response);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: `Error fetching uom: ${error?.message}`,
+        title: `Error fetching UOM: ${error?.message}`,
       });
     }
   }, [userData, toast]);
 
-  const handleChange = (e) => {
-    const { name, type, value, files } = e.target;
-    if (type === "file") {
-      const file = files[0] || null;
-      setFormData((prev) => ({ ...prev, [name]: file }));
-      setError((prev) => ({ ...prev, [name]: "" }));
+  const handleImageChange = (e) => {
+    const file = e.target.files[0] || null;
+    formik.setFieldValue("image_file", file);
 
-      // generate preview URL
-      if (file) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-      } else {
-        setPreviewUrl(null);
-      }
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-      setError((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const validationErrors = validateInput();
-    if (Object.keys(validationErrors).length > 0) {
-      setError(validationErrors);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const normalizedData = {
-        ...formData,
-        ITEM_NAME: toTitleCase(formData.ITEM_NAME),
-        SUPPLIER_NAME: toTitleCase(formData.SUPPLIER_NAME),
-        SUB_MATERIAL_BASED_ON: Array.isArray(formData.SUB_MATERIAL_BASED_ON)
-          ? formData.SUB_MATERIAL_BASED_ON.map(toTitleCase).join(",")
-          : toTitleCase(formData.SUB_MATERIAL_BASED_ON),
-      };
-
-      const payload = {
-        UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData("INVT_MATERIAL_MASTER", normalizedData),
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-      const match = response.match(/Item Code Ref\s*'([\w\d]+)'/);
-      const newItemCode = match ? match[1] : "(NEW)";
-
-      // Handle image using custom hook
-      if (formData.image_file) {
-        try {
-          await saveImage(
-            "product",
-            newItemCode,
-            formData.image_file,
-            null,
-            !id, // isNew = true for create, false for update
-          );
-        } catch (imageError) {
-          // Error toast is already shown by hook
-          console.error("Image processing error:", imageError);
-        }
-      }
-
-      if (newItemCode !== "(NEW)") {
-        setFormData((prev) => ({ ...prev, ITEM_CODE: newItemCode }));
-        setSubmitCount((c) => c + 1);
-        toast({ title: response });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error saving data. Please try again.",
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
+      setPreviewUrl(null);
     }
   };
 
   return (
     <div className="grid h-full w-full grid-cols-1 gap-4 lg:grid-cols-12">
       <div className="col-span-1 h-full w-full lg:col-span-7">
-        <h1 className="title">{formData.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
+        <h1 className="title">{formik.values.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
+        {/* Global Error Summary */}
+        {formik.submitCount > 0 && Object.keys(formik.errors).length > 0 && (
+          <div className="mb-4 rounded-lg bg-red-50 p-1 text-red-800 text-xs">
+            <h3 className="font-bold">Please fix the following errors:</h3>
+            <ul className="list-disc pl-5">
+              {Object.entries(formik.errors).map(([key, error]) => (
+                <li key={key}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <form
-          onSubmit={handleSubmit}
+          onSubmit={formik.handleSubmit}
           className="mt-4 h-full w-full"
         >
           <Tabs defaultValue="productdetails">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="productdetails">Product Details</TabsTrigger>
-              <TabsTrigger value="productconfiguration">Product Configuration</TabsTrigger>
+              <TabsTrigger
+                value="productdetails"
+                className={getTabErrors("productdetails") ? "border-2 border-red-500" : ""}
+              >
+                Product Details {getTabErrors("productdetails") && <span className="ml-2 text-red-500">•</span>}
+              </TabsTrigger>
+              <TabsTrigger
+                value="productconfiguration"
+                className={getTabErrors("productconfiguration") ? "border-2 border-red-500" : ""}
+              >
+                Product Configuration {getTabErrors("productconfiguration") && <span className="ml-2 text-red-500">•</span>}
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="productdetails">
               <Card>
                 <CardHeader>
                   <CardTitle>Product Details</CardTitle>
-                  <CardDescription> Provide essential information to define and manage your product.</CardDescription>
+                  <CardDescription>Provide essential information to define and manage your product.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2 lg:flex-row">
                     <div className="w-full">
                       <div className="w-full">
-                        <Label htmlFor="itemcode">Item Code</Label>
+                        <Label htmlFor="ITEM_CODE">Item Code</Label>
                         <Input
                           name="ITEM_CODE"
                           id="ITEM_CODE"
                           type="text"
                           placeholder="Type item code (New)"
-                          value={formData.ITEM_CODE === "(NEW)" ? "New" : formData.ITEM_CODE}
-                          onChange={handleChange}
+                          value={formik.values.ITEM_CODE === "(NEW)" ? "New" : formik.values.ITEM_CODE}
                           readOnly
                         />
-                        {error.ITEM_CODE && <p className="text-xs text-red-500">{error.ITEM_CODE}</p>}
                       </div>
 
-                      <div className="w-full">
-                        <Label htmlFor="itemname">Item Name</Label>
+                      <div className="mt-3 w-full">
+                        <Label htmlFor="ITEM_NAME">Item Name<span className="text-red-500">*</span></Label>
                         <Input
                           name="ITEM_NAME"
                           id="ITEM_NAME"
                           type="text"
                           placeholder="Type item name"
-                          onChange={handleChange}
-                          value={formData.ITEM_NAME}
-                          required
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          value={formik.values.ITEM_NAME}
                         />
-                        {error.ITEM_NAME && <p className="text-xs text-red-500">{error.ITEM_NAME}</p>}
+                        {formik.touched.ITEM_NAME && formik.errors.ITEM_NAME && <p className="text-xs text-red-500">{formik.errors.ITEM_NAME}</p>}
                       </div>
 
-                      <div className="w-full">
-                        <Label htmlFor="SUPPLIER_NAME">Supplier Ref</Label>
+                      <div className="mt-3 w-full">
+                        <Label htmlFor="SUPPLIER_NAME">Supplier Ref<span className="text-red-500">*</span></Label>
                         <Input
                           name="SUPPLIER_NAME"
                           id="SUPPLIER_NAME"
                           type="text"
                           placeholder="Type supplier ref"
-                          onChange={handleChange}
-                          value={formData.SUPPLIER_NAME}
-                          required
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          value={formik.values.SUPPLIER_NAME}
                         />
-                        {error.SUPPLIER_NAME && <p className="text-xs text-red-500">{error.SUPPLIER_NAME}</p>}
+                        {formik.touched.SUPPLIER_NAME && formik.errors.SUPPLIER_NAME && (
+                          <p className="text-xs text-red-500">{formik.errors.SUPPLIER_NAME}</p>
+                        )}
                       </div>
 
-                      <div className="flex w-full flex-col gap-2 lg:flex-row">
+                      <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row">
                         <div className="w-full">
-                          <Label htmlFor="SALE_RATE">Sales Price</Label>
+                          <Label htmlFor="SALE_RATE">Sales Price<span className="text-red-500">*</span></Label>
                           <Input
                             name="SALE_RATE"
                             id="SALE_RATE"
                             type="text"
                             placeholder="Type sales price"
-                            onChange={handleChange}
-                            value={formData.SALE_RATE}
-                            required
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            value={formik.values.SALE_RATE}
                           />
-                          {error.SALE_RATE && <p className="text-xs text-red-500">{error.SALE_RATE}</p>}
+                          {formik.touched.SALE_RATE && formik.errors.SALE_RATE && <p className="text-xs text-red-500">{formik.errors.SALE_RATE}</p>}
                         </div>
                         <div className="w-full">
-                          <Label>UoM</Label>
+                          <Label>UoM<span className="text-red-500">*</span></Label>
                           <Popover
                             open={opened}
                             onOpenChange={setOpened}
@@ -437,10 +472,10 @@ export default function ProductFormPage() {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={open}
+                                aria-expanded={opened}
                                 className="w-full justify-between"
                               >
-                                {formData.SALE_UOM ? uom.find((uom) => uom === formData.SALE_UOM) : "Select..."}
+                                {formik.values.SALE_UOM || "Select..."}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
@@ -457,18 +492,15 @@ export default function ProductFormPage() {
                                       <CommandItem
                                         key={type}
                                         value={type}
-                                        onSelect={(currentValue) => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            SALE_UOM: currentValue,
-                                            UOM_STOCK: currentValue,
-                                            UOM_SUBMATERIAL: currentValue,
-                                          }));
+                                        onSelect={() => {
+                                          formik.setFieldValue("SALE_UOM", type);
+                                          formik.setFieldValue("UOM_STOCK", type);
+                                          formik.setFieldValue("UOM_SUBMATERIAL", type);
                                           setOpened(false);
                                         }}
                                       >
                                         {type}
-                                        <Check className={`ml-auto h-4 w-4 ${formData.SALE_UOM === type ? "opacity-100" : "opacity-0"}`} />
+                                        <Check className={`ml-auto h-4 w-4 ${formik.values.SALE_UOM === type ? "opacity-100" : "opacity-0"}`} />
                                       </CommandItem>
                                     ))}
                                   </CommandGroup>
@@ -476,21 +508,21 @@ export default function ProductFormPage() {
                               </Command>
                             </PopoverContent>
                           </Popover>
-                          {error.SALE_UOM && <p className="text-sm text-red-500">{error.SALE_UOM}</p>}
+                          {formik.touched.SALE_UOM && formik.errors.SALE_UOM && <p className="text-sm text-red-500">{formik.errors.SALE_UOM}</p>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="w-full">
-                      <div className="mt-8 w-full text-left">
+                    <div className="mt-3 w-full">
+                      <div className="w-full text-left">
                         <label
                           htmlFor="image_file"
                           className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
                         >
-                          {formData.image_file ? (
+                          {formik.values.image_file ? (
                             <img
                               src={previewUrl}
-                              alt={formData.ITEM_NAME}
+                              alt={formik.values.ITEM_NAME}
                               className="h-full w-full object-cover"
                             />
                           ) : (
@@ -502,31 +534,33 @@ export default function ProductFormPage() {
                           name="image_file"
                           type="file"
                           accept="image/*"
-                          onChange={handleChange}
+                          onChange={handleImageChange}
                           className="hidden"
                         />
-                        {error.image_file && <p className="text-xs text-red-500">{error.image_file}</p>}
+                        {formik.touched.image_file && formik.errors.image_file && <p className="text-xs text-red-500">{formik.errors.image_file}</p>}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex w-full flex-col gap-2 lg:flex-row">
+                  <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row">
                     <div className="w-full">
-                      <Label htmlFor="margin">Margin %</Label>
+                      <Label htmlFor="SALE_MARGIN_PTG">Margin %<span className="text-red-500">*</span></Label>
                       <Input
                         name="SALE_MARGIN_PTG"
                         id="SALE_MARGIN_PTG"
                         type="text"
                         placeholder="Type margin"
-                        onChange={handleChange}
-                        value={formData.SALE_MARGIN_PTG}
-                        required
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                        value={formik.values.SALE_MARGIN_PTG}
                       />
-                      {error.SALE_MARGIN_PTG && <p className="text-xs text-red-500">{error.SALE_MARGIN_PTG}</p>}
+                      {formik.touched.SALE_MARGIN_PTG && formik.errors.SALE_MARGIN_PTG && (
+                        <p className="text-xs text-red-500">{formik.errors.SALE_MARGIN_PTG}</p>
+                      )}
                     </div>
 
-                    <div className="mt-[14px] flex w-full flex-col gap-1">
-                      <Label>Category</Label>
+                    <div className="w-full">
+                      <Label>Category<span className="text-red-500">*</span></Label>
                       <Popover
                         open={openCategoryData}
                         onOpenChange={setOpenCategoryData}
@@ -535,22 +569,19 @@ export default function ProductFormPage() {
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={open}
+                            aria-expanded={openCategoryData}
                             className="w-full justify-between"
                           >
-                            {formData.GROUP_LEVEL1
-                              ? categoryData.find((item) => item.GROUP_LEVEL1 === formData.GROUP_LEVEL1)?.GROUP_LEVEL1
-                              : "Select category..."}
+                            {formik.values.GROUP_LEVEL1 || "Select category..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-full p-0">
                           <Command>
-                            {/* Capture command input value */}
                             <CommandInput
                               placeholder="Search category..."
                               className="h-9"
-                              onValueChange={(value) => setCommandInputValue(value)}
+                              onValueChange={setCommandInputValue}
                             />
                             <CommandList>
                               <CommandEmpty>
@@ -563,15 +594,8 @@ export default function ProductFormPage() {
                                         const newValue = toTitleCase(commandInputValue.trim());
                                         if (newValue) {
                                           setCategoryData((prev) => [...prev, { GROUP_LEVEL1: newValue }]);
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            GROUP_LEVEL1: newValue,
-                                          }));
+                                          formik.setFieldValue("GROUP_LEVEL1", newValue);
                                           setOpenCategoryData(false);
-                                          setError((prev) => ({
-                                            ...prev,
-                                            GROUP_LEVEL1: "",
-                                          }));
                                         }
                                       }}
                                     >
@@ -585,17 +609,17 @@ export default function ProductFormPage() {
                                   <CommandItem
                                     key={index}
                                     value={item.GROUP_LEVEL1}
-                                    onSelect={(currentValue) => {
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        GROUP_LEVEL1: currentValue,
-                                      }));
+                                    onSelect={() => {
+                                      formik.setFieldValue("GROUP_LEVEL1", item.GROUP_LEVEL1);
                                       setOpenCategoryData(false);
                                     }}
                                   >
                                     {item.GROUP_LEVEL1}
                                     <Check
-                                      className={cn("ml-auto h-4 w-4", formData.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0")}
+                                      className={cn(
+                                        "ml-auto h-4 w-4",
+                                        formik.values.GROUP_LEVEL1 === item.GROUP_LEVEL1 ? "opacity-100" : "opacity-0",
+                                      )}
                                     />
                                   </CommandItem>
                                 ))}
@@ -604,25 +628,27 @@ export default function ProductFormPage() {
                           </Command>
                         </PopoverContent>
                       </Popover>
-                      {error.GROUP_LEVEL1 && <p className="text-sm text-red-500">{error.GROUP_LEVEL1}</p>}
+                      {formik.touched.GROUP_LEVEL1 && formik.errors.GROUP_LEVEL1 && (
+                        <p className="text-sm text-red-500">{formik.errors.GROUP_LEVEL1}</p>
+                      )}
                     </div>
                   </div>
 
-                  <div className="w-full">
+                  <div className="mt-3 w-full">
                     <Label htmlFor="REMARKS">Remarks</Label>
                     <Textarea
                       name="REMARKS"
                       id="REMARKS"
                       placeholder="Enter item features"
-                      onChange={handleChange}
-                      value={formData.REMARKS}
+                      onChange={formik.handleChange}
+                      value={formik.values.REMARKS}
                     />
-                    {error.REMARKS && <p className="text-sm text-red-500">{error.REMARKS}</p>}
                   </div>
+
                   <Accordion
                     type="single"
                     collapsible
-                    className="w-full"
+                    className="mt-4 w-full"
                   >
                     <AccordionItem value="item-1">
                       <AccordionTrigger>Specifications</AccordionTrigger>
@@ -635,10 +661,9 @@ export default function ProductFormPage() {
                               id="ITEM_SIZE"
                               type="text"
                               placeholder="Type size"
-                              onChange={handleChange}
-                              value={formData.ITEM_SIZE}
+                              onChange={formik.handleChange}
+                              value={formik.values.ITEM_SIZE}
                             />
-                            {error.ITEM_SIZE && <p className="text-sm text-red-500">{error.ITEM_SIZE}</p>}
                           </div>
                           <div className="w-full">
                             <Label htmlFor="ITEM_FINISH">Color</Label>
@@ -647,10 +672,9 @@ export default function ProductFormPage() {
                               id="ITEM_FINISH"
                               type="text"
                               placeholder="Type color"
-                              onChange={handleChange}
-                              value={formData.ITEM_FINISH}
+                              onChange={formik.handleChange}
+                              value={formik.values.ITEM_FINISH}
                             />
-                            {error.ITEM_FINISH && <p className="text-sm text-red-500">{error.ITEM_FINISH}</p>}
                           </div>
                         </div>
                         <div className="mb-3 flex flex-col gap-3 md:flex-row">
@@ -660,130 +684,9 @@ export default function ProductFormPage() {
                               name="ITEM_TYPE"
                               id="ITEM_TYPE"
                               type="text"
-                              placeholder="Type width"
-                              onChange={handleChange}
-                              value={formData.ITEM_TYPE}
-                            />
-                            {error.ITEM_TYPE && <p className="text-sm text-red-500">{error.ITEM_TYPE}</p>}
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-2">
-                      <AccordionTrigger>Other Reference</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-full">
-                            <Label htmlFor="ITEM_GROUP">Group ref</Label>
-                            <Input
-                              name="ITEM_GROUP"
-                              id="ITEM_GROUP"
-                              type="text"
-                              placeholder="Type group ref"
-                              onChange={handleChange}
-                              value={formData.ITEM_GROUP}
-                              readOnly
-                            />
-                          </div>
-                          <div className="w-full">
-                            <Label htmlFor="ITEM_REF">Item ref</Label>
-                            <Input
-                              name="ITEM_REF"
-                              id="ITEM_REF"
-                              type="text"
-                              placeholder="Type Item ref"
-                              onChange={handleChange}
-                              value={formData.ITEM_REF}
-                            />
-                          </div>
-                        </div>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-full">
-                            <Label htmlFor="ITEM_BRAND">Brand</Label>
-                            <Input
-                              name="ITEM_BRAND"
-                              id="ITEM_BRAND"
-                              type="text"
-                              placeholder="Type brand"
-                              onChange={handleChange}
-                              value={formData.ITEM_BRAND}
-                            />
-                          </div>
-                          <div className="w-full">
-                            <Label htmlFor="ITEM_COLOR">Color</Label>
-                            <Input
-                              name="ITEM_COLOR"
-                              id="ITEM_COLOR"
-                              type="text"
-                              placeholder="Type color"
-                              onChange={handleChange}
-                              value={formData.ITEM_COLOR}
-                            />
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="item-3">
-                      <AccordionTrigger>Stocks</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-full">
-                            <Label htmlFor="MIN_STOCK_LEVEL">Min Quantity</Label>
-                            <Input
-                              name="MIN_STOCK_LEVEL"
-                              id="MIN_STOCK_LEVEL"
-                              type="text"
-                              placeholder="Type Min quantity"
-                              onChange={handleChange}
-                              value={formData.MIN_STOCK_LEVEL}
-                            />
-                          </div>
-                          <div className="w-full">
-                            <Label htmlFor="MAX_STOCK_LEVEL">Max Quantity</Label>
-                            <Input
-                              name="MAX_STOCK_LEVEL"
-                              id="MAX_STOCK_LEVEL"
-                              type="text"
-                              placeholder="Type Max quantity"
-                              onChange={handleChange}
-                              value={formData.MAX_STOCK_LEVEL}
-                            />
-                          </div>
-                        </div>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-full">
-                            <Label htmlFor="REORDER_QTY">Re-Order Quantity</Label>
-                            <Input
-                              name="REORDER_QTY"
-                              id="REORDER_QTY"
-                              type="text"
-                              placeholder="Type Re-Order Quantity"
-                              onChange={handleChange}
-                              value={formData.REORDER_QTY}
-                            />
-                          </div>
-                          <div className="w-full">
-                            <Label htmlFor="REORDER_LEVEL">Re-Order Alert Quantity</Label>
-                            <Input
-                              name="REORDER_LEVEL"
-                              id="REORDER_LEVEL"
-                              type="text"
-                              placeholder="Type Re-Order Alert Quantity"
-                              onChange={handleChange}
-                              value={formData.REORDER_LEVEL}
-                            />
-                          </div>
-                        </div>
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row">
-                          <div className="w-1/2">
-                            <Label htmlFor="MAX_AGE_DAYS">Max Life Days</Label>
-                            <Input
-                              name="MAX_AGE_DAYS"
-                              id="MAX_AGE_DAYS"
-                              type="text"
-                              placeholder="Type Max Life Days"
-                              onChange={handleChange}
-                              value={formData.MAX_AGE_DAYS}
+                              placeholder="Type variant"
+                              onChange={formik.handleChange}
+                              value={formik.values.ITEM_TYPE}
                             />
                           </div>
                         </div>
@@ -793,22 +696,20 @@ export default function ProductFormPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="productconfiguration">
               <Card>
                 <CardHeader>
                   <CardTitle>Product Configuration</CardTitle>
-                  <CardDescription>Customize product settings such as options, variants, and default behaviors to suit your needs.</CardDescription>
+                  <CardDescription>Customize product settings</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="mb-3 space-y-4">
                     <div className="flex space-x-2">
                       <Checkbox
-                        checked={formData?.SUB_MATERIALS_MODE === "T"}
+                        checked={formik.values.SUB_MATERIALS_MODE === "T"}
                         onCheckedChange={(checked) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            SUB_MATERIALS_MODE: checked ? "T" : "F",
-                          }));
+                          formik.setFieldValue("SUB_MATERIALS_MODE", checked ? "T" : "F");
                         }}
                         id="subProductMode"
                         disabled={subProductCount > 0}
@@ -821,10 +722,10 @@ export default function ProductFormPage() {
                       </label>
                     </div>
 
-                    {(formData?.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
+                    {(formik.values.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
                       <>
                         <div className="mt-3 w-full">
-                          <Label className="block text-sm font-medium">Select sub product details</Label>
+                          <Label className="block text-sm font-medium">Select sub product details<span className="text-red-500">*</span></Label>
 
                           <Popover
                             open={openSubMaterialDetails}
@@ -837,8 +738,8 @@ export default function ProductFormPage() {
                                 aria-expanded={openSubMaterialDetails}
                                 className="min-h-10 w-full justify-between gap-2 text-left font-normal text-gray-400"
                               >
-                                {formData.SUB_MATERIAL_BASED_ON.length > 0
-                                  ? formData.SUB_MATERIAL_BASED_ON.join(", ")
+                                {formik.values.SUB_MATERIAL_BASED_ON?.length > 0
+                                  ? formik.values.SUB_MATERIAL_BASED_ON.join(", ")
                                   : "Select sub material details"}
                                 <ChevronsUpDown className="opacity-50" />
                               </Button>
@@ -858,31 +759,25 @@ export default function ProductFormPage() {
                                         key={index}
                                         value={item.name}
                                         onSelect={(currentValue) => {
-                                          setFormData((prev) => {
-                                            const currentSelections = prev.SUB_MATERIAL_BASED_ON || [];
-                                            if (currentSelections.includes(currentValue)) {
-                                              // Remove the item if it's already selected
-                                              return {
-                                                ...prev,
-                                                SUB_MATERIAL_BASED_ON: currentSelections.filter((val) => val !== currentValue),
-                                              };
-                                            } else {
-                                              // Otherwise add the new selection
-                                              return {
-                                                ...prev,
-                                                SUB_MATERIAL_BASED_ON: [...currentSelections, currentValue],
-                                              };
-                                            }
-                                          });
-                                          setError((prev) => ({
-                                            ...prev,
-                                            SUB_MATERIAL_BASED_ON: "",
-                                          }));
+                                          const currentSelections = formik.values.SUB_MATERIAL_BASED_ON || [];
+                                          let newSelections;
+
+                                          if (currentSelections.includes(currentValue)) {
+                                            newSelections = currentSelections.filter((val) => val !== currentValue);
+                                          } else {
+                                            newSelections = [...currentSelections, currentValue];
+                                          }
+
+                                          formik.setFieldValue("SUB_MATERIAL_BASED_ON", newSelections);
+                                          formik.setFieldTouched("SUB_MATERIAL_BASED_ON", true);
                                         }}
                                       >
                                         {item.name}
                                         <Check
-                                          className={cn("ml-auto", formData.SUB_MATERIAL_BASED_ON.includes(item.value) ? "opacity-100" : "opacity-0")}
+                                          className={cn(
+                                            "ml-auto",
+                                            formik.values.SUB_MATERIAL_BASED_ON?.includes(item.value) ? "opacity-100" : "opacity-0",
+                                          )}
                                         />
                                       </CommandItem>
                                     ))}
@@ -891,38 +786,30 @@ export default function ProductFormPage() {
                               </Command>
                             </PopoverContent>
                           </Popover>
+                         {(formik.touched.SUB_MATERIAL_BASED_ON || formik.submitCount > 0) && 
+                          formik.errors.SUB_MATERIAL_BASED_ON && (
+                            <p className="text-sm text-red-500">{formik.errors.SUB_MATERIAL_BASED_ON}</p>
+                          )}
                         </div>
 
-                        <div className="w-full">
-                          <Label
-                            htmlFor="UOM_SUBMATERIAL"
-                            className="block text-sm font-medium leading-6"
-                          >
-                            UOM for SubMaterial
-                          </Label>
+                        <div className="mt-3 w-full">
+                          <Label htmlFor="UOM_SUBMATERIAL">UOM for SubMaterial</Label>
                           <Input
                             type="text"
                             name="UOM_SUBMATERIAL"
                             id="UOM_SUBMATERIAL"
-                            value={formData.UOM_SUBMATERIAL || "Not Selected"}
-                            onChange={handleChange}
+                            value={formik.values.UOM_SUBMATERIAL || "Not Selected"}
                             readOnly
                           />
                         </div>
 
-                        <div className="w-full">
-                          <Label
-                            htmlFor="SUBMATERIAL_CONVRATE"
-                            className="block text-sm font-medium leading-6"
-                          >
-                            Conversion Rate
-                          </Label>
+                        <div className="mt-3 w-full">
+                          <Label htmlFor="SUBMATERIAL_CONVRATE">Conversion Rate</Label>
                           <Input
                             type="text"
                             name="SUBMATERIAL_CONVRATE"
                             id="SUBMATERIAL_CONVRATE"
-                            value={formData.SUBMATERIAL_CONVRATE || 1}
-                            onChange={handleChange}
+                            value={formik.values.SUBMATERIAL_CONVRATE}
                             readOnly
                           />
                         </div>
@@ -933,17 +820,18 @@ export default function ProductFormPage() {
               </Card>
             </TabsContent>
           </Tabs>
+
           <div className="flex justify-center pt-5">
             <Button
-              disabled={loading}
+              disabled={loading || formik.isSubmitting}
               type="submit"
             >
-              {loading ? (
+              {loading || formik.isSubmitting ? (
                 <BeatLoader
                   color="#000"
                   size={8}
                 />
-              ) : formData.ITEM_CODE === "(NEW)" ? (
+              ) : formik.values.ITEM_CODE === "(NEW)" ? (
                 "Save Product"
               ) : (
                 "Update Product"
@@ -952,9 +840,10 @@ export default function ProductFormPage() {
           </div>
         </form>
       </div>
+
       <div className="col-span-1 mt-5 h-fit w-full lg:col-span-5 lg:mt-24">
         <AddSubProduct
-          formDataProps={formData}
+          formDataProps={formik.values}
           onSubmitTrigger={submitCount}
         />
       </div>
