@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useImageAPI } from "@/hooks/useImageAPI";
 
-const CartItemImage = ({ itemCode, subProductNo }) => {
+const CartItemImage = ({ ITEM_CODE, SUB_MATERIAL_NO }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const { fetchImageUrl } = useImageAPI();
   const [loading, setLoading] = useState(true);
@@ -17,8 +17,8 @@ const CartItemImage = ({ itemCode, subProductNo }) => {
         setLoading(true);
         setError(false);
 
-        const type = subProductNo ? "subproduct" : "product";
-        const url = await fetchImageUrl(type, itemCode, subProductNo);
+        const type = SUB_MATERIAL_NO ? "subproduct" : "product";
+        const url = await fetchImageUrl(type, ITEM_CODE, SUB_MATERIAL_NO);
 
         if (isMounted) {
           // Revoke previous URL if exists
@@ -41,13 +41,13 @@ const CartItemImage = ({ itemCode, subProductNo }) => {
       isMounted = false;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [itemCode, subProductNo]);
+  }, [ITEM_CODE, SUB_MATERIAL_NO]);
 
   if (loading) return <div className="h-20 w-20 animate-pulse rounded-md bg-gray-200" />;
 
   if (error) return <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed bg-gray-200 text-xs">Error</div>;
 
-  if (!imageUrl) return <div className="h-20 w-20 rounded-md bg-gray-200" />;
+  if (!imageUrl) return <div className="h-20 w-20 rounded-md bg-slate-200 dark:bg-slate-700" />;
 
   return (
     <img

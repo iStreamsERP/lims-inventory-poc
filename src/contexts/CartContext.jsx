@@ -30,10 +30,10 @@ function cartReducer(state, action) {
       
       const idx = state.findIndex(
         (item) =>
-          item.itemCode === payload.itemCode &&
-          item.itemColor === payload.itemColor &&
-          item.itemSize === payload.itemSize &&
-          item.itemVariant === payload.itemVariant,
+          item.ITEM_CODE === payload.ITEM_CODE &&
+          item.ITEM_FINISH  === payload.ITEM_FINISH &&
+          item.ITEM_SIZE  === payload.ITEM_SIZE  &&
+          item.ITEM_TYPE  === payload.ITEM_TYPE,
       );
       if (idx > -1) {
         // merge quantities
@@ -46,14 +46,14 @@ function cartReducer(state, action) {
 
     case REMOVE_ITEM:
       return state.filter((item) => {
-        const lineKey = item.subProductNo ?? item.itemCode;
+        const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
         return lineKey !== action.payload.id;
       });
 
     case UPDATE_QUANTITY: {
       const { id, qty } = action.payload;
       return state.map((item) => {
-        const lineKey = item.subProductNo ?? item.itemCode;
+        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
         if (lineKey !== id) return item;
         return { ...item, itemQty: Math.max(1, qty) };
       });

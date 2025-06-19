@@ -14,7 +14,7 @@ import { formatPrice } from "@/utils/formatPrice";
 import { Check, ChevronsUpDown, Minus, MoveRight, Plus, X } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -103,7 +103,7 @@ const CartPage = () => {
   const total = taxableAmount;
 
   const getOrderCategoryFromCart = () => {
-    const categories = cart.map((item) => item.itemGroup);
+    const categories = cart.map((item) => item.ITEM_GROUP );
     const category = Array.from(new Set(categories));
 
     if (category.length === 1) {
@@ -225,11 +225,11 @@ const CartPage = () => {
           ORDER_NO: updatedMasterData.ORDER_NO,
           ORDER_DATE: updatedMasterData.ORDER_DATE,
           SERIAL_NO: -1, // Sequential line number
-          ITEM_CODE: item.itemCode || item.ITEM_CODE,
-          SUB_MATERIAL_NO: item.subProductNo,
-          DESCRIPTION: item.itemName || item.ITEM_NAME,
-          UOM_SALES: item.uomStock,
-          UOM_STOCK: item.uomStock,
+          ITEM_CODE: item.ITEM_CODE || item.ITEM_CODE,
+          SUB_MATERIAL_NO: item.SUB_MATERIAL_NO ,
+          DESCRIPTION: item.ITEM_NAME  || item.ITEM_NAME,
+          UOM_SALES: item.UOM_STOCK ,
+          UOM_STOCK: item.UOM_STOCK ,
           CONVERSION_RATE: 1,
           QTY: item.itemQty,
           QTY_STOCK: item.itemQty,
@@ -279,20 +279,20 @@ const CartPage = () => {
     <main className="container mx-auto px-4">
       <div className="grid gap-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Shopping Cart</h1>
             <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
           </div>
-          <Button
-            variant="link"
-            onClick={() => navigate("/categories")}
+          <Link
+            to="/categories"
+            className="flex items-center gap-2 text-sm font-semibold hover:underline"
           >
-            Continue Shopping <MoveRight />
-          </Button>
+            Continue Shopping <MoveRight size={16} />
+          </Link>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6  lg:grid-cols-3">
           {/* Cart Items */}
           <div className="col-span-2 space-y-6">
             {cart.length === 0 ? (
@@ -300,29 +300,28 @@ const CartPage = () => {
             ) : (
               cart.map((item, idx) => (
                 <div
-                  key={`${item.itemCode}-${item.subProductNo}-${idx}`}
+                  key={`${item.ITEM_CODE}-${item.SUB_MATERIAL_NO }-${idx}`}
                   className="space-y-4"
                 >
-                  <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4">
-                    <div className="flex items-center gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] items-center gap-4">
+                    <div className="flex items-start gap-3">
                       <CartItemImage
-                        itemCode={item.itemCode || item.ITEM_CODE}
-                        subProductNo={item.subProductNo}
+                        ITEM_CODE={item.ITEM_CODE}
+                        SUB_MATERIAL_NO ={item.SUB_MATERIAL_NO }
                       />
                       <div>
-                        {item.itemGroup && (
+                        {item.ITEM_GROUP  && (
                           <Badge
                             variant="outline"
-                            className="mb-1"
                           >
-                            <p className="text-xs text-gray-500">{item.itemGroup}</p>
+                            <p className="text-xs text-gray-500">{item.ITEM_GROUP }</p>
                           </Badge>
                         )}
-                        <h3 className="text-lg font-medium">{item.itemName || item.ITEM_NAME}</h3>
+                        <h3 className="text-lg font-medium">{item.ITEM_NAME  || item.ITEM_NAME}</h3>
                         {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
-                        {item.itemColor && <p className="text-xs text-gray-500">Color: {item.itemColor}</p>}
-                        {item.itemSize && <p className="text-xs text-gray-500">Size: {item.itemSize}</p>}
-                        {item.itemVariant && <p className="text-xs text-gray-500">Variant: {item.itemVariant}</p>}
+                        {item.ITEM_FINISH  && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH }</p>}
+                        {item.ITEM_SIZE  && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE }</p>}
+                        {item.ITEM_TYPE  && <p className="text-xs text-gray-500">Variant: {item.ITEM_TYPE }</p>}
                       </div>
                     </div>
 
@@ -332,7 +331,7 @@ const CartPage = () => {
                         size="icon"
                         className="h-6 w-8"
                         onClick={() => {
-                          const lineKey = item.subProductNo ?? item.itemCode;
+                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
                           updateItemQuantity(lineKey, item.itemQty - 1);
                         }}
                         disabled={item.itemQty <= 1}
@@ -345,7 +344,7 @@ const CartPage = () => {
                         size="icon"
                         className="h-6 w-8"
                         onClick={() => {
-                          const lineKey = item.subProductNo ?? item.itemCode;
+                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
                           updateItemQuantity(lineKey, item.itemQty + 1);
                         }}
                       >
@@ -353,14 +352,14 @@ const CartPage = () => {
                       </Button>
                     </div>
 
-                    <div className="text-right font-semibold">
+                    <div className="md:text-right font-semibold">
                       {formatPrice(item.finalSaleRate * item.itemQty)}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-2"
                         onClick={() => {
-                          const lineKey = item.subProductNo ?? item.itemCode;
+                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
                           removeItem(lineKey);
                         }}
                       >
@@ -376,7 +375,7 @@ const CartPage = () => {
           </div>
 
           {/* Customer & Summary */}
-          <div className="col-span-2 space-y-4 md:col-span-1">
+          <div className="col-span-2 space-y-4 lg:col-span-1">
             {/* Customer Selector */}
             <Card className="space-y-2 p-6">
               <h2 className="text-lg font-semibold">Select Customer</h2>

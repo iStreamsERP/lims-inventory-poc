@@ -46,9 +46,9 @@ const ProductDetailPage = () => {
     if (variants.length) {
       const subs = variants[0].subProducts;
 
-      const allColors = [...new Set(subs.map((s) => s.itemColor))].filter(Boolean);
-      const allSizes = [...new Set(subs.map((s) => s.itemSize))].filter(Boolean);
-      const allVariants = [...new Set(subs.map((s) => s.itemVariant))].filter(Boolean);
+      const allColors = [...new Set(subs.map((s) => s.ITEM_FINISH))].filter(Boolean);
+      const allSizes = [...new Set(subs.map((s) => s.ITEM_SIZE))].filter(Boolean);
+      const allVariants = [...new Set(subs.map((s) => s.ITEM_TYPE))].filter(Boolean);
 
       setSelectedColor(allColors[0] || "");
       setSelectedSize(allSizes[0] || "");
@@ -61,21 +61,21 @@ const ProductDetailPage = () => {
     try {
       const payload = {
         SQLQuery: `SELECT 
-          m.ITEM_CODE AS itemCode, 
-          m.ITEM_NAME AS itemName, 
+          m.ITEM_CODE, 
+          m.ITEM_NAME, 
           m.SALE_RATE AS mainSaleRate,
-          m.ITEM_BRAND AS itemBrand,
-          m.GROUP_LEVEL1 AS category,
-          m.UOM_STOCK AS uomStock,
-          m.ITEM_GROUP AS itemGroup,
+          m.ITEM_BRAND,
+          m.GROUP_LEVEL1,
+          m.UOM_STOCK,
+          m.ITEM_GROUP,
           (
             SELECT 
               s.ITEM_CODE,
               s.ITEM_NAME, 
-              s.SUB_MATERIAL_NO AS subProductNo,
-              s.ITEM_FINISH AS itemColor, 
-              s.ITEM_SIZE AS itemSize, 
-              s.ITEM_TYPE AS itemVariant,
+              s.SUB_MATERIAL_NO,
+              s.ITEM_FINISH, 
+              s.ITEM_SIZE, 
+              s.ITEM_TYPE,
               COALESCE(s.SALE_RATE, m.SALE_RATE) AS finalSaleRate
             FROM INVT_SUBMATERIAL_MASTER s
             WHERE s.ITEM_CODE = m.ITEM_CODE
@@ -93,18 +93,18 @@ const ProductDetailPage = () => {
           const parsed = item.subProducts && typeof item.subProducts === "string" ? JSON.parse(item.subProducts) : [];
 
           // Fetch main image once per item
-          const mainImage = await fetchImageUrl("product", item.itemCode);
+          const mainImage = await fetchImageUrl("product", item.ITEM_CODE);
 
           const subs = parsed.length
             ? parsed
             : [
                 {
-                  itemCode: item.itemCode,
-                  itemName: item.itemName,
-                  subProductNo: null,
-                  itemColor: null,
-                  itemSize: null,
-                  itemVariant: null,
+                  ITEM_CODE: item.ITEM_CODE,
+                  ITEM_NAME: item.ITEM_NAME,
+                  SUB_MATERIAL_NO: null,
+                  ITEM_FINISH: null,
+                  ITEM_SIZE: null,
+                  ITEM_TYPE: null,
                   finalSaleRate: item.mainSaleRate,
                 },
               ];
@@ -114,8 +114,8 @@ const ProductDetailPage = () => {
               let image = null;
 
               try {
-                if (sub.subProductNo && String(sub.subProductNo).trim() !== "") {
-                  image = await fetchImageUrl("subproduct", sub.ITEM_CODE, sub.subProductNo);
+                if (sub.SUB_MATERIAL_NO && String(sub.SUB_MATERIAL_NO).trim() !== "") {
+                  image = await fetchImageUrl("subproduct", sub.ITEM_CODE, sub.SUB_MATERIAL_NO);
                 } else {
                   image = mainImage;
                 }
@@ -156,29 +156,29 @@ const ProductDetailPage = () => {
     <>
       {variants.map((item) => {
         const subs = item.subProducts;
-        const allColors = Array.from(new Set(subs.map((s) => s.itemColor))).filter(Boolean);
-        const allSizes = Array.from(new Set(subs.map((s) => s.itemSize))).filter(Boolean);
-        const allVariants = Array.from(new Set(subs.map((s) => s.itemVariant))).filter(Boolean);
+        const allColors = Array.from(new Set(subs.map((s) => s.ITEM_FINISH))).filter(Boolean);
+        const allSizes = Array.from(new Set(subs.map((s) => s.ITEM_SIZE))).filter(Boolean);
+        const allVariants = Array.from(new Set(subs.map((s) => s.ITEM_TYPE))).filter(Boolean);
 
         const availableColors = allColors.filter((c) =>
           subs.some(
-            (s) => s.itemColor === c && (!selectedSize || s.itemSize === selectedSize) && (!selectedVariant || s.itemVariant === selectedVariant),
+            (s) => s.ITEM_FINISH === c && (!selectedSize || s.ITEM_SIZE === selectedSize) && (!selectedVariant || s.ITEM_TYPE === selectedVariant),
           ),
         );
 
         const availableSizes = allSizes.filter((sz) =>
           subs.some(
-            (s) => s.itemSize === sz && (!selectedColor || s.itemColor === selectedColor) && (!selectedVariant || s.itemVariant === selectedVariant),
+            (s) => s.ITEM_SIZE === sz && (!selectedColor || s.ITEM_FINISH === selectedColor) && (!selectedVariant || s.ITEM_TYPE === selectedVariant),
           ),
         );
 
         const availableVariants = allVariants.filter((v) =>
           subs.some(
-            (s) => s.itemVariant === v && (!selectedColor || s.itemColor === selectedColor) && (!selectedSize || s.itemSize === selectedSize),
+            (s) => s.ITEM_TYPE === v && (!selectedColor || s.ITEM_FINISH === selectedColor) && (!selectedSize || s.ITEM_SIZE === selectedSize),
           ),
         );
 
-        const chosen = subs.find((s) => s.itemColor === selectedColor && s.itemSize === selectedSize && s.itemVariant === selectedVariant) || subs[0];
+        const chosen = subs.find((s) => s.ITEM_FINISH === selectedColor && s.ITEM_SIZE === selectedSize && s.ITEM_TYPE === selectedVariant) || subs[0];
 
         const handleClick = (dim, value, availableSet) => {
           setError("");
@@ -215,10 +215,10 @@ const ProductDetailPage = () => {
 
         const existingCartItem = cart.find(
           (item) =>
-            item.itemCode === chosen.itemCode &&
-            (item.itemColor || "") === (chosen.itemColor || "") &&
-            (item.itemSize || "") === (chosen.itemSize || "") &&
-            (item.itemVariant || "") === (chosen.itemVariant || ""),
+            item.ITEM_CODE === chosen.ITEM_CODE &&
+            (item.ITEM_FINISH || "") === (chosen.ITEM_FINISH || "") &&
+            (item.ITEM_SIZE || "") === (chosen.ITEM_SIZE || "") &&
+            (item.ITEM_TYPE || "") === (chosen.ITEM_TYPE || ""),
         );
 
         const quantityInCart = existingCartItem ? existingCartItem.itemQty : 0;
@@ -227,8 +227,8 @@ const ProductDetailPage = () => {
           addItem({
             ...chosen,
             image: undefined,
-            uomStock: item.uomStock,
-            itemGroup: item.itemGroup,
+            UOM_STOCK: item.UOM_STOCK,
+            ITEM_GROUP: item.ITEM_GROUP,
             itemQty: 1,
           });
           toast({ title: "Added to cart" });
@@ -236,7 +236,7 @@ const ProductDetailPage = () => {
 
         return (
           <Card
-            key={item.itemCode}
+            key={item.ITEM_CODE}
             className="mx-auto w-full p-6"
           >
             <div className="flex flex-col gap-6 md:flex-row">
@@ -244,7 +244,7 @@ const ProductDetailPage = () => {
                 <div className="h-96 w-full overflow-hidden rounded-lg bg-neutral-300">
                   <img
                     src={chosen.image || item.image}
-                    alt={item.itemName}
+                    alt={item.ITEM_NAME}
                     className="h-full w-full object-contain"
                   />
                 </div>
@@ -252,9 +252,9 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="flex-1">
-                <p className="text-xl font-semibold">{item.itemName}</p>
+                <p className="text-xl font-semibold">{item.ITEM_NAME}</p>
                 <p className="mb-3 text-sm text-muted-foreground">
-                  {item.itemBrand || "Brand not available"}, <span>{item.category}</span>
+                  {item.ITEM_BRAND || "Brand not available"}, <span>{item.GROUP_LEVEL1}</span>
                 </p>
                 <Badge variant="outline">4.3 ★</Badge>
 

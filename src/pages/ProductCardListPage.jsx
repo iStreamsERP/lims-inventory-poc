@@ -139,7 +139,7 @@ export default function ProductCardListPage() {
                       <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">+{product.subProductCount} other color/pattern</p>
                     )}
                     <div className="flex h-full flex-col justify-between">
-                      <h2 className="mb-2 line-clamp-2 truncate text-sm leading-snug group-hover:underline">{product.ITEM_NAME}</h2>
+                      <h2 className="mb-2 line-clamp-2 truncate text-sm leading-snug group-hover:underline" title={product.ITEM_NAME}>{product.ITEM_NAME}</h2>
                       <span className="text-lg font-semibold">{formatPrice(product.SALE_RATE)}</span>
                     </div>
                   </CardContent>
