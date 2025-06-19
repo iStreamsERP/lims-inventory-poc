@@ -18,8 +18,9 @@ import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Check, ChevronsUpDown, Settings2, Trash2 } from "lucide-react";
+import { toWords } from "number-to-words";
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 const generatePDF = async (element, fileName) => {
   // Hide any unwanted elements during PDF generation
@@ -630,42 +631,12 @@ const formatDate = (dateString) => {
 };
 
 // Define initial master form data outside the component
-const initialMasterFormData = {
-  COMPANY_CODE: 1,
-  BRANCH_CODE: 1,
-  SALES_ORDER_SERIAL_NO: -1,
-  ORDER_NO: "ORDER-" + new Date().getTime(),
-  ORDER_DATE: new Date().toISOString().split("T")[0],
-  QUOTATION_NO: "QUOTATION-" + new Date().getTime(),
-  QUOTATION_DATE: new Date().toISOString().split("T")[0],
-  CLIENT_ID: null,
-  CLIENT_NAME: null,
-  ORDER_CATEGORY: "",
-  TOTAL_VALUE: 0,
-  DISCOUNT_VALUE: 0,
-  NET_VALUE: 0,
-  AMOUNT_IN_WORDS: "",
-  CURRENCY_NAME: "Rupees",
-  NO_OF_DECIMALS: 0,
-  EXCHANGE_RATE: 0,
-  ORDER_VALUE_IN_LC: 0,
-  MODE_OF_PAYMENT: "Static",
-  CREDIT_DAYS: 0,
-  ADVANCE_AMOUNT: 0,
-  MODE_OF_TRANSPORT: "",
-  DELIVERY_DATE: "",
-  DELIVERY_ADDRESS: "",
-  TERMS_AND_CONDITIONS: "",
-  DELETED_STATUS: "F",
-  DELETED_DATE: "",
-  DELETED_USER: "",
-  USER_NAME: "",
-  ENT_DATE: "",
-};
+
 
 const OrderFormPage = () => {
   const { id } = useParams();
   const { userData } = useAuth();
+   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
 
@@ -692,22 +663,55 @@ const OrderFormPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // const [editingDiscountRowId, setEditingDiscountRowId] = useState(null);
-  // const [discountInputs, setDiscountInputs] = useState({ percentage: 0, value: 0 });
-
   // Determine document type
   const isQuotation = location.pathname.includes("quotation");
   const isEditMode = Boolean(id);
   const isViewMode = location.pathname.includes("view");
   const docTypeLabel = isQuotation ? "Quotation" : "Order";
 
+  const initialMasterFormData = {
+  COMPANY_CODE: userData.companyCode,
+  BRANCH_CODE: userData.branchCode,
+  SALES_ORDER_SERIAL_NO: -1,
+  ORDER_NO: "ORDER-" + new Date().getTime(),
+  ORDER_DATE: new Date().toISOString().split("T")[0],
+  QUOTATION_NO: "QUOTATION-" + new Date().getTime(),
+  QUOTATION_DATE: new Date().toISOString().split("T")[0],
+  CLIENT_ID: selectedClient?.CLIENT_ID || null,
+    CLIENT_NAME: selectedClient?.CLIENT_NAME || "",
+  CLIENT_ADDRESS: selectedClient?.INVOICE_ADDRESS || "",
+    CLIENT_CONTACT: selectedClient?.TELEPHONE_NO || "",
+    EMP_NO: userData?.userEmployeeNo || "",
+  ORDER_CATEGORY: "",
+  TOTAL_VALUE: 0,
+  DISCOUNT_VALUE: 0,
+  NET_VALUE: 0,
+  AMOUNT_IN_WORDS: "",
+  CURRENCY_NAME: "Rupees",
+  NO_OF_DECIMALS: 0,
+  EXCHANGE_RATE: 0,
+  ORDER_VALUE_IN_LC: 0,
+  MODE_OF_PAYMENT: "Static",
+  CREDIT_DAYS: 0,
+  ADVANCE_AMOUNT: 0,
+  MODE_OF_TRANSPORT: "",
+   DELIVERY_DATE: "",
+    DELIVERY_ADDRESS: selectedClient?.DELIVERY_ADDRESS || "",
+  TERMS_AND_CONDITIONS: "",
+  DELETED_STATUS: "F",
+  DELETED_DATE: "",
+  DELETED_USER: "",
+  USER_NAME: userData.userEmail,
+  ENT_DATE: "",
+};
+
   // Master Form state
   const [masterFormData, setMasterFormData] = useState(initialMasterFormData);
 
   // Detail Form Data
   const [detailsFormData, setDetailsFormData] = useState({
-    COMPANY_CODE: 1,
-    BRANCH_CODE: 1,
+    COMPANY_CODE:  userData.companyCode,
+    BRANCH_CODE: userData.branchCode,
     SALES_ORDER_SERIAL_NO: masterFormData.SALES_ORDER_SERIAL_NO,
     ORDER_NO: "",
     ORDER_DATE: new Date().toISOString().split("T")[0],
@@ -914,8 +918,11 @@ const OrderFormPage = () => {
     setSelectedClient(client);
     setMasterFormData((prev) => ({
       ...prev,
-      CLIENT_ID: client?.CLIENT_ID,
-      CLIENT_NAME: client?.CLIENT_NAME,
+      CLIENT_ID: client?.CLIENT_ID ?? null,
+      CLIENT_NAME: client?.CLIENT_NAME ?? "",
+      CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
+      CLIENT_CONTACT: client?.TELEPHONE_NO || "",
+      DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
     }));
     setCustomerValue(name);
     setOpenCustomer(false);
@@ -1190,7 +1197,21 @@ const OrderFormPage = () => {
     }
   };
 
-  const handleSubmit = async () => {
+    const handleProceed = async () => {
+    if (!selectedClient) {
+      return toast({ variant: "destructive", title: "Please select a customer." });
+    }
+
+    const newOrderNo = await handleSaveOrder();
+
+    navigate("/proceed-to-check", {
+      state: {
+        newOrderNo,
+      },
+    });
+  };
+
+  const handleSaveOrder = async () => {
     if (!selectedClient) {
       return toast({ variant: "destructive", title: "Please select a customer." });
     }
@@ -1203,6 +1224,7 @@ const OrderFormPage = () => {
         QUOTATION_NO: isQuotation ? masterFormData.QUOTATION_NO : "",
         ORDER_DATE: isQuotation ? "" : masterFormData.ORDER_DATE,
         QUOTATION_DATE: isQuotation ? masterFormData.QUOTATION_DATE : "",
+        AMOUNT_IN_WORDS: toWords(Number(masterFormData.NET_VALUE)),
       };
 
       const payload = {
@@ -1224,8 +1246,6 @@ const OrderFormPage = () => {
       }
 
       const itemsToSend = tableData;
-
-      console.table(tableData[0]);
 
       // 2) now send each item as a DETAIL record
       for (let i = 0; i < itemsToSend.length; i++) {
@@ -1276,6 +1296,8 @@ const OrderFormPage = () => {
         title: "Order Saved Successfully",
         description: response,
       });
+
+      return newSerialNo;
     } catch (error) {
       console.error(error);
       toast({
@@ -1602,7 +1624,7 @@ const OrderFormPage = () => {
             <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Subtotal (Before Discount):</span>
+                  <span>Subtotal:</span>
                   <span>{tableData.reduce((sum, r) => sum + r.QTY * r.NET_VALUE, 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1621,13 +1643,16 @@ const OrderFormPage = () => {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={handleSubmit}
+                  onClick={handleSaveOrder}
                 >
                   {loading ? "Saving…" : "Save my order"}
                 </Button>
-                <Button className="w-full">
-                  <Check /> Proceed To Pay
-                </Button>
+                <Button
+                                 className="w-full"
+                                 onClick={handleProceed}
+                               >
+                                 Proceed to Checkout
+                               </Button>
               </CardFooter>
             )}
           </Card>

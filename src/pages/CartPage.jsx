@@ -1,4 +1,5 @@
 import CartItemImage from "@/components/CartItemImage";
+import OrderSummary from "@/components/OrderSummary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,7 +35,7 @@ const CartPage = () => {
     COMPANY_CODE: userData.companyCode,
     BRANCH_CODE: userData.branchCode,
     SALES_ORDER_SERIAL_NO: -1,
-    ORDER_NO: "",
+    ORDER_NO: "ORDER-" + new Date().getTime(),
     ORDER_DATE: new Date().toISOString().split("T")[0],
     CLIENT_ID: selectedClient?.CLIENT_ID || null,
     CLIENT_NAME: selectedClient?.CLIENT_NAME || "",
@@ -103,7 +104,7 @@ const CartPage = () => {
   const total = taxableAmount;
 
   const getOrderCategoryFromCart = () => {
-    const categories = cart.map((item) => item.ITEM_GROUP );
+    const categories = cart.map((item) => item.ITEM_GROUP);
     const category = Array.from(new Set(categories));
 
     if (category.length === 1) {
@@ -166,7 +167,7 @@ const CartPage = () => {
 
     const newOrderNo = await handleSaveOrder();
 
-    navigate("proceed-to-check", {
+    navigate("/proceed-to-check", {
       state: {
         cart,
         newOrderNo,
@@ -226,10 +227,10 @@ const CartPage = () => {
           ORDER_DATE: updatedMasterData.ORDER_DATE,
           SERIAL_NO: -1, // Sequential line number
           ITEM_CODE: item.ITEM_CODE || item.ITEM_CODE,
-          SUB_MATERIAL_NO: item.SUB_MATERIAL_NO ,
-          DESCRIPTION: item.ITEM_NAME  || item.ITEM_NAME,
-          UOM_SALES: item.UOM_STOCK ,
-          UOM_STOCK: item.UOM_STOCK ,
+          SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
+          DESCRIPTION: item.ITEM_NAME || item.ITEM_NAME,
+          UOM_SALES: item.UOM_STOCK,
+          UOM_STOCK: item.UOM_STOCK,
           CONVERSION_RATE: 1,
           QTY: item.itemQty,
           QTY_STOCK: item.itemQty,
@@ -276,194 +277,108 @@ const CartPage = () => {
   };
 
   return (
-    <main className="container mx-auto px-4">
-      <div className="grid gap-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Shopping Cart</h1>
-            <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
-          </div>
-          <Link
-            to="/categories"
-            className="flex items-center gap-2 text-sm font-semibold hover:underline"
-          >
-            Continue Shopping <MoveRight size={16} />
-          </Link>
+    <div className="grid gap-8">
+      {/* Header */}
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Shopping Cart</h1>
+          <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
         </div>
+        <Link
+          to="/categories"
+          className="flex items-center gap-2 text-sm font-semibold hover:underline"
+        >
+          Continue Shopping <MoveRight size={16} />
+        </Link>
+      </div>
 
-        <div className="grid gap-6  lg:grid-cols-3">
-          {/* Cart Items */}
-          <div className="col-span-2 space-y-6">
-            {cart.length === 0 ? (
-              <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
-            ) : (
-              cart.map((item, idx) => (
-                <div
-                  key={`${item.ITEM_CODE}-${item.SUB_MATERIAL_NO }-${idx}`}
-                  className="space-y-4"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] items-center gap-4">
-                    <div className="flex items-start gap-3">
-                      <CartItemImage
-                        ITEM_CODE={item.ITEM_CODE}
-                        SUB_MATERIAL_NO ={item.SUB_MATERIAL_NO }
-                      />
-                      <div>
-                        {item.ITEM_GROUP  && (
-                          <Badge
-                            variant="outline"
-                          >
-                            <p className="text-xs text-gray-500">{item.ITEM_GROUP }</p>
-                          </Badge>
-                        )}
-                        <h3 className="text-lg font-medium">{item.ITEM_NAME  || item.ITEM_NAME}</h3>
-                        {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
-                        {item.ITEM_FINISH  && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH }</p>}
-                        {item.ITEM_SIZE  && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE }</p>}
-                        {item.ITEM_TYPE  && <p className="text-xs text-gray-500">Variant: {item.ITEM_TYPE }</p>}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-6 w-8"
-                        onClick={() => {
-                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
-                          updateItemQuantity(lineKey, item.itemQty - 1);
-                        }}
-                        disabled={item.itemQty <= 1}
-                      >
-                        <Minus size={14} />
-                      </Button>
-                      <span>{item.itemQty}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-6 w-8"
-                        onClick={() => {
-                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
-                          updateItemQuantity(lineKey, item.itemQty + 1);
-                        }}
-                      >
-                        <Plus size={14} />
-                      </Button>
-                    </div>
-
-                    <div className="md:text-right font-semibold">
-                      {formatPrice(item.finalSaleRate * item.itemQty)}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="ml-2"
-                        onClick={() => {
-                          const lineKey = item.SUB_MATERIAL_NO  ?? item.ITEM_CODE;
-                          removeItem(lineKey);
-                        }}
-                      >
-                        <X className="h-5 w-5" />
-                        <span className="sr-only">Remove</span>
-                      </Button>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Cart Items */}
+        <div className="col-span-2 md:max-h-[59vh] space-y-6 md:overflow-y-auto">
+          {cart.length === 0 ? (
+            <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
+          ) : (
+            cart.map((item, idx) => (
+              <div
+                key={`${item.ITEM_CODE}-${item.SUB_MATERIAL_NO}-${idx}`}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[2fr_1fr_1fr]">
+                  <div className="flex items-start gap-3">
+                    <CartItemImage
+                      ITEM_CODE={item.ITEM_CODE}
+                      SUB_MATERIAL_NO={item.SUB_MATERIAL_NO}
+                    />
+                    <div>
+                      {item.ITEM_GROUP && (
+                        <Badge variant="outline">
+                          <p className="text-xs text-gray-500">{item.ITEM_GROUP}</p>
+                        </Badge>
+                      )}
+                      <h3 className="text-lg font-medium">{item.ITEM_NAME || item.ITEM_NAME}</h3>
+                      {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
+                      {item.ITEM_FINISH && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH}</p>}
+                      {item.ITEM_SIZE && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE}</p>}
+                      {item.ITEM_TYPE && <p className="text-xs text-gray-500">Variant: {item.ITEM_TYPE}</p>}
                     </div>
                   </div>
-                  <Separator />
+
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-8"
+                      onClick={() => {
+                        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
+                        updateItemQuantity(lineKey, item.itemQty - 1);
+                      }}
+                      disabled={item.itemQty <= 1}
+                    >
+                      <Minus size={14} />
+                    </Button>
+                    <span>{item.itemQty}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-8"
+                      onClick={() => {
+                        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
+                        updateItemQuantity(lineKey, item.itemQty + 1);
+                      }}
+                    >
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+
+                  <div className="font-semibold md:text-right">
+                    {formatPrice(item.finalSaleRate * item.itemQty)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-2"
+                      onClick={() => {
+                        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
+                        removeItem(lineKey);
+                      }}
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+                <Separator />
+              </div>
+            ))
+          )}
+        </div>
 
-          {/* Customer & Summary */}
-          <div className="col-span-2 space-y-4 lg:col-span-1">
-            {/* Customer Selector */}
-            <Card className="space-y-2 p-6">
-              <h2 className="text-lg font-semibold">Select Customer</h2>
-
-              <Popover
-                open={openCustomer}
-                onOpenChange={setOpenCustomer}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCustomer}
-                    className="flex w-full justify-between"
-                  >
-                    {value || "Select customer..."}
-                    <ChevronsUpDown className="opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Search customer..."
-                      value={value}
-                      onValueChange={setValue}
-                      className="h-9 px-3"
-                    />
-                    <CommandList>
-                      <CommandEmpty>No customers found.</CommandEmpty>
-                      <CommandGroup>
-                        {filteredClients.map((client) => (
-                          <CommandItem
-                            key={client.CLIENT_ID}
-                            value={client.CLIENT_NAME}
-                            onSelect={handleSelectClient}
-                          >
-                            {client.CLIENT_NAME}
-                            <Check className={`ml-auto ${value === client.CLIENT_NAME ? "opacity-100" : "opacity-0"}`} />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </Card>
-
-            {/* Order Summary */}
-            <Card className="sticky top-0 space-y-4 p-6">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal ({totalItem} Items)</span>
-                <span>{formatPrice(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-green-500">
-                <span>Discount</span>
-                <span>-{formatPrice(discount)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Taxable Amount</span>
-                <span>{formatPrice(taxableAmount)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold">
-                <span>Total</span>
-                <span>{formatPrice(total)}</span>
-              </div>
-              <div className="space-y-3 pt-4">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleSaveOrder}
-                  disabled={loading || cart.length === 0}
-                >
-                  {loading ? "Saving…" : "Save my order"}
-                </Button>
-                <Button
-                  className="w-full"
-                  onClick={handleProceed}
-                  disabled={cart.length === 0}
-                >
-                  Proceed to Checkout
-                </Button>
-              </div>
-            </Card>
-          </div>
+        {/* Order Summary */}
+        <div className="col-span-2 space-y-4 lg:col-span-1">
+          {/* Order Summary */}
+          <OrderSummary />
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 

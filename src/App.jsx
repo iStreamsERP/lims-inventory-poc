@@ -106,7 +106,7 @@ const App = () => {
             { path: "account-settings", element: <AccountSettings /> },
 
             { path: "cart-page", element: <CartPage /> },
-            { path: "cart-page/proceed-to-check", element: <ProceedToCheckPage /> },
+            { path: "/proceed-to-check", element: <ProceedToCheckPage /> },
           ],
         },
       ],

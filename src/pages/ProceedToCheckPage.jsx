@@ -26,6 +26,9 @@ export default function ProceedToCheckPage() {
   const { cart } = location.state || {};
   const newOrderNo = location.state?.newOrderNo || "";
 
+  console.log(cart, newOrderNo);
+  
+
   // Cache refs to prevent unnecessary re-fetches
   const addressesFetched = useRef(false);
   const countriesLoaded = useRef(false);
@@ -304,13 +307,6 @@ export default function ProceedToCheckPage() {
       }));
     }
   }, [cart, orderTotals.subtotal]);
-
-  // Early return if no cart data
-  useEffect(() => {
-    if (!cart || cart.length === 0) {
-      navigate("/cart-page", { replace: true });
-    }
-  }, [cart, navigate]);
 
   // Optimized form submission
   const handleBillingSubmit = useCallback(
