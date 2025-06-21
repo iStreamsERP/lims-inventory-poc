@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";

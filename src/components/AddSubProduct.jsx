@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import axios from "axios";
 import { Plus, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";

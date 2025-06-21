@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { SquarePen, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";

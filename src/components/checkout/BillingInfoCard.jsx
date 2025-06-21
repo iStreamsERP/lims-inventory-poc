@@ -13,9 +13,7 @@ export default function BillingInfoCard({
   isBillingModalOpen,
   setIsBillingModalOpen,
   handleBillingChange,
-  selectedCountry,
   setSelectedCountry,
-  selectedState,
   setSelectedState,
   countries,
   states,
@@ -37,16 +35,7 @@ export default function BillingInfoCard({
               onOpenChange={setIsBillingModalOpen}
             >
               <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                >
-                  <Edit
-                    size={16}
-                    className="mr-1"
-                  />{" "}
-                  Update
-                </Button>
+                <Button variant="outline">Update</Button>
               </DialogTrigger>
               <DialogContent className="z-[999] max-h-[95vh] max-w-5xl overflow-hidden">
                 <DialogHeader>
@@ -94,11 +83,12 @@ export default function BillingInfoCard({
                           if (countryObj) setSelectedCountry(countryObj.isoCode);
                           handleBillingChange("COUNTRY", value);
                         }}
+                        disabled={true}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select Country" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[9999]">
                           {countries.map((country) => (
                             <SelectItem
                               key={country.isoCode}
@@ -120,12 +110,12 @@ export default function BillingInfoCard({
                           if (stateObj) setSelectedState(stateObj.isoCode);
                           handleBillingChange("STATE_NAME", value);
                         }}
-                        disabled={!selectedCountry}
+                        disabled={true}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select State" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[9999]">
                           {states.map((state) => (
                             <SelectItem
                               key={state.isoCode}
@@ -142,12 +132,12 @@ export default function BillingInfoCard({
                       <Select
                         value={orderForm.CITY_NAME}
                         onValueChange={(value) => handleBillingChange("CITY_NAME", value)}
-                        disabled={!selectedState}
+                        disabled={true}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select City" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[9999]">
                           {cities.map((city, index) => (
                             <SelectItem
                               key={index}

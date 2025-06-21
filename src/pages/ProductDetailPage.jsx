@@ -7,7 +7,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { addItem } from "@/slices/cartSlice";
 import { formatPrice } from "@/utils/formatPrice";
 import { useCallback, useEffect, useState } from "react";

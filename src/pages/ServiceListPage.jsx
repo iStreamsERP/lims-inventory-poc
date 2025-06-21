@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import DataTable from "@/components/DataTable";
 import {
   DropdownMenu,

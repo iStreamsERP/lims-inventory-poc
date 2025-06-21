@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { cartesianProduct } from "@/utils/cartesian";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { toTitleCase } from "@/utils/stringUtils";

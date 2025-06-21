@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { formatPrice } from "@/utils/formatPrice";
 import axios from "axios";
 import { useEffect, useState } from "react";

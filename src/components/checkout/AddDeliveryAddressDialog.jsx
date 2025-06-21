@@ -11,6 +11,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-geosearch/dist/geosearch.css";
 import MapLocationPicker from "../MapLocationPicker";
+import { State } from "country-state-city";
+import { useAuth } from "@/contexts/AuthContext";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { callSoapService } from "@/api/callSoapService";
 
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,34 +24,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-// Mock data for countries
-const mockCountries = [
-  { name: "India", isoCode: "IN" },
-  { name: "United States", isoCode: "US" },
-  { name: "United Kingdom", isoCode: "GB" },
-  { name: "Canada", isoCode: "CA" },
-  { name: "Australia", isoCode: "AU" },
-];
-
-// Enhanced NewAddressDialog Component
-export default function NewAddressDialog({
+export default function AddDeliveryAddressDialog({
   isNewAddressDialogOpen,
   setIsNewAddressDialogOpen,
-  newAddressForm,
-  handleNewAddressChange,
-  countries = mockCountries,
-  getCurrentLocationForNewAddress,
-  isNewAddressLocating,
-  newAddressLocationError,
-  saveNewAddressToClient,
-  setSaveNewAddressToClient,
-  handleSaveNewAddress,
+  countries,
   orderForm,
+  fetchPreviousAddresses,
 }) {
+  const { userData } = useAuth();
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+
+  const [newAddressForm, setNewAddressForm] = useState(initialNewAddressForm());
+  const [isNewAddressLocating, setIsNewAddressLocating] = useState(false);
+  const [newAddressLocationError, setNewAddressLocationError] = useState(null);
 
   // Validate form fields
   const validateForm = () => {
@@ -71,6 +63,59 @@ export default function NewAddressDialog({
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const getCurrentLocationForNewAddress = () => {
+    if (!navigator.geolocation) {
+      setNewAddressLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsNewAddressLocating(true);
+    setNewAddressLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await response.json();
+          console.log(data);
+
+          if (data.address) {
+            const addr = data.address;
+            const country = countries.find((c) => c.isoCode === (addr.country_code ? addr.country_code.toUpperCase() : ""));
+            const state = country ? State.getStatesOfCountry(country.isoCode).find((s) => s.name === addr.state || s.isoCode === addr.state) : null;
+            const city = addr.city || addr.town || addr.village || addr.county;
+
+            const fullAddress = [addr.road || "", addr.house_number || "", city, addr.state, country?.name || addr.country, addr.postcode || ""]
+              .filter(Boolean)
+              .join(", ");
+
+            setNewAddressForm((prev) => ({
+              ...prev,
+              address: fullAddress,
+              country: country?.name || "",
+              state: state?.name || "",
+              city: city || "",
+              zipCode: addr.postcode || "",
+              GPS_LOCATION: `${latitude}, ${longitude}`,
+              GPS_LATITUDE: latitude.toString(),
+              GPS_LONGITUDE: longitude.toString(),
+            }));
+          }
+        } catch (error) {
+          setNewAddressLocationError("Failed to fetch address details");
+        } finally {
+          setIsNewAddressLocating(false);
+        }
+      },
+      (error) => {
+        setIsNewAddressLocating(false);
+        setNewAddressLocationError("Unable to retrieve your location: " + error.message);
+      },
+      { timeout: 10000, enableHighAccuracy: true },
+    );
   };
 
   const handleLocationSelect = (locationData) => {
@@ -103,6 +148,14 @@ export default function NewAddressDialog({
       setLocationAccuracy("medium");
     }
 
+    if (coordinates) {
+      const { lat, lng } = coordinates;
+
+      handleNewAddressChange("GPS_LOCATION", `${lat}, ${lng}`);
+      handleNewAddressChange("GPS_LATITUDE", lat.toString());
+      handleNewAddressChange("GPS_LONGITUDE", lng.toString());
+    }
+
     setSelectedMapLocation(coordinates);
     // Clear validation errors when location is selected
     setValidationErrors({});
@@ -127,6 +180,49 @@ export default function NewAddressDialog({
         [field]: undefined,
       }));
     }
+  };
+
+  const handleNewAddressChange = (field, value) => {
+    setNewAddressForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveNewAddress = async () => {
+    try {
+      const salesOrderPayload = {
+        UserName: userData.userEmail,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
+          ...orderForm,
+          DELIVERY_ADDRESS: newAddressForm.address,
+          GPS_LOCATION: newAddressForm.GPS_LOCATION,
+          GPS_LATITUDE: newAddressForm.GPS_LATITUDE,
+          GPS_LONGITUDE: newAddressForm.GPS_LONGITUDE,
+        }),
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", salesOrderPayload);
+
+      // ✅ Fetch updated addresses
+      if (typeof fetchPreviousAddresses === "function") {
+        fetchPreviousAddresses();
+      }
+    } catch (error) {
+      console.error("Failed to save to SALES_ORDER_MASTER:", error);
+    }
+
+    setIsNewAddressDialogOpen(false);
+    setNewAddressForm({
+      address: "",
+      country: "",
+      state: "",
+      city: "",
+      zipCode: "",
+      GPS_LOCATION: "",
+      GPS_LATITUDE: "",
+      GPS_LONGITUDE: "",
+    });
   };
 
   return (
@@ -279,7 +375,6 @@ export default function NewAddressDialog({
                         handleFieldChange("city", "");
                       }
                     }}
-                    
                   >
                     <SelectTrigger className={validationErrors.country ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select Country" />
@@ -308,23 +403,6 @@ export default function NewAddressDialog({
                 </div>
               </div>
             </div>
-
-            {/* Save to Client Option */}
-            {orderForm?.CLIENT_ID && (
-              <div className="flex items-center space-x-2 rounded-lg border p-3">
-                <Checkbox
-                  id="save-new-address"
-                  checked={saveNewAddressToClient}
-                  onCheckedChange={(checked) => setSaveNewAddressToClient(checked)}
-                />
-                <Label
-                  htmlFor="save-new-address"
-                  className="text-sm"
-                >
-                  Save this address to client profile for future orders
-                </Label>
-              </div>
-            )}
           </div>
 
           <DialogFooter className="flex-shrink-0">
@@ -334,12 +412,7 @@ export default function NewAddressDialog({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSaveWithValidation}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Save Address
-            </Button>
+            <Button onClick={handleSaveWithValidation}>Save Address</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -352,4 +425,17 @@ export default function NewAddressDialog({
       />
     </>
   );
+}
+
+function initialNewAddressForm() {
+  return {
+    address: "",
+    country: "",
+    state: "",
+    city: "",
+    zipCode: "",
+    GPS_LOCATION: "",
+    GPS_LATITUDE: "",
+    GPS_LONGITUDE: "",
+  };
 }

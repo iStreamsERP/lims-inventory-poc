@@ -1,9 +1,10 @@
+import { callSoapService } from "@/api/callSoapService";
+import AddDeliveryAddressDialog from "@/components/checkout/AddDeliveryAddressDialog";
 import BillingInfoCard from "@/components/checkout/BillingInfoCard";
 import ConfirmationTab from "@/components/checkout/ConfirmationTab";
 import CustomerSelector from "@/components/checkout/CustomerSelector";
 import DeliveryAddressDialog from "@/components/checkout/DeliveryAddressDialog";
 import DeliveryInfoCard from "@/components/checkout/DeliveryInfoCard";
-import NewAddressDialog from "@/components/checkout/NewAddressDialog";
 import OrderSummaryCard from "@/components/checkout/OrderSummaryCard";
 import PaymentMethodCard from "@/components/checkout/PaymentMethodCard";
 import ReceiptTab from "@/components/checkout/ReceiptTab";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { fetchOrderDetails } from "@/services/orderService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { City, Country, State } from "country-state-city";
 import { ArrowRight, ClipboardCheck, CreditCard, ShoppingCart } from "lucide-react";
@@ -28,13 +29,14 @@ export default function ProceedToCheckPage() {
   // State declarations
   const [orderItems, setOrderItems] = useState([]);
   const [openCustomer, setOpenCustomer] = useState(false);
+
   const [countries] = useState(Country.getAllCountries());
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedState, setSelectedState] = useState("");
+
   const [activeTab, setActiveTab] = useState("billing");
+
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
-  const [orderId, setOrderId] = useState(null);
-  const [orderDate] = useState(new Date());
   const [paymentMethod, setPaymentMethod] = useState({ type: "card", cardType: "Visa" });
   const [orderForm, setOrderForm] = useState(initialOrderForm(userData, salesOrderSerialNo));
   const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
@@ -44,13 +46,8 @@ export default function ProceedToCheckPage() {
   const [saveToClientMaster, setSaveToClientMaster] = useState(false);
   const [addBillingToClient, setAddBillingToClient] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [newAddressForm, setNewAddressForm] = useState(initialNewAddressForm());
-  const [saveNewAddressToClient, setSaveNewAddressToClient] = useState(false);
-  const [isNewAddressLocating, setIsNewAddressLocating] = useState(false);
-  const [newAddressLocationError, setNewAddressLocationError] = useState(null);
 
   // Refs and memoized values
-  const addressesFetched = useRef(false);
   const availableStates = useMemo(() => (selectedCountry ? State.getStatesOfCountry(selectedCountry) : []), [selectedCountry]);
   const availableCities = useMemo(
     () => (selectedCountry && selectedState ? City.getCitiesOfState(selectedCountry, selectedState) : []),
@@ -58,74 +55,77 @@ export default function ProceedToCheckPage() {
   );
   const orderTotals = useMemo(() => calculateOrderTotals(orderItems, orderForm.DISCOUNT_VALUE), [orderItems, orderForm.DISCOUNT_VALUE]);
 
-  // Initialization
+  // Retrive the order items when the component mounts or salesOrderSerialNo changes
   useEffect(() => {
-    fetchOrderItems();
-  }, []);
+    const getOrderItems = async () => {
+      if (!salesOrderSerialNo || !userData?.clientURL) return;
+      const items = await fetchOrderDetails(userData.clientURL, salesOrderSerialNo);
+      setOrderItems(items);
+    };
 
-  const fetchOrderItems = useCallback(async () => {
-    if (!salesOrderSerialNo) return;
-    try {
-      const payload = {
-        DataModelName: "SALES_ORDER_DETAILS",
-        WhereCondition: `SALES_ORDER_SERIAL_NO = '${salesOrderSerialNo}'`,
-        Orderby: "",
-      };
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-      setOrderItems(response || []);
-    } catch (error) {
-      console.error("Error fetching order items:", error);
-    }
-  }, [salesOrderSerialNo, userData.clientURL]);
+    getOrderItems();
+  }, [salesOrderSerialNo, userData?.clientURL]);
 
   // Event handlers
-  const handleSelectClient = useCallback(async (client) => {
-    if (!client) return;
-    setOrderForm((prev) => ({
-      ...prev,
-      CLIENT_ID: client?.CLIENT_ID,
-      CLIENT_NAME: client?.CLIENT_NAME,
-      CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
-      CLIENT_CONTACT: client?.TELEPHONE_NO || "",
-      DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
-      EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
-      COUNTRY: client.COUNTRY || "",
-      STATE_NAME: client.STATE_NAME || "",
-      CITY_NAME: client.CITY_NAME || "",
-      zipCode: client.zipCode || "",
-    }));
-    setOpenCustomer(false);
+  const handleSelectClient = useCallback(
+    async (client) => {
+      if (!client) return;
+      setOrderForm((prev) => ({
+        ...prev,
+        CLIENT_ID: client?.CLIENT_ID,
+        CLIENT_NAME: client?.CLIENT_NAME,
+        CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
+        CLIENT_CONTACT: client?.TELEPHONE_NO || "",
+        DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
+        EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
+        COUNTRY: client.COUNTRY || "",
+        STATE_NAME: client.STATE_NAME || "",
+        CITY_NAME: client.CITY_NAME || "",
+        zipCode: client.zipCode || "",
+      }));
+      setOpenCustomer(false);
 
-    await fetchPreviousAddresses();
-    addressesFetched.current = false;
-  }, []);
+      const selectedCountryObj = countries.find((c) => c.name === client.COUNTRY);
+      if (selectedCountryObj) setSelectedCountry(selectedCountryObj.isoCode);
 
-  const fetchPreviousAddresses = useCallback(async () => {
-    if (!orderForm.CLIENT_ID || addressesFetched.current) return;
+      const selectedStateObj = selectedCountryObj
+        ? State.getStatesOfCountry(selectedCountryObj.isoCode).find((s) => s.name === client.STATE_NAME)
+        : null;
+      if (selectedStateObj) setSelectedState(selectedStateObj.isoCode);
 
-    setIsLoadingAddresses(true);
-    try {
-      const payload = {
-        SQLQuery: `SELECT DELIVERY_ADDRESS FROM CLIENT_MASTER WHERE CLIENT_ID = '${orderForm.CLIENT_ID}' 
+      await fetchPreviousAddresses(client.CLIENT_ID);
+    },
+    [orderForm.CLIENT_ID],
+  );
+
+  const fetchPreviousAddresses = useCallback(
+    async (clientId) => {
+      if (!clientId) return;
+
+      setIsLoadingAddresses(true);
+      try {
+        const payload = {
+          SQLQuery: `SELECT DELIVERY_ADDRESS FROM CLIENT_MASTER WHERE CLIENT_ID = '${clientId}' 
                    UNION 
-                   SELECT DISTINCT DELIVERY_ADDRESS FROM SALES_ORDER_MASTER WHERE CLIENT_ID = '${orderForm.CLIENT_ID}'`,
-      };
+                   SELECT DISTINCT DELIVERY_ADDRESS FROM SALES_ORDER_MASTER WHERE CLIENT_ID = '${clientId}'`,
+        };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+        const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
-      if (Array.isArray(response)) {
-        const validAddresses = response.map((item) => item?.DELIVERY_ADDRESS?.trim()).filter((addr) => addr && addr.length > 0);
+        if (Array.isArray(response)) {
+          const validAddresses = response.map((item) => item?.DELIVERY_ADDRESS?.trim()).filter((addr) => addr && addr.length > 0);
 
-        setPreviousAddresses([...new Set(validAddresses)]);
-        addressesFetched.current = true;
+          setPreviousAddresses([...new Set(validAddresses)]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch addresses:", error);
+        setPreviousAddresses([]);
+      } finally {
+        setIsLoadingAddresses(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch addresses:", error);
-      setPreviousAddresses([]);
-    } finally {
-      setIsLoadingAddresses(false);
-    }
-  }, [orderForm.CLIENT_ID, userData.clientURL]);
+    },
+    [userData.clientURL],
+  );
 
   const handlePlaceOrder = useCallback(async () => {
     if (saveToClientMaster && orderForm.CLIENT_ID) {
@@ -143,8 +143,6 @@ export default function ProceedToCheckPage() {
       }
     }
 
-    setOrderId(salesOrderSerialNo); // Use actual order number instead of random
-    setOrderDate(new Date());
     setActiveTab("receipts");
   }, [saveToClientMaster, orderForm, userData.userEmail, userData.clientURL, salesOrderSerialNo]);
 
@@ -155,7 +153,10 @@ export default function ProceedToCheckPage() {
       try {
         const payload = {
           UserName: userData.userEmail,
-          DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", orderForm),
+          DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
+            SALES_ORDER_SERIAL_NO: orderForm.SALES_ORDER_SERIAL_NO,
+            CLIENT_ADDRESS: orderForm.CLIENT_ADDRESS,
+          }),
         };
 
         const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
@@ -198,104 +199,6 @@ export default function ProceedToCheckPage() {
     }
     setIsDeliveryDialogOpen(false);
   }, [selectedAddress]);
-
-  const getCurrentLocationForNewAddress = useCallback(() => {
-    if (!navigator.geolocation) {
-      setNewAddressLocationError("Geolocation is not supported by your browser");
-      return;
-    }
-
-    setIsNewAddressLocating(true);
-    setNewAddressLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-          const data = await response.json();
-
-          if (data.address) {
-            const addr = data.address;
-            const country = countries.find((c) => c.isoCode === (addr.country_code ? addr.country_code.toUpperCase() : ""));
-            const state = country ? State.getStatesOfCountry(country.isoCode).find((s) => s.name === addr.state || s.isoCode === addr.state) : null;
-            const city = addr.city || addr.town || addr.village || addr.county;
-
-            const fullAddress = [addr.road || "", addr.house_number || "", city, addr.state, country?.name || addr.country, addr.postcode || ""]
-              .filter(Boolean)
-              .join(", ");
-
-            setNewAddressForm((prev) => ({
-              ...prev,
-              address: fullAddress,
-              country: country?.name || "",
-              state: state?.name || "",
-              city: city || "",
-              zipCode: addr.postcode || "",
-            }));
-          }
-        } catch (error) {
-          setNewAddressLocationError("Failed to fetch address details");
-        } finally {
-          setIsNewAddressLocating(false);
-        }
-      },
-      (error) => {
-        setIsNewAddressLocating(false);
-        setNewAddressLocationError("Unable to retrieve your location: " + error.message);
-      },
-      { timeout: 10000, enableHighAccuracy: true },
-    );
-  }, [countries]);
-
-  const handleSaveNewAddress = useCallback(async () => {
-    setOrderForm((prev) => ({
-      ...prev,
-      DELIVERY_ADDRESS: newAddressForm.address,
-    }));
-
-    try {
-      const salesOrderPayload = {
-        UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
-          ...orderForm,
-          DELIVERY_ADDRESS: newAddressForm.address,
-        }),
-      };
-
-      await callSoapService(userData.clientURL, "DataModel_SaveData", salesOrderPayload);
-    } catch (error) {
-      console.error("Failed to save to SALES_ORDER_MASTER:", error);
-    }
-
-    if (saveNewAddressToClient && orderForm.CLIENT_ID) {
-      try {
-        const clientPayload = {
-          UserName: userData.userEmail,
-          DModelData: convertDataModelToStringData("CLIENT_MASTER", {
-            ...orderForm,
-            DELIVERY_ADDRESS: newAddressForm.address,
-          }),
-        };
-        await callSoapService(userData.clientURL, "DataModel_SaveData", clientPayload);
-      } catch (error) {
-        console.error("Failed to save to CLIENT_MASTER:", error);
-      }
-    }
-
-    // Reset cache and refetch
-    addressesFetched.current = false;
-    fetchPreviousAddresses();
-
-    setIsNewAddressDialogOpen(false);
-    setNewAddressForm({
-      address: "",
-      country: "",
-      state: "",
-      city: "",
-      zipCode: "",
-    });
-  }, [newAddressForm, userData.userEmail, userData.clientURL, orderForm, saveNewAddressToClient, fetchPreviousAddresses]);
 
   // Navigation
   const goToNext = useCallback(() => {
@@ -352,9 +255,7 @@ export default function ProceedToCheckPage() {
                 isBillingModalOpen={isBillingModalOpen}
                 setIsBillingModalOpen={setIsBillingModalOpen}
                 handleBillingChange={(field, value) => setOrderForm((prev) => ({ ...prev, [field]: value }))}
-                selectedCountry={selectedCountry}
                 setSelectedCountry={setSelectedCountry}
-                selectedState={selectedState}
                 setSelectedState={setSelectedState}
                 countries={countries}
                 states={availableStates}
@@ -369,7 +270,7 @@ export default function ProceedToCheckPage() {
                 isLoadingAddresses={isLoadingAddresses}
                 selectedAddress={selectedAddress}
                 setSelectedAddress={setSelectedAddress}
-                setOrderForm={setOrderForm}
+                orderForm={orderForm}
                 setIsNewAddressDialogOpen={setIsNewAddressDialogOpen}
               />
 
@@ -414,7 +315,6 @@ export default function ProceedToCheckPage() {
             handlePlaceOrder={handlePlaceOrder}
             goToPrev={goToPrev}
             goToNext={goToNext}
-            orderId={orderId}
           />
         </TabsContent>
 
@@ -424,8 +324,6 @@ export default function ProceedToCheckPage() {
             paymentMethod={paymentMethod}
             orderItems={orderItems}
             orderTotals={orderTotals}
-            orderId={orderId}
-            orderDate={orderDate}
             goToPrev={goToPrev}
             navigate={navigate}
           />
@@ -444,19 +342,12 @@ export default function ProceedToCheckPage() {
         handleAddressSelect={handleAddressSelect}
       />
 
-      <NewAddressDialog
+      <AddDeliveryAddressDialog
         isNewAddressDialogOpen={isNewAddressDialogOpen}
         setIsNewAddressDialogOpen={setIsNewAddressDialogOpen}
-        newAddressForm={newAddressForm}
-        handleNewAddressChange={(field, value) => setNewAddressForm((prev) => ({ ...prev, [field]: value }))}
         countries={countries}
-        getCurrentLocationForNewAddress={getCurrentLocationForNewAddress}
-        isNewAddressLocating={isNewAddressLocating}
-        newAddressLocationError={newAddressLocationError}
-        saveNewAddressToClient={saveNewAddressToClient}
-        setSaveNewAddressToClient={setSaveNewAddressToClient}
-        handleSaveNewAddress={handleSaveNewAddress}
         orderForm={orderForm}
+        fetchPreviousAddresses={() => fetchPreviousAddresses(orderForm.CLIENT_ID)}
       />
     </div>
   );
@@ -467,8 +358,8 @@ function initialOrderForm(userData, salesOrderSerialNo) {
   return {
     COMPANY_CODE: userData.companyCode,
     BRANCH_CODE: userData.branchCode,
-    SALES_ORDER_SERIAL_NO: -1,
-    ORDER_NO: salesOrderSerialNo || "",
+    SALES_ORDER_SERIAL_NO: salesOrderSerialNo || -1,
+    ORDER_NO: "",
     ORDER_DATE: new Date().toISOString().split("T")[0],
     CLIENT_ID: "",
     CLIENT_NAME: "",
@@ -492,16 +383,6 @@ function initialOrderForm(userData, salesOrderSerialNo) {
     GPS_LATITUDE: "",
     GPS_LONGITUDE: "",
     USER_NAME: userData.userEmail,
-  };
-}
-
-function initialNewAddressForm() {
-  return {
-    address: "",
-    country: "",
-    state: "",
-    city: "",
-    zipCode: "",
   };
 }
 

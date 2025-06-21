@@ -5,16 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/utils/formatPrice";
 import { ArrowLeft } from "lucide-react";
 
-export default function ReceiptTab({
-  orderForm,
-  paymentMethod,
-  orderItems,
-  orderTotals,
-  orderId,
-  orderDate,
-  goToPrev,
-  navigate
-}) {
+export default function ReceiptTab({ orderForm, paymentMethod, orderItems, orderTotals, orderId, orderDate, goToPrev, navigate }) {
   return (
     <Card>
       <CardHeader className="bg-green-50">
@@ -89,7 +80,10 @@ export default function ReceiptTab({
             </div>
 
             {orderItems?.map((item, idx) => (
-              <div key={idx} className="border-b py-4">
+              <div
+                key={idx}
+                className="border-b py-4"
+              >
                 <div className="flex justify-between">
                   <span>
                     {item.itemName || item.ITEM_NAME} × {item.itemQty}
@@ -120,7 +114,10 @@ export default function ReceiptTab({
       <CardFooter className="flex justify-between pt-6">
         <Button variant="outline">Download Invoice</Button>
         <div className="space-x-2">
-          <Button variant="outline" onClick={() => navigate("/categories")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/categories")}
+          >
             Continue Shopping
           </Button>
           <Button>Track Order</Button>

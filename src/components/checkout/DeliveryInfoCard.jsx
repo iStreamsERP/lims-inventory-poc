@@ -1,15 +1,47 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Truck } from "lucide-react";
+import { callSoapService } from "@/api/callSoapService";
+import { useAuth } from "@/contexts/AuthContext";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { ClipLoader } from "react-spinners";
+import { useState } from "react";
 
 export default function DeliveryInfoCard({
   previousAddresses,
   isLoadingAddresses,
   selectedAddress,
   setSelectedAddress,
-  setOrderForm,
   setIsNewAddressDialogOpen,
+  orderForm,
 }) {
+  const { userData } = useAuth();
+  const [loadingAddress, setLoadingAddress] = useState(null);
+
+  const handleSubmitAddress = async (address) => {
+    setLoadingAddress(address);
+    try {
+      const payload = {
+        UserName: userData.userEmail,
+        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
+          SALES_ORDER_SERIAL_NO: orderForm.SALES_ORDER_SERIAL_NO,
+          DELIVERY_ADDRESS: address,
+        }),
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+    } catch (error) {
+      console.error("Failed to save billing details:", error);
+      toast({
+        variant: "destructive",
+        title: "Billing Update Failed",
+        description: error.message,
+      });
+    } finally {
+      setLoadingAddress(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -28,7 +60,6 @@ export default function DeliveryInfoCard({
       </CardHeader>
       <CardContent>
         <div className="mb-6">
-          <h4 className="mb-3 text-sm font-medium">Previous Delivery Addresses</h4>
           {isLoadingAddresses ? (
             <p className="text-sm text-gray-500">Loading addresses...</p>
           ) : previousAddresses.length > 0 ? (
@@ -58,10 +89,10 @@ export default function DeliveryInfoCard({
                     size="sm"
                     onClick={() => {
                       setSelectedAddress(address);
-                      setOrderForm((prev) => ({ ...prev, DELIVERY_ADDRESS: address }));
+                      handleSubmitAddress(address);
                     }}
                   >
-                    Deliver Here
+                    {loadingAddress === address ? <ClipLoader size={16} /> : "Deliver Here"}
                   </Button>
                 </div>
               ))}
