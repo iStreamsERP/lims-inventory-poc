@@ -3,16 +3,36 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { callSoapService } from "@/services/callSoapService";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function CustomerSelector({ openCustomer, setOpenCustomer, value, setValue, clientData, handleSelectClient }) {
+export default function CustomerSelector({ openCustomer, setOpenCustomer, handleSelectClient }) {
+  const { userData } = useAuth();
+  const { toast } = useToast();
+
+  const [clientData, setClientData] = useState([]);
+  const [value, setValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filter clients based on search query
   const filteredClients = clientData.filter((client) => client.CLIENT_NAME.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  // API call functions
+  const fetchClientData = useCallback(async () => {
+    try {
+      const payload = { SQLQuery: `SELECT * from CLIENT_MASTER` };
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+      setClientData(response || []);
+    } catch (error) {
+      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
+    }
+  }, [toast]);
+
   // Reset search query when dropdown closes
   useEffect(() => {
+    fetchClientData();
     if (!openCustomer) {
       setSearchQuery("");
     }
@@ -59,7 +79,8 @@ export default function CustomerSelector({ openCustomer, setOpenCustomer, value,
                     key={client.CLIENT_ID}
                     value={client.CLIENT_NAME}
                     onSelect={() => {
-                      handleSelectClient(client.CLIENT_NAME);
+                      handleSelectClient(client);
+                      setValue(client.CLIENT_NAME);
                       setOpenCustomer(false);
                     }}
                   >

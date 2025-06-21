@@ -205,13 +205,21 @@ export default function BillingInfoCard({
       <CardContent>
         {orderForm.CLIENT_NAME ? (
           <div className="space-y-2 text-sm">
-            <p className="font-medium">{orderForm.CLIENT_NAME}</p>
+            <p className="text-lg font-medium">{orderForm.CLIENT_NAME}</p>
             <p>{orderForm.CLIENT_ADDRESS}</p>
             <p>
               {orderForm.CITY_NAME}, {orderForm.STATE_NAME}, {orderForm.COUNTRY}
             </p>
-            <p className="pt-2">Phone: {orderForm.CLIENT_CONTACT}</p>
-            <p>Email: {orderForm.EMAIL_ADDRESS}</p>
+            <div className="flex items-center space-x-2">
+              <p>
+                {" "}
+                <span className="font-medium">Phone:</span> {orderForm.CLIENT_CONTACT}
+              </p>
+              <p>
+                {" "}
+                <span className="font-medium">Email:</span> {orderForm.EMAIL_ADDRESS}
+              </p>
+            </div>
           </div>
         ) : (
           <p className="text-sm text-gray-500">Select a customer to view billing information</p>

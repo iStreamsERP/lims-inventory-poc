@@ -13,7 +13,7 @@ export default function OrderSummaryCard({ orderItems, orderForm, orderTotals })
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span>Subtotal ({orderItems?.length || 0} Items)</span>
-            <span>{formatPrice(orderForm.TOTAL_VALUE)}</span>
+            <span>{formatPrice(orderTotals.orderTotal)}</span>
           </div>
           <div className="flex justify-between text-sm text-green-500">
             <span>Discount</span>

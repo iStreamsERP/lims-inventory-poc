@@ -1,13 +1,14 @@
 import { AuthProvider } from "@/contexts/AuthContext.jsx";
 import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
 import App from "./App.jsx";
+import { store } from "./app/store.jsx";
 import "./index.css";
-import { CartProvider } from "@/contexts/CartContext";
 
 createRoot(document.getElementById("root")).render(
   <AuthProvider>
-    <CartProvider>
+    <Provider store={store}>
       <App />
-    </CartProvider>
+    </Provider>
   </AuthProvider>,
 );

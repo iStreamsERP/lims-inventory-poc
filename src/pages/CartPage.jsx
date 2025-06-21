@@ -4,14 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
+import { updateItemQuantity, removeItem } from "@/slices/cartSlice";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { Minus, MoveRight, Plus, X } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 
 const CartPage = () => {
@@ -19,7 +20,9 @@ const CartPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { cart, removeItem, updateItemQuantity, clearCart } = useCart();
+
+  const dispatch = useDispatch();
+  const cart = useSelector((state) => state.cart.items);
 
   // Initialize masterFormData with default values
   const [masterFormData, setMasterFormData] = useState({
@@ -260,7 +263,7 @@ const CartPage = () => {
                       className="h-6 w-8"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
-                        updateItemQuantity(lineKey, item.itemQty - 1);
+                        dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty - 1 }));
                       }}
                       disabled={item.itemQty <= 1}
                     >
@@ -273,7 +276,7 @@ const CartPage = () => {
                       className="h-6 w-8"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
-                        updateItemQuantity(lineKey, item.itemQty + 1);
+                        dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty + 1 }));
                       }}
                     >
                       <Plus size={14} />
@@ -288,7 +291,7 @@ const CartPage = () => {
                       className="ml-2"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
-                        removeItem(lineKey);
+                        dispatch(removeItem({ id: lineKey }));
                       }}
                     >
                       <X className="h-5 w-5" />

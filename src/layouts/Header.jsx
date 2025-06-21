@@ -15,13 +15,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CloudMoon, CloudSun, LogOut, Maximize, Minimize, PanelLeftClose, Settings2, ShoppingCart } from "lucide-react";
 import PropTypes from "prop-types";
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
 
 export const Header = ({ collapsed, setCollapsed }) => {
   const { userData, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { cart } = useCart();
+  const cart = useSelector((state) => state.cart.items);
 
   const navigate = useNavigate();
 

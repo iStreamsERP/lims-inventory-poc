@@ -26,14 +26,9 @@ export default function ProceedToCheckPage() {
   const salesOrderSerialNo = location.state?.newSerialNo || "";
 
   // State declarations
-  const [clientData, setClientData] = useState([]);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [value, setValue] = useState("");
   const [orderItems, setOrderItems] = useState([]);
   const [openCustomer, setOpenCustomer] = useState(false);
   const [countries] = useState(Country.getAllCountries());
-  const [states, setStates] = useState([]);
-  const [cities, setCities] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [activeTab, setActiveTab] = useState("billing");
@@ -41,9 +36,6 @@ export default function ProceedToCheckPage() {
   const [orderId, setOrderId] = useState(null);
   const [orderDate] = useState(new Date());
   const [paymentMethod, setPaymentMethod] = useState({ type: "card", cardType: "Visa" });
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationError, setLocationError] = useState(null);
   const [orderForm, setOrderForm] = useState(initialOrderForm(userData, salesOrderSerialNo));
   const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
   const [isNewAddressDialogOpen, setIsNewAddressDialogOpen] = useState(false);
@@ -68,20 +60,8 @@ export default function ProceedToCheckPage() {
 
   // Initialization
   useEffect(() => {
-    fetchClientData();
     fetchOrderItems();
   }, []);
-
-  // API call functions
-  const fetchClientData = useCallback(async () => {
-    try {
-      const payload = { SQLQuery: `SELECT * from CLIENT_MASTER` };
-      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
-      setClientData(response || []);
-    } catch (error) {
-      toast({ variant: "destructive", title: `Error fetching client: ${error.message}` });
-    }
-  }, [userData.clientURL, toast]);
 
   const fetchOrderItems = useCallback(async () => {
     if (!salesOrderSerialNo) return;
@@ -99,34 +79,26 @@ export default function ProceedToCheckPage() {
   }, [salesOrderSerialNo, userData.clientURL]);
 
   // Event handlers
-  const handleSelectClient = useCallback(
-    async (clientName) => {
-      const client = clientData.find((c) => c.CLIENT_NAME === clientName);
-      if (!client) return;
+  const handleSelectClient = useCallback(async (client) => {
+    if (!client) return;
+    setOrderForm((prev) => ({
+      ...prev,
+      CLIENT_ID: client?.CLIENT_ID,
+      CLIENT_NAME: client?.CLIENT_NAME,
+      CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
+      CLIENT_CONTACT: client?.TELEPHONE_NO || "",
+      DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
+      EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
+      COUNTRY: client.COUNTRY || "",
+      STATE_NAME: client.STATE_NAME || "",
+      CITY_NAME: client.CITY_NAME || "",
+      zipCode: client.zipCode || "",
+    }));
+    setOpenCustomer(false);
 
-      setValue(clientName);
-      setSelectedClient(client || null);
-
-      setOrderForm((prev) => ({
-        ...prev,
-        CLIENT_ID: client?.CLIENT_ID,
-        CLIENT_NAME: client?.CLIENT_NAME,
-        CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
-        CLIENT_CONTACT: client?.TELEPHONE_NO || "",
-        DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
-        EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
-        COUNTRY: client.COUNTRY || "",
-        STATE_NAME: client.STATE_NAME || "",
-        CITY_NAME: client.CITY_NAME || "",
-        zipCode: client.zipCode || "",
-      }));
-      setOpenCustomer(false);
-
-      await fetchPreviousAddresses();
-      addressesFetched.current = false;
-    },
-    [clientData],
-  );
+    await fetchPreviousAddresses();
+    addressesFetched.current = false;
+  }, []);
 
   const fetchPreviousAddresses = useCallback(async () => {
     if (!orderForm.CLIENT_ID || addressesFetched.current) return;
@@ -141,8 +113,6 @@ export default function ProceedToCheckPage() {
 
       const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
 
-      console.log(response);
-
       if (Array.isArray(response)) {
         const validAddresses = response.map((item) => item?.DELIVERY_ADDRESS?.trim()).filter((addr) => addr && addr.length > 0);
 
@@ -155,7 +125,7 @@ export default function ProceedToCheckPage() {
     } finally {
       setIsLoadingAddresses(false);
     }
-  }, [orderForm.CLIENT_ID, userData.clientURL, selectedClient]);
+  }, [orderForm.CLIENT_ID, userData.clientURL]);
 
   const handlePlaceOrder = useCallback(async () => {
     if (saveToClientMaster && orderForm.CLIENT_ID) {
@@ -204,7 +174,6 @@ export default function ProceedToCheckPage() {
             }),
           };
           const response = await callSoapService(userData.clientURL, "DataModel_SaveData", clientPayload);
-          fetchClientData();
         }
       } catch (error) {
         console.error("Failed to save billing details:", error);
@@ -217,7 +186,7 @@ export default function ProceedToCheckPage() {
 
       setIsBillingModalOpen(false);
     },
-    [orderForm, userData, addBillingToClient, fetchClientData],
+    [orderForm, userData, addBillingToClient],
   );
 
   const handleAddressSelect = useCallback(() => {
@@ -375,9 +344,6 @@ export default function ProceedToCheckPage() {
               <CustomerSelector
                 openCustomer={openCustomer}
                 setOpenCustomer={setOpenCustomer}
-                value={value}
-                setValue={setValue}
-                clientData={clientData}
                 handleSelectClient={handleSelectClient}
               />
 
@@ -542,8 +508,8 @@ function initialNewAddressForm() {
 function calculateOrderTotals(orderItems, discountValue) {
   const subtotal =
     orderItems?.reduce((sum, item) => {
-      const rate = item.finalSaleRate || item.FINAL_SALE_RATE || 0;
-      const qty = item.itemQty || item.ITEM_QTY || 0;
+      const rate = item.NET_VALUE || 0;
+      const qty = item.QTY || 0;
       return sum + rate * qty;
     }, 0) || 0;
 

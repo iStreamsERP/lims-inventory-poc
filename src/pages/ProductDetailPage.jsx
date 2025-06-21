@@ -5,13 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useImageAPI } from "@/hooks/useImageAPI";
 import { callSoapService } from "@/services/callSoapService";
+import { addItem } from "@/slices/cartSlice";
 import { formatPrice } from "@/utils/formatPrice";
-import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 
@@ -19,7 +19,8 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const { userData } = useAuth();
   const { toast } = useToast();
-  const { cart, addItem } = useCart();
+  const cart = useSelector((state) => state.cart.items);
+  const dispatch = useDispatch();
   const { fetchImageUrl } = useImageAPI();
 
   const [loading, setLoading] = useState(false);
@@ -178,7 +179,8 @@ const ProductDetailPage = () => {
           ),
         );
 
-        const chosen = subs.find((s) => s.ITEM_FINISH === selectedColor && s.ITEM_SIZE === selectedSize && s.ITEM_TYPE === selectedVariant) || subs[0];
+        const chosen =
+          subs.find((s) => s.ITEM_FINISH === selectedColor && s.ITEM_SIZE === selectedSize && s.ITEM_TYPE === selectedVariant) || subs[0];
 
         const handleClick = (dim, value, availableSet) => {
           setError("");
@@ -224,13 +226,16 @@ const ProductDetailPage = () => {
         const quantityInCart = existingCartItem ? existingCartItem.itemQty : 0;
 
         const handleAddToCart = () => {
-          addItem({
-            ...chosen,
-            image: undefined,
-            UOM_STOCK: item.UOM_STOCK,
-            ITEM_GROUP: item.ITEM_GROUP,
-            itemQty: 1,
-          });
+          dispatch(
+            addItem({
+              ...chosen,
+              image: undefined,
+              UOM_STOCK: item.UOM_STOCK,
+              ITEM_GROUP: item.ITEM_GROUP,
+              itemQty: 1,
+            }),
+          );
+
           toast({ title: "Added to cart" });
         };
 

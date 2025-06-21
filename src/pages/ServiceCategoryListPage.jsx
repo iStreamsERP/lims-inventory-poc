@@ -2,24 +2,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
+import { addItem } from "@/slices/cartSlice";
 import { CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { BarLoader } from "react-spinners";
 
 const ServiceCategoryListPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
-  const { cart, addItem } = useCart();
+  const cart = useSelector((state) => state.cart.items);
+  const dispatch = useDispatch();
 
   const [serviceData, setServiceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-      fetchAllServicesData();
+    fetchAllServicesData();
   }, [userData]);
 
   const fetchAllServicesData = async () => {
@@ -47,15 +49,18 @@ const ServiceCategoryListPage = () => {
   };
 
   const handleAddToCart = (serviceItem) => {
-    addItem({
-      ITEM_CODE: serviceItem.ITEM_CODE,
-      ITEM_NAME: serviceItem.ITEM_NAME,
-      ITEM_GROUP: serviceItem.ITEM_GROUP,
-      SALE_UOM: serviceItem.SALE_UOM,
-      finalSaleRate: serviceItem.SALE_RATE,
-      image: "https://img.freepik.com/free-vector/businessman-holding-pencil-big-complete-checklist-with-tick-marks_1150-35019.jpg?t=st=1746508610~exp=1746512210~hmac=bffe01511ed20780fc69db0bdf2fbea126fb78ea57216b6ba027d4b8dd527c53&w=996",
-      itemQty: 1,
-    });
+    dispatch(
+      addItem({
+        ITEM_CODE: serviceItem.ITEM_CODE,
+        ITEM_NAME: serviceItem.ITEM_NAME,
+        ITEM_GROUP: serviceItem.ITEM_GROUP,
+        SALE_UOM: serviceItem.SALE_UOM,
+        finalSaleRate: serviceItem.SALE_RATE,
+        image:
+          "https://img.freepik.com/free-vector/businessman-holding-pencil-big-complete-checklist-with-tick-marks_1150-35019.jpg?t=st=1746508610~exp=1746512210~hmac=bffe01511ed20780fc69db0bdf2fbea126fb78ea57216b6ba027d4b8dd527c53&w=996",
+        itemQty: 1,
+      }),
+    );
 
     toast({ title: "Added to cart" });
   };
@@ -86,9 +91,7 @@ const ServiceCategoryListPage = () => {
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {serviceData.map((serviceItem) => {
             // Calculate quantity for THIS specific item
-            const existingCartItem = cart.find(
-              (cartItem) => cartItem.itemCode === serviceItem.ITEM_CODE
-            );
+            const existingCartItem = cart.find((cartItem) => cartItem.ITEM_CODE === serviceItem.ITEM_CODE);
             const quantityInCart = existingCartItem?.itemQty || 0;
 
             return (
@@ -115,11 +118,7 @@ const ServiceCategoryListPage = () => {
                   </Button>
 
                   {/* Display quantity only if item exists in cart */}
-                  {quantityInCart > 0 && (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Quantity in cart: {quantityInCart}
-                    </p>
-                  )}
+                  {quantityInCart > 0 && <p className="mt-2 text-sm text-gray-500">Quantity in cart: {quantityInCart}</p>}
 
                   <div className="space-y-1 text-sm font-normal text-muted-foreground">
                     <div className="mb-1 font-semibold">Features</div>
