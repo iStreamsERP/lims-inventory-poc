@@ -72,7 +72,7 @@ export function Overview() {
     return (
         <ResponsiveContainer width="100%" height={200}>
             <ChartContainer config={overviewChartConfig} >
-                <BarChart data={data} margin={{ top: 20 }}>
+                <BarChart data={dataWithPercentage} margin={{ top: 20 }}>
                     <XAxis
                         dataKey="month"
                         stroke="#888888"
@@ -91,7 +91,7 @@ export function Overview() {
                         cursor={false}
                         content={<ChartTooltipContent hideLabel />}
                     />
-                    <Bar dataKey="totalSales" radius={8} className="fill-primary">
+                    <Bar dataKey="totalSales" radius={8}>
                         {dataWithPercentage.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={getDynamicColor(entry.Percentage)} />
                         ))}
