@@ -265,7 +265,7 @@ export default function AddDeliveryAddressDialog({
           </DialogHeader>
 
           <div
-            className="space-y-2 overflow-y-auto pr-2"
+            className="space-y-2 overflow-y-auto p-1"
             style={{ maxHeight: "calc(95vh - 140px)" }}
           >
             {/* Location Picker Buttons */}

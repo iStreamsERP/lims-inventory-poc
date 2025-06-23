@@ -131,7 +131,6 @@ const MapLocationPicker = ({ isOpen, onClose, onLocationSelect, initialLocation 
     if (!mapRef.current || mapInstanceRef.current) return;
 
     try {
-
       // Initialize map
       const map = L.map(mapRef.current, {
         center: [selectedLocation.lat, selectedLocation.lng],
@@ -359,14 +358,38 @@ const MapLocationPicker = ({ isOpen, onClose, onLocationSelect, initialLocation 
     >
       <DialogContent className="z-[999] max-h-screen max-w-5xl overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Select Exact Delivery Location
+          <DialogTitle className="flex items-center justify-between gap-2 pr-4">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <MapPin className="h-5 w-5" />
+              Select Exact Delivery Location
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={getCurrentLocation}
+                disabled={isLoadingAddress}
+                className="flex items-center gap-2"
+              >
+                {isLoadingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
+                {isLoadingAddress ? "Detecting..." : "Auto-Detect"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => reverseGeocode(selectedLocation)}
+                disabled={isLoadingAddress || !mapLoaded || !selectedLocation}
+                className="flex items-center gap-2"
+              >
+                {isLoadingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Refresh
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
         <div
-          className="space-y-4 overflow-y-auto pr-2"
+          className="space-y-4 overflow-y-auto px-1"
           style={{ maxHeight: "calc(95vh - 140px)" }}
         >
           {/* Error Display */}
@@ -430,28 +453,6 @@ const MapLocationPicker = ({ isOpen, onClose, onLocationSelect, initialLocation 
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={getCurrentLocation}
-              disabled={isLoadingAddress}
-              className="flex items-center gap-2"
-            >
-              {isLoadingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
-              Use Current Location
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => reverseGeocode(selectedLocation)}
-              disabled={isLoadingAddress || !mapLoaded || !selectedLocation}
-              className="flex items-center gap-2"
-            >
-              {isLoadingAddress ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Refresh Address
-            </Button>
           </div>
 
           {/* Map Container */}
@@ -572,7 +573,6 @@ const MapLocationPicker = ({ isOpen, onClose, onLocationSelect, initialLocation 
           <Button
             onClick={handleConfirmLocation}
             disabled={!selectedLocation || isLoadingAddress}
-            className="bg-blue-600 hover:bg-blue-700"
           >
             {isLoadingAddress ? (
               <>
