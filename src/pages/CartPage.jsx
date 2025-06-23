@@ -243,12 +243,8 @@ const CartPage = () => {
                       SUB_MATERIAL_NO={item.SUB_MATERIAL_NO}
                     />
                     <div>
-                      {item.ITEM_GROUP && (
-                        <Badge variant="outline">
-                          <p className="text-xs text-gray-500">{item.ITEM_GROUP}</p>
-                        </Badge>
-                      )}
                       <h3 className="text-lg font-medium">{item.ITEM_NAME || item.ITEM_NAME}</h3>
+                      {<p className="text-xs text-gray-500">{item.ITEM_GROUP}</p>}
                       {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
                       {item.ITEM_FINISH && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH}</p>}
                       {item.ITEM_SIZE && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE}</p>}

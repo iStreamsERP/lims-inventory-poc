@@ -36,7 +36,7 @@ const SalesFunnelChart = () => {
                         content={<ChartTooltipContent hideLabel />}
                     />
                     <Funnel dataKey="value" data={salesFunnelData} isAnimationActive>
-                        <LabelList position="right" offset={10} fill="#FFF" fontSize={10} stroke="none" dataKey="stage" />
+                        <LabelList position="right" offset={10} fontSize={10} stroke="none" dataKey="stage" />
                     </Funnel>
                 </FunnelChart>
             </ChartContainer>

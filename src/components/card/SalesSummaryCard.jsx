@@ -5,7 +5,7 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui/card"
-import { BarChart, DollarSign, Handshake, TrendingUp } from "lucide-react"
+import { BarChart, DollarSign, Handshake, IndianRupee, TrendingUp } from "lucide-react"
 
 
 const data = [
@@ -13,7 +13,7 @@ const data = [
         title: "Total Revenue",
         value: "$45,231.89",
         percentage: "20.1%",
-        icon: <DollarSign size={18} color="green" />
+        icon: <IndianRupee size={18} color="green" />
     },
     {
         title: "Deals",

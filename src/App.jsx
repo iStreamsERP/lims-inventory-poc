@@ -1,9 +1,8 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import EnquiryForm from "./components/form/EnquiryForm";
 import AccountSettings from "./pages/AccountSettings";
 import CartPage from "./pages/CartPage";
-import CategoryListPage from "./pages/CategoryListPage";
+import CategoryAccessRightsPage from "./pages/CategoryAccessRightsPage";
 import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import CustomerFormPage from "./pages/CustomerFormPage";
 import CustomerListPage from "./pages/CustomerListPage";
@@ -13,29 +12,28 @@ import LoginFormPage from "./pages/LoginFormPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import OrderFormPage from "./pages/OrderFormPage";
 import OrderList from "./pages/OrderList";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import ProceedToCheckPage from "./pages/ProceedToCheckPage";
 import ProductCardListPage from "./pages/ProductCardListPage";
+import ProductCategoryListPage from "./pages/ProductCategoryListPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import ProductFormPage from "./pages/ProductFormPage";
 import ProductListPage from "./pages/ProductListPage";
+import RefundPolicyPage from "./pages/RefundPolicyPage";
+import ReturnPolicyPage from "./pages/ReturnPolicyPage";
+import RoleAccessRightsPage from "./pages/RoleAccessRightsPage";
 import ServiceCategoryListPage from "./pages/ServiceCategoryListPage";
 import ServiceFormPage from "./pages/ServiceFormPage";
 import ServiceListPage from "./pages/ServiceListPage";
+import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 import SignUpPage from "./pages/SignUpPage";
+import TermsAndConditionPage from "./pages/TermsAndConditionPage";
+import UserAccessRightsPage from "./pages/UserAccessRightsPage";
 import UserListPage from "./pages/UserListPage";
 import UserPreferences from "./pages/userPreferences/UserPreferences";
 import UserRolePage from "./pages/UserRolePage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import UserAccessRightsPage from "./pages/UserAccessRightsPage";
-import RoleAccessRightsPage from "./pages/RoleAccessRightsPage";
-import CategoryAccessRightsPage from "./pages/CategoryAccessRightsPage";
-import TermsAndConditionPage from "./pages/TermsAndConditionPage";
-import RefundPolicyPage from "./pages/RefundPolicyPage";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import ReturnPolicy from "./pages/ReturnPolicyPage";
-import ReturnPolicyPage from "./pages/ReturnPolicyPage";
-import ShippingPolicyPage from "./pages/ShippingPolicyPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -71,7 +69,7 @@ const App = () => {
             { path: "/customer/:id", element: <CustomerFormPage /> },
             { path: "/customer-dashboard/:id", element: <CustomerDashboardPage /> },
 
-            { path: "categories", element: <CategoryListPage /> },
+            { path: "categories", element: <ProductCategoryListPage /> },
             { path: "product-card-list/:id", element: <ProductCardListPage /> },
             { path: "product-detail/:id", element: <ProductDetailPage /> },
 
@@ -93,8 +91,6 @@ const App = () => {
             { path: "/new-quotation", element: <OrderFormPage /> },
             { path: "/edit-quotation/:id", element: <OrderFormPage /> },
             { path: "/view-quotation/:id", element: <OrderFormPage /> },
-
-            { path: "enquiry-form", element: <EnquiryForm /> },
 
             { path: "users", element: <UserListPage /> },
             { path: "user-role", element: <UserRolePage /> },

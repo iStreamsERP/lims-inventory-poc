@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 
-const CategoryListPage = () => {
+const ProductCategoryListPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
   const { fetchImageUrl } = useImageAPI();
@@ -118,4 +118,4 @@ const CategoryListPage = () => {
   );
 };
 
-export default CategoryListPage;
+export default ProductCategoryListPage;

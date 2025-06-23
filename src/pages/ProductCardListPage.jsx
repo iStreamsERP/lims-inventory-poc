@@ -136,7 +136,7 @@ export default function ProductCardListPage() {
                   </div>
                   <CardContent className="p-4">
                     {product.subProductCount > 0 && (
-                      <p className="mb-2 cursor-pointer text-sm text-blue-600 underline">+{product.subProductCount} other color/pattern</p>
+                      <p className="mb-2 text-sm text-blue-600 underline">{product.subProductCount} other color/pattern</p>
                     )}
                     <div className="flex h-full flex-col justify-between">
                       <h2 className="mb-2 line-clamp-2 truncate text-sm leading-snug group-hover:underline" title={product.ITEM_NAME}>{product.ITEM_NAME}</h2>
