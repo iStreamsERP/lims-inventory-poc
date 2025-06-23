@@ -11,7 +11,7 @@ import { BarChart, DollarSign, Handshake, IndianRupee, TrendingUp } from "lucide
 const data = [
     {
         title: "Total Revenue",
-        value: "$45,231.89",
+        value: "₹45,231.89",
         percentage: "20.1%",
         icon: <IndianRupee size={18} color="green" />
     },
