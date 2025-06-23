@@ -1,12 +1,11 @@
+import { callSoapService } from "@/api/callSoapService";
 import CartItemImage from "@/components/CartItemImage";
 import OrderSummary from "@/components/OrderSummary";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/api/callSoapService";
-import { updateItemQuantity, removeItem } from "@/slices/cartSlice";
+import { removeItem, updateItemQuantity } from "@/slices/cartSlice";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { Minus, MoveRight, Plus, X } from "lucide-react";
