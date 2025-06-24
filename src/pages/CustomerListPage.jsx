@@ -25,7 +25,6 @@ const CustomerListPage = () => {
 
   const { userData } = useAuth();
   const { toast } = useToast();
-  const { deleteImage } = useImageAPI();
   const navigate = useNavigate();
 
   const fetchAllCustomersData = useCallback(async () => {
@@ -80,7 +79,7 @@ const CustomerListPage = () => {
         setLoading(false);
       }
     },
-    [userData, toast, deleteImage],
+    [userData, toast],
   );
 
   const columns = [

@@ -26,26 +26,26 @@ const ServiceListPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const fetchAllServicesData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        DataModelName: "INVT_MATERIAL_MASTER",
+        WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
+        Orderby: "ITEM_CODE DESC",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      setTableList(response);
+    } catch (error) {
+      setError(error?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAllServicesData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const payload = {
-          DataModelName: "INVT_MATERIAL_MASTER",
-          WhereCondition: "COST_CODE = 'MXXXX' AND ITEM_GROUP = 'SERVICE'",
-          Orderby: "ITEM_CODE DESC",
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
-        setTableList(response);
-      } catch (error) {
-        setError(error?.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAllServicesData();
   }, [userData]);
 
