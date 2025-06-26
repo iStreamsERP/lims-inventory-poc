@@ -37,12 +37,12 @@ const OrderList = () => {
     setLoading(true);
     try {
       const payload = {
-        SQLQuery: `SELECT * FROM SALES_ORDER_MASTER WHERE ${
-          isQuotation ? "QUOTATION_NO IS NOT NULL AND QUOTATION_NO != ''" : "ORDER_NO IS NOT NULL AND ORDER_NO != ''"
-        } ORDER BY SALES_ORDER_SERIAL_NO DESC`,
+        DataModelName: "SALES_ORDER_MASTER",
+        WhereCondition: `${isQuotation ? "QUOTATION_NO IS NOT NULL AND QUOTATION_NO != ''" : "ORDER_NO IS NOT NULL AND ORDER_NO != ''"}`,
+        Orderby: "SALES_ORDER_SERIAL_NO DESC",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
       setTableList(response || []);
     } catch (error) {
       setError(error.message);

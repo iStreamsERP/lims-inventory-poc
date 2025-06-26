@@ -1,14 +1,12 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/utils/formatPrice";
-import { ArrowLeft } from "lucide-react";
 
-export default function ReceiptTab({ orderForm, paymentMethod, orderItems, orderTotals, orderId, orderDate, goToPrev, navigate }) {
+export default function ReceiptTab({ orderForm, paymentMethod, orderItems, orderTotals, navigate }) {
   return (
     <Card>
-      <CardHeader className="bg-green-50">
+      <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-green-800">Order Confirmed!</CardTitle>
@@ -24,11 +22,11 @@ export default function ReceiptTab({ orderForm, paymentMethod, orderItems, order
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Order ID:</span>
-                <span>#{orderId || "155244371"}</span>
+                <span>{orderForm?.ORDER_NO || "Pending"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Date:</span>
-                <span>{orderDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
+                <span>{orderForm?.ORDER_DATE}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>
@@ -65,12 +63,14 @@ export default function ReceiptTab({ orderForm, paymentMethod, orderItems, order
             <h3 className="mb-3 border-b pb-2 text-lg font-semibold">Delivery Address</h3>
             <div className="text-sm">
               <p>{orderForm?.DELIVERY_ADDRESS}</p>
+              {orderForm?.DELIVERY_CONTACT_PERSON && <p>Contact: {orderForm.DELIVERY_CONTACT_PERSON}</p>}
+              {orderForm?.DELIVERY_CONTACT_NO && <p>Phone: {orderForm.DELIVERY_CONTACT_NO}</p>}
             </div>
           </div>
         </div>
 
         <div className="mt-8 overflow-hidden rounded-lg border">
-          <div className="border-b bg-gray-50 p-4">
+          <div className="border-b p-4">
             <h3 className="font-semibold">Order Summary</h3>
           </div>
           <div className="p-4 text-sm">
@@ -86,9 +86,9 @@ export default function ReceiptTab({ orderForm, paymentMethod, orderItems, order
               >
                 <div className="flex justify-between">
                   <span>
-                    {item.itemName || item.ITEM_NAME} × {item.itemQty}
+                    {item.DESCRIPTION} × {item.QTY}
                   </span>
-                  <span>{formatPrice(item.finalSaleRate * item.itemQty)}</span>
+                  <span>{formatPrice(item.RATE * item.QTY)}</span>
                 </div>
               </div>
             ))}
@@ -96,16 +96,20 @@ export default function ReceiptTab({ orderForm, paymentMethod, orderItems, order
             <div className="space-y-2 pt-4">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{formatPrice(orderTotals.subtotal)}</span>
+                <span>{formatPrice(orderTotals.totalValue)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
                 <span className="text-green-600">-{formatPrice(orderTotals.discountValue)}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Tax (18%)</span>
+                <span>{formatPrice(orderTotals.gstAmount)}</span>
+              </div>
 
               <div className="flex justify-between border-t pt-3 text-lg font-bold">
                 <span>Total</span>
-                <span>{formatPrice(orderTotals.orderTotal)}</span>
+                <span>{formatPrice(orderTotals.totalPayable)}</span>
               </div>
             </div>
           </div>

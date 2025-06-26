@@ -34,12 +34,17 @@ import UserPreferences from "./pages/userPreferences/UserPreferences";
 import UserRolePage from "./pages/UserRolePage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import PhoneAuth from "./PhoneAuth";
 
 const App = () => {
   const router = createBrowserRouter([
     {
       path: "/login",
       element: <LoginFormPage />,
+    },
+    {
+      path: "/phone",
+      element: <PhoneAuth />,
     },
     {
       path: "/signup",

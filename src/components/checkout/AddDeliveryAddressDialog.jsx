@@ -1,20 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Navigation, Loader2, RefreshCw, Search, CheckCircle, AlertCircle, X } from "lucide-react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "leaflet-geosearch/dist/geosearch.css";
+import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
 import MapLocationPicker from "../MapLocationPicker";
 import { State } from "country-state-city";
-import { useAuth } from "@/contexts/AuthContext";
-import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { callSoapService } from "@/api/callSoapService";
 
 // Fix leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -24,14 +17,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-export default function AddDeliveryAddressDialog({
-  isNewAddressDialogOpen,
-  setIsNewAddressDialogOpen,
-  countries,
-  orderForm,
-  fetchPreviousAddresses,
-}) {
-  const { userData } = useAuth();
+export default function AddDeliveryAddressDialog({ isNewAddressDialogOpen, setIsNewAddressDialogOpen, countries, onSave }) {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
@@ -40,6 +26,7 @@ export default function AddDeliveryAddressDialog({
   const [newAddressForm, setNewAddressForm] = useState(initialNewAddressForm());
   const [isNewAddressLocating, setIsNewAddressLocating] = useState(false);
   const [newAddressLocationError, setNewAddressLocationError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Validate form fields
   const validateForm = () => {
@@ -80,7 +67,6 @@ export default function AddDeliveryAddressDialog({
           const { latitude, longitude } = position.coords;
           const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await response.json();
-          console.log(data);
 
           if (data.address) {
             const addr = data.address;
@@ -92,9 +78,10 @@ export default function AddDeliveryAddressDialog({
               .filter(Boolean)
               .join(", ");
 
-            setNewAddressForm((prev) => ({
-              ...prev,
+            setNewAddressForm({
               address: fullAddress,
+              streetAddress: [addr.road, addr.house_number].filter(Boolean).join(" "),
+              neighborhood: addr.neighbourhood || addr.suburb || "",
               country: country?.name || "",
               state: state?.name || "",
               city: city || "",
@@ -102,7 +89,7 @@ export default function AddDeliveryAddressDialog({
               GPS_LOCATION: `${latitude}, ${longitude}`,
               GPS_LATITUDE: latitude.toString(),
               GPS_LONGITUDE: longitude.toString(),
-            }));
+            });
           }
         } catch (error) {
           setNewAddressLocationError("Failed to fetch address details");
@@ -129,31 +116,30 @@ export default function AddDeliveryAddressDialog({
           ? `${detailedAddress.streetNumber} ${detailedAddress.route}`
           : detailedAddress.route || "";
 
-      handleNewAddressChange("address", fullAddress);
-      handleNewAddressChange("streetAddress", streetAddress);
-      handleNewAddressChange("neighborhood", detailedAddress.neighborhood || "");
-      handleNewAddressChange("city", detailedAddress.city || "");
-      handleNewAddressChange("state", detailedAddress.state || "");
-      handleNewAddressChange("zipCode", detailedAddress.zipCode || "");
-
-      // Auto-select country if found in our list
-      const foundCountry = countries.find((c) => c.name.toLowerCase().includes(detailedAddress.country?.toLowerCase() || ""));
-      if (foundCountry) {
-        handleNewAddressChange("country", foundCountry.name);
-      }
+      setNewAddressForm((prev) => ({
+        ...prev,
+        address: fullAddress,
+        streetAddress: streetAddress,
+        neighborhood: detailedAddress.neighborhood || "",
+        city: detailedAddress.city || "",
+        state: detailedAddress.state || "",
+        zipCode: detailedAddress.zipCode || "",
+        country: countries.find((c) => c.name.toLowerCase().includes(detailedAddress.country?.toLowerCase() || ""))?.name || prev.country,
+        GPS_LOCATION: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : "",
+        GPS_LATITUDE: coordinates?.lat.toString() || "",
+        GPS_LONGITUDE: coordinates?.lng.toString() || "",
+      }));
 
       setLocationAccuracy("high");
     } else {
-      handleNewAddressChange("address", address);
+      setNewAddressForm((prev) => ({
+        ...prev,
+        address: address,
+        GPS_LOCATION: coordinates ? `${coordinates.lat}, ${coordinates.lng}` : "",
+        GPS_LATITUDE: coordinates?.lat.toString() || "",
+        GPS_LONGITUDE: coordinates?.lng.toString() || "",
+      }));
       setLocationAccuracy("medium");
-    }
-
-    if (coordinates) {
-      const { lat, lng } = coordinates;
-
-      handleNewAddressChange("GPS_LOCATION", `${lat}, ${lng}`);
-      handleNewAddressChange("GPS_LATITUDE", lat.toString());
-      handleNewAddressChange("GPS_LONGITUDE", lng.toString());
     }
 
     setSelectedMapLocation(coordinates);
@@ -161,68 +147,43 @@ export default function AddDeliveryAddressDialog({
     setValidationErrors({});
   };
 
-  const handleUseMapPicker = () => {
-    setIsMapOpen(true);
-  };
+  const handleSaveWithValidation = async () => {
+    if (!validateForm()) return;
 
-  const handleSaveWithValidation = () => {
-    if (validateForm()) {
-      handleSaveNewAddress();
+    setIsSaving(true);
+    try {
+      await onSave({
+        DELIVERY_ADDRESS: newAddressForm.address,
+        GPS_LOCATION: newAddressForm.GPS_LOCATION,
+        GPS_LATITUDE: newAddressForm.GPS_LATITUDE,
+        GPS_LONGITUDE: newAddressForm.GPS_LONGITUDE,
+      });
+
+      // Reset form on successful save
+      setNewAddressForm(initialNewAddressForm());
+      setSelectedMapLocation(null);
+      setLocationAccuracy(null);
+      setIsNewAddressDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to save address:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleFieldChange = (field, value) => {
-    handleNewAddressChange(field, value);
-    // Clear validation error for this field when user starts typing
+    setNewAddressForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({
         ...prev,
         [field]: undefined,
       }));
     }
-  };
-
-  const handleNewAddressChange = (field, value) => {
-    setNewAddressForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSaveNewAddress = async () => {
-    try {
-      const salesOrderPayload = {
-        UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
-          ...orderForm,
-          DELIVERY_ADDRESS: newAddressForm.address,
-          GPS_LOCATION: newAddressForm.GPS_LOCATION,
-          GPS_LATITUDE: newAddressForm.GPS_LATITUDE,
-          GPS_LONGITUDE: newAddressForm.GPS_LONGITUDE,
-        }),
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", salesOrderPayload);
-
-      // ✅ Fetch updated addresses
-      if (typeof fetchPreviousAddresses === "function") {
-        fetchPreviousAddresses();
-      }
-    } catch (error) {
-      console.error("Failed to save to SALES_ORDER_MASTER:", error);
-    }
-
-    setIsNewAddressDialogOpen(false);
-    setNewAddressForm({
-      address: "",
-      country: "",
-      state: "",
-      city: "",
-      zipCode: "",
-      GPS_LOCATION: "",
-      GPS_LATITUDE: "",
-      GPS_LONGITUDE: "",
-    });
   };
 
   return (
@@ -255,10 +216,10 @@ export default function AddDeliveryAddressDialog({
                   type="button"
                   variant="outline"
                   className="flex h-8 items-center justify-center gap-2"
-                  onClick={handleUseMapPicker}
+                  onClick={() => setIsMapOpen(true)}
                 >
                   <MapPin className="h-4 w-4" />
-                  Pick
+                  Pick on Map
                 </Button>
               </div>
             </DialogTitle>
@@ -268,20 +229,20 @@ export default function AddDeliveryAddressDialog({
             className="space-y-2 overflow-y-auto p-1"
             style={{ maxHeight: "calc(95vh - 140px)" }}
           >
-            {/* Location Picker Buttons */}
-            <div className="space-y-2">
-              {newAddressLocationError && (
-                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-600">{newAddressLocationError}</p>
-                </div>
-              )}
-            </div>
+            {/* Location Error */}
+            {newAddressLocationError && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <p className="text-sm text-red-600">{newAddressLocationError}</p>
+              </div>
+            )}
 
             {/* Location Accuracy Indicator */}
             {locationAccuracy && (
               <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <div className="text-green-600">
+                  <MapPin className="h-4 w-4" />
+                </div>
                 <div>
                   <p className="text-sm font-medium text-green-800">
                     {locationAccuracy === "high" ? "Exact Location Selected" : "Location Selected"}
@@ -367,14 +328,7 @@ export default function AddDeliveryAddressDialog({
                   </Label>
                   <Select
                     value={newAddressForm.country}
-                    onValueChange={(value) => {
-                      handleFieldChange("country", value);
-                      // Reset dependent fields when country changes
-                      if (newAddressForm.country !== value) {
-                        handleFieldChange("state", "");
-                        handleFieldChange("city", "");
-                      }
-                    }}
+                    onValueChange={(value) => handleFieldChange("country", value)}
                   >
                     <SelectTrigger className={validationErrors.country ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select Country" />
@@ -390,6 +344,7 @@ export default function AddDeliveryAddressDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {validationErrors.country && <p className="mt-1 text-sm text-red-600">{validationErrors.country}</p>}
                 </div>
 
                 <div>
@@ -397,7 +352,7 @@ export default function AddDeliveryAddressDialog({
                   <Input
                     id="new-zip"
                     value={newAddressForm.zipCode}
-                    onChange={(e) => handleNewAddressChange("zipCode", e.target.value)}
+                    onChange={(e) => handleFieldChange("zipCode", e.target.value)}
                     placeholder="Enter ZIP or postal code"
                   />
                 </div>
@@ -409,10 +364,23 @@ export default function AddDeliveryAddressDialog({
             <Button
               variant="outline"
               onClick={() => setIsNewAddressDialogOpen(false)}
+              disabled={isSaving}
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveWithValidation}>Save Address</Button>
+            <Button
+              onClick={handleSaveWithValidation}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Address"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -430,6 +398,8 @@ export default function AddDeliveryAddressDialog({
 function initialNewAddressForm() {
   return {
     address: "",
+    streetAddress: "",
+    neighborhood: "",
     country: "",
     state: "",
     city: "",

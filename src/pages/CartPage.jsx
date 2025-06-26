@@ -1,6 +1,6 @@
 import { callSoapService } from "@/api/callSoapService";
 import CartItemImage from "@/components/CartItemImage";
-import OrderSummary from "@/components/OrderSummary";
+import OrderSummaryCard from "@/components/checkout/OrderSummaryCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,7 @@ import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { Minus, MoveRight, Plus, X } from "lucide-react";
 import { toWords } from "number-to-words";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -58,72 +58,87 @@ const CartPage = () => {
     ENT_DATE: "",
   });
 
-  const [detailsFormData, setDetailsFormData] = useState({
-    COMPANY_CODE: 1,
-    BRANCH_CODE: 1,
-    SALES_ORDER_SERIAL_NO: masterFormData.SALES_ORDER_SERIAL_NO,
-    ORDER_NO: "",
-    ORDER_DATE: new Date().toISOString().split("T")[0],
-    SERIAL_NO: -1,
-    ITEM_CODE: "",
-    SUB_MATERIAL_NO: "",
-    DESCRIPTION: "",
-    UOM_SALES: "",
-    UOM_STOCK: "",
-    CONVERSION_RATE: 1,
-    QTY: 0,
-    QTY_STOCK: 0,
-    CONVRATE_TO_MASTER: 0,
-    QTY_TO_MASTER: 0,
-    RATE: 0,
-    VALUE: 0,
-    DISCOUNT_VALUE: 0,
-    DISCOUNT_RATE: 0,
-    NET_VALUE: 0,
-    VALUE_IN_LC: 0,
-    DELETED_STATUS: 0,
-    USER_NAME: userData.userEmail,
-    ENT_DATE: "",
-    TRANSPORT_CHARGE: "",
-  });
+  // Calculate cart totals
+  const { totalItem, totalValue } = useMemo(() => {
+    const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
+    const totalValue = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
+    return { totalItem, totalValue };
+  }, [cart]);
 
-  // Cart totals
-  const totalItem = cart.reduce((sum, i) => sum + i.itemQty, 0);
-  const subtotal = cart.reduce((sum, i) => sum + i.finalSaleRate * i.itemQty, 0);
-  const discount = masterFormData.DISCOUNT_VALUE;
-  const total = subtotal - discount;
+  // Get order category from cart items
+  const getOrderCategory = useCallback(() => {
+    const categories = [...new Set(cart.map((item) => item.ITEM_GROUP))];
+    return categories.length === 1 ? categories[0] : "ALL";
+  }, [cart]);
 
-  const getOrderCategoryFromCart = () => {
-    const categories = cart.map((item) => item.ITEM_GROUP);
-    const category = Array.from(new Set(categories));
+  // Prepare master data for checkout
+  const prepareMasterData = useCallback(() => {
+    return {
+      ...masterFormData,
+      TOTAL_VALUE: totalValue,
+      NET_VALUE: totalValue, // Assuming no discounts
+      ORDER_CATEGORY: getOrderCategory(),
+      AMOUNT_IN_WORDS: toWords(Number(totalValue)),
+    };
+  }, [masterFormData, totalValue, getOrderCategory]);
 
-    if (category.length === 1) {
-      return category[0];
-    }
-    return "ALL";
-  };
+  // Prepare detail data for a cart item
+  const prepareDetailData = useCallback(
+    (item, newSerialNo, masterData) => {
+      const lineValue = item.finalSaleRate * item.itemQty;
 
-  useEffect(() => {
-    setMasterFormData((fd) => ({
-      ...fd,
-      TOTAL_VALUE: subtotal,
-      NET_VALUE: total,
-      ORDER_CATEGORY: getOrderCategoryFromCart(),
-      AMOUNT_IN_WORDS: toWords(Number(total)),
-    }));
-  }, [subtotal, cart, total]);
+      return {
+        COMPANY_CODE: masterData.COMPANY_CODE,
+        BRANCH_CODE: masterData.BRANCH_CODE,
+        SALES_ORDER_SERIAL_NO: newSerialNo,
+        ORDER_NO: masterData.ORDER_NO,
+        ORDER_DATE: masterData.ORDER_DATE,
+        SERIAL_NO: -1,
+        ITEM_CODE: item.ITEM_CODE,
+        SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
+        DESCRIPTION: item.ITEM_NAME,
+        UOM_SALES: item.UOM_STOCK,
+        UOM_STOCK: item.UOM_STOCK,
+        CONVERSION_RATE: 1,
+        QTY: item.itemQty,
+        QTY_STOCK: item.itemQty,
+        CONVRATE_TO_MASTER: 1,
+        QTY_TO_MASTER: item.itemQty,
+        RATE: item.finalSaleRate,
+        VALUE: lineValue,
+        DISCOUNT_VALUE: 0,
+        DISCOUNT_RATE: 0,
+        NET_VALUE: lineValue,
+        VALUE_IN_LC: lineValue,
+        TRANSPORT_CHARGE: 0,
+        DELETED_STATUS: "F",
+        USER_NAME: userData.userEmail,
+        ENT_DATE: "",
+      };
+    },
+    [userData],
+  );
 
-  const handleProceedToCheckout = async () => {
+  // Save order details
+  const saveOrderDetails = useCallback(
+    async (cart, newSerialNo, masterData) => {
+      for (const item of cart) {
+        const detailModel = prepareDetailData(item, newSerialNo, masterData);
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
+        };
+        await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+      }
+    },
+    [prepareDetailData, userData],
+  );
+
+  // Handle checkout process
+  const handleProceedToCheckout = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Update masterFormData with latest values before saving
-      const updatedMasterData = {
-        ...masterFormData,
-        TOTAL_VALUE: subtotal,
-        NET_VALUE: total,
-        AMOUNT_IN_WORDS: toWords(Number(total)),
-      };
+      const updatedMasterData = prepareMasterData();
 
       const payload = {
         UserName: userData.userEmail,
@@ -131,71 +146,21 @@ const CartPage = () => {
       };
 
       const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
       const m = response.match(/Serial No\s*'(\d+)'/);
       const newSerialNo = m ? parseInt(m[1], 10) : null;
-
-      if (typeof response === "string" && response.trim().startsWith("Error")) {
-        throw new Error(response);
-      }
 
       if (!newSerialNo) {
         throw new Error("Could not parse new order serial number from response");
       }
 
-      // Save each cart item as a DETAIL record
-      for (let i = 0; i < cart.length; i++) {
-        const item = cart[i];
-        const lineValue = item.finalSaleRate * item.itemQty;
-
-        const detailModel = {
-          ...detailsFormData,
-          COMPANY_CODE: updatedMasterData.COMPANY_CODE,
-          BRANCH_CODE: updatedMasterData.BRANCH_CODE,
-          SALES_ORDER_SERIAL_NO: newSerialNo,
-          ORDER_NO: updatedMasterData.ORDER_NO,
-          ORDER_DATE: updatedMasterData.ORDER_DATE,
-          SERIAL_NO: -1,
-          ITEM_CODE: item.ITEM_CODE,
-          SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
-          DESCRIPTION: item.ITEM_NAME,
-          UOM_SALES: item.UOM_STOCK,
-          UOM_STOCK: item.UOM_STOCK,
-          CONVERSION_RATE: 1,
-          QTY: item.itemQty,
-          QTY_STOCK: item.itemQty,
-          CONVRATE_TO_MASTER: 1,
-          QTY_TO_MASTER: item.itemQty,
-          RATE: item.finalSaleRate,
-          VALUE: lineValue,
-          DISCOUNT_VALUE: 0,
-          DISCOUNT_RATE: 0,
-          NET_VALUE: lineValue,
-          VALUE_IN_LC: lineValue,
-          TRANSPORT_CHARGE: 0,
-          DELETED_STATUS: "F",
-          USER_NAME: userData.userEmail,
-          ENT_DATE: "",
-        };
-
-        const detailPayload = {
-          UserName: userData.userEmail,
-          DModelData: convertDataModelToStringData("SALES_ORDER_DETAILS", detailModel),
-        };
-
-        await callSoapService(userData.clientURL, "DataModel_SaveData", detailPayload);
-      }
+      await saveOrderDetails(cart, newSerialNo, updatedMasterData);
 
       toast({
         title: "Order created Successfully",
         description: `Order #${newSerialNo} has been saved`,
       });
 
-      navigate("/proceed-to-check", {
-        state: {
-          newSerialNo,
-        },
-      });
+      navigate("/proceed-to-check", { state: { newSerialNo } });
     } catch (error) {
       console.error(error);
       toast({
@@ -206,7 +171,7 @@ const CartPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [prepareMasterData, saveOrderDetails, cart, userData, navigate, toast]);
 
   return (
     <div className="grid gap-8">
@@ -302,13 +267,11 @@ const CartPage = () => {
 
         {/* Order Summary */}
         <div className="col-span-2 space-y-4 lg:col-span-1">
-          <OrderSummary
+          <OrderSummaryCard
+            itemCount={totalItem}
+            totalValue={totalValue}
+            totalPayable={totalValue}
             isViewMode={false}
-            totalItem={totalItem}
-            subtotal={subtotal}
-            discount={discount}
-            total={total}
-            isLoading={loading}
             onProceed={handleProceedToCheckout}
           />
         </div>

@@ -1,4 +1,3 @@
-import OrderSummary from "@/components/OrderSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -20,9 +19,10 @@ import { Check, ChevronsUpDown, Settings2, Trash2 } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import OrderSummaryCard from "@/components/checkout/OrderSummaryCard";
 
 const OrderFormPage = () => {
-    const { id } = useParams();
+  const { id } = useParams();
   const { userData } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,41 +53,44 @@ const OrderFormPage = () => {
   const docTypeLabel = isQuotation ? "Quotation" : "Order";
 
   // Memoize initial form data to prevent unnecessary re-renders
-  const initialMasterFormData = useMemo(() => ({
-    COMPANY_CODE: userData?.companyCode || "",
-    BRANCH_CODE: userData?.branchCode || "",
-    SALES_ORDER_SERIAL_NO: -1,
-    ORDER_NO: "ORDER-" + new Date().getTime(),
-    ORDER_DATE: new Date().toISOString().split("T")[0],
-    QUOTATION_NO: "QUOTATION-" + new Date().getTime(),
-    QUOTATION_DATE: new Date().toISOString().split("T")[0],
-    CLIENT_ID: null,
-    CLIENT_NAME: "",
-    CLIENT_ADDRESS: "",
-    CLIENT_CONTACT: "",
-    EMP_NO: userData?.userEmployeeNo || "",
-    ORDER_CATEGORY: "",
-    TOTAL_VALUE: 0,
-    DISCOUNT_VALUE: 0,
-    NET_VALUE: 0,
-    AMOUNT_IN_WORDS: "",
-    CURRENCY_NAME: "Rupees",
-    NO_OF_DECIMALS: 0,
-    EXCHANGE_RATE: 0,
-    ORDER_VALUE_IN_LC: 0,
-    MODE_OF_PAYMENT: "",
-    CREDIT_DAYS: 0,
-    ADVANCE_AMOUNT: 0,
-    MODE_OF_TRANSPORT: "",
-    DELIVERY_DATE: "",
-    DELIVERY_ADDRESS: "",
-    TERMS_AND_CONDITIONS: "",
-    DELETED_STATUS: "F",
-    DELETED_DATE: "",
-    DELETED_USER: "",
-    USER_NAME: userData?.userEmail || "",
-    ENT_DATE: "",
-  }), [userData]);
+  const initialMasterFormData = useMemo(
+    () => ({
+      COMPANY_CODE: userData?.companyCode || "",
+      BRANCH_CODE: userData?.branchCode || "",
+      SALES_ORDER_SERIAL_NO: -1,
+      ORDER_NO: "ORDER-" + new Date().getTime(),
+      ORDER_DATE: new Date().toISOString().split("T")[0],
+      QUOTATION_NO: "QUOTATION-" + new Date().getTime(),
+      QUOTATION_DATE: new Date().toISOString().split("T")[0],
+      CLIENT_ID: null,
+      CLIENT_NAME: "",
+      CLIENT_ADDRESS: "",
+      CLIENT_CONTACT: "",
+      EMP_NO: userData?.userEmployeeNo || "",
+      ORDER_CATEGORY: "",
+      TOTAL_VALUE: 0,
+      DISCOUNT_VALUE: 0,
+      NET_VALUE: 0,
+      AMOUNT_IN_WORDS: "",
+      CURRENCY_NAME: "Rupees",
+      NO_OF_DECIMALS: 0,
+      EXCHANGE_RATE: 0,
+      ORDER_VALUE_IN_LC: 0,
+      MODE_OF_PAYMENT: "",
+      CREDIT_DAYS: 0,
+      ADVANCE_AMOUNT: 0,
+      MODE_OF_TRANSPORT: "",
+      DELIVERY_DATE: "",
+      DELIVERY_ADDRESS: "",
+      TERMS_AND_CONDITIONS: "",
+      DELETED_STATUS: "F",
+      DELETED_DATE: "",
+      DELETED_USER: "",
+      USER_NAME: userData?.userEmail || "",
+      ENT_DATE: "",
+    }),
+    [userData],
+  );
 
   // Master Form state
   const [masterFormData, setMasterFormData] = useState(initialMasterFormData);
@@ -127,7 +130,7 @@ const OrderFormPage = () => {
     const totalItem = tableData.length;
     const subtotal = tableData.reduce((sum, item) => {
       const rate = item.SALE_RATE || item.RATE || 0;
-      return sum + (item.QTY * rate);
+      return sum + item.QTY * rate;
     }, 0);
     const discount = tableData.reduce((sum, item) => sum + (item.DISCOUNT_VALUE || 0), 0);
     const total = subtotal - discount;
@@ -148,7 +151,7 @@ const OrderFormPage = () => {
 
     const totalValue = tableData.reduce((sum, item) => {
       const rate = item.SALE_RATE || item.RATE || 0;
-      return sum + (item.QTY * rate);
+      return sum + item.QTY * rate;
     }, 0);
     const totalDiscount = tableData.reduce((sum, item) => sum + (item.DISCOUNT_VALUE || 0), 0);
     const netValue = totalValue - totalDiscount;
@@ -377,7 +380,7 @@ const OrderFormPage = () => {
           >
             <div className="text-right">
               <div>{(row.original.DISCOUNT_VALUE || 0).toFixed(2)}</div>
-              <div className="text-xs text-red-500">({(row.original.DISCOUNT_PERCENTAGE || 0)}%)</div>
+              <div className="text-xs text-red-500">({row.original.DISCOUNT_PERCENTAGE || 0}%)</div>
             </div>
           </Button>
         </DialogTrigger>
@@ -673,8 +676,7 @@ const OrderFormPage = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <div className="flex justify-end">
-      </div>
+      <div className="flex justify-end"></div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         {/* Main form */}
         <Card className="col-span-12 lg:col-span-9">
@@ -924,7 +926,7 @@ const OrderFormPage = () => {
 
         {/* Sidebar */}
         <div className="col-span-12 space-y-4 lg:col-span-3">
-          <OrderSummary
+          <OrderSummaryCard
             isViewMode={isViewMode}
             totalItem={totalItem}
             subtotal={subtotal}

@@ -13,23 +13,14 @@ export default function DeliveryInfoCard({
   selectedAddress,
   setSelectedAddress,
   setIsNewAddressDialogOpen,
-  orderForm,
+  onSelectAddress,
 }) {
-  const { userData } = useAuth();
   const [loadingAddress, setLoadingAddress] = useState(null);
 
-  const handleSubmitAddress = async (address) => {
+  const handleAddressSelect = async (address) => {
     setLoadingAddress(address);
     try {
-      const payload = {
-        UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
-          SALES_ORDER_SERIAL_NO: orderForm.SALES_ORDER_SERIAL_NO,
-          DELIVERY_ADDRESS: address,
-        }),
-      };
-
-      const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+      await onSelectAddress(address);
     } catch (error) {
       console.error("Failed to save billing details:", error);
       toast({
@@ -63,11 +54,11 @@ export default function DeliveryInfoCard({
           {isLoadingAddresses ? (
             <p className="text-sm text-gray-500">Loading addresses...</p>
           ) : previousAddresses.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {previousAddresses.map((address, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between rounded border p-3"
+                  className="flex items-center justify-between rounded border p-2 transition-colors hover:bg-gray-100"
                 >
                   <div className="flex items-center">
                     <input
@@ -75,25 +66,19 @@ export default function DeliveryInfoCard({
                       id={`address-${index}`}
                       name="delivery-address"
                       checked={selectedAddress === address}
-                      onChange={() => setSelectedAddress(address)}
-                      className="mr-3 h-4 w-4"
+                      onChange={() => {
+                        setSelectedAddress(address);
+                        handleAddressSelect(address);
+                      }}
+                      className="mr-1 h-4 w-4"
                     />
                     <label
                       htmlFor={`address-${index}`}
                       className="text-sm"
                     >
-                      {address}
+                      {loadingAddress === address ? <p>Loading...</p> : address}
                     </label>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setSelectedAddress(address);
-                      handleSubmitAddress(address);
-                    }}
-                  >
-                    {loadingAddress === address ? <ClipLoader size={16} /> : "Deliver Here"}
-                  </Button>
                 </div>
               ))}
             </div>

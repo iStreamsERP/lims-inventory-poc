@@ -87,7 +87,7 @@ export default function ConfirmationTab({
                   <span>
                     {item.itemName || item.ITEM_NAME} × {item.itemQty}
                   </span>
-                  <span className="font-medium">{formatPrice(item.finalSaleRate * item.itemQty)}</span>
+                  <span className="font-medium">{formatPrice(item?.finalSaleRate * item.itemQty)}</span>
                 </div>
               ))}
             </div>

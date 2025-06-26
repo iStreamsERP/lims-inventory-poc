@@ -1,9 +1,7 @@
 import { callSoapService } from "@/api/callSoapService";
 import AddDeliveryAddressDialog from "@/components/checkout/AddDeliveryAddressDialog";
 import BillingInfoCard from "@/components/checkout/BillingInfoCard";
-import ConfirmationTab from "@/components/checkout/ConfirmationTab";
 import CustomerSelector from "@/components/checkout/CustomerSelector";
-import DeliveryAddressDialog from "@/components/checkout/DeliveryAddressDialog";
 import DeliveryInfoCard from "@/components/checkout/DeliveryInfoCard";
 import OrderSummaryCard from "@/components/checkout/OrderSummaryCard";
 import PaymentMethodCard from "@/components/checkout/PaymentMethodCard";
@@ -12,23 +10,27 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { fetchOrderDetails } from "@/services/orderService";
+import { fetchClientDetails, fetchOrderDetails, fetchOrderMaster } from "@/services/orderService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { City, Country, State } from "country-state-city";
-import { ArrowRight, ClipboardCheck, CreditCard, ShoppingCart } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, CreditCard, ShoppingCart } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function ProceedToCheckPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { userData } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const salesOrderSerialNo = location.state?.newSerialNo || "";
 
   // State declarations
+  const [orderForm, setOrderForm] = useState({});
   const [orderItems, setOrderItems] = useState([]);
-  const [openCustomer, setOpenCustomer] = useState(false);
+
+  const [clientDetails, setClientDetails] = useState({});
+  const [selectedClientName, setSelectedClientName] = useState("");
+  const [openClient, setOpenClient] = useState(false);
 
   const [countries] = useState(Country.getAllCountries());
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -38,14 +40,15 @@ export default function ProceedToCheckPage() {
 
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState({ type: "card", cardType: "Visa" });
-  const [orderForm, setOrderForm] = useState(initialOrderForm(userData, salesOrderSerialNo));
-  const [isDeliveryDialogOpen, setIsDeliveryDialogOpen] = useState(false);
   const [isNewAddressDialogOpen, setIsNewAddressDialogOpen] = useState(false);
   const [previousAddresses, setPreviousAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [saveToClientMaster, setSaveToClientMaster] = useState(false);
   const [addBillingToClient, setAddBillingToClient] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
+  const nonCodMethods = useMemo(() => ["wallet", "card", "netbanking"], []);
 
   // Refs and memoized values
   const availableStates = useMemo(() => (selectedCountry ? State.getStatesOfCountry(selectedCountry) : []), [selectedCountry]);
@@ -53,49 +56,171 @@ export default function ProceedToCheckPage() {
     () => (selectedCountry && selectedState ? City.getCitiesOfState(selectedCountry, selectedState) : []),
     [selectedCountry, selectedState],
   );
-  const orderTotals = useMemo(() => calculateOrderTotals(orderItems, orderForm.DISCOUNT_VALUE), [orderItems, orderForm.DISCOUNT_VALUE]);
 
-  // Retrive the order items when the component mounts or salesOrderSerialNo changes
+  const orderTotals = useMemo(
+    () => calculateOrderTotals(orderItems, orderForm.DISCOUNT_VALUE, orderForm.DISCOUNT_PTG, orderForm.TRANSPORT_CHARGE),
+    [orderItems, orderForm.DISCOUNT_VALUE, orderForm.DISCOUNT_PTG, orderForm.TRANSPORT_CHARGE],
+  );
+
   useEffect(() => {
-    const getOrderItems = async () => {
-      if (!salesOrderSerialNo || !userData?.clientURL) return;
-      const items = await fetchOrderDetails(userData.clientURL, salesOrderSerialNo);
-      setOrderItems(items);
-    };
+    setIsPaymentSuccess(false);
+  }, [paymentMethod.type]);
 
-    getOrderItems();
+  // Mock payment function
+  const initiateMockPayment = useCallback(() => {
+    setIsProcessingPayment(true);
+
+    // Simulate API call delay
+    setTimeout(() => {
+      setIsProcessingPayment(false);
+
+      // For demo purposes - 80% success rate
+      const success = Math.random() < 0.8;
+      setIsPaymentSuccess(success);
+
+      if (success) {
+        toast({
+          title: "Payment Successful",
+          description: `Your payment via ${paymentMethod.type === "card" ? paymentMethod.cardType : paymentMethod.type} has been processed`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Payment Failed",
+          description: "Transaction declined. Please try another method",
+        });
+      }
+    }, 2000);
+  }, [toast, paymentMethod]);
+
+  // Retrieve the order data when the component mounts or salesOrderSerialNo changes
+  const getOrderData = async () => {
+    if (!salesOrderSerialNo || !userData?.clientURL) return;
+
+    try {
+      // 1. Fetch master
+      const master = await fetchOrderMaster(userData.clientURL, salesOrderSerialNo);
+      if (!master) {
+        throw new Error("Empty order master response");
+      }
+
+      console.log(master);
+
+      setOrderForm(master);
+      setSelectedAddress(master.DELIVERY_ADDRESS || "");
+      setSelectedClientName(master.CLIENT_NAME || "");
+
+      // 2. Fetch client details if client exists
+      if (master.CLIENT_ID) {
+        const client = await fetchClientDetails(userData.clientURL, master.CLIENT_ID);
+        if (client) {
+          setClientDetails({
+            COUNTRY: client.COUNTRY || "",
+            STATE_NAME: client.STATE_NAME || "",
+            CITY_NAME: client.CITY_NAME || "",
+          });
+
+          // Set country/state from client data
+          const countryObj = countries.find((c) => c.name === client.COUNTRY);
+          if (countryObj) setSelectedCountry(countryObj.isoCode);
+
+          if (client.STATE_NAME && countryObj) {
+            const stateObj = State.getStatesOfCountry(countryObj.isoCode).find((s) => s.name === client.STATE_NAME);
+            if (stateObj) setSelectedState(stateObj.isoCode);
+          }
+
+          // Fetch previous addresses
+          fetchPreviousAddresses(master.CLIENT_ID);
+        }
+      }
+
+      // 3. Fetch details
+      const details = await fetchOrderDetails(userData.clientURL, salesOrderSerialNo);
+      if (!details) {
+        throw new Error("Empty order details response");
+      }
+
+      setOrderItems(details);
+
+      // Fetch previous addresses if client exists
+      if (master.CLIENT_ID) {
+        fetchPreviousAddresses(master.CLIENT_ID);
+      }
+    } catch (error) {
+      console.error("Failed to fetch order data:", error);
+      toast({
+        variant: "destructive",
+        title: "Order Error",
+        description: "Could not load order data",
+      });
+    }
+  };
+
+  useEffect(() => {
+    getOrderData();
   }, [salesOrderSerialNo, userData?.clientURL]);
 
-  // Event handlers
+  const saveOrderForm = useCallback(
+    async (formData) => {
+      if (!formData.SALES_ORDER_SERIAL_NO || formData.SALES_ORDER_SERIAL_NO === -1) return;
+
+      try {
+        const payload = {
+          UserName: userData.userEmail,
+          DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", formData),
+        };
+        await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+        return true;
+      } catch (error) {
+        console.error("Failed to save order form:", error);
+        toast({
+          variant: "destructive",
+          title: "Save Failed",
+          description: "Could not save order data. Please try again.",
+        });
+        return false;
+      }
+    },
+    [userData, toast],
+  );
+
   const handleSelectClient = useCallback(
     async (client) => {
       if (!client) return;
-      setOrderForm((prev) => ({
-        ...prev,
+
+      const newForm = {
+        ...orderForm,
         CLIENT_ID: client?.CLIENT_ID,
         CLIENT_NAME: client?.CLIENT_NAME,
         CLIENT_ADDRESS: client?.INVOICE_ADDRESS || "",
-        CLIENT_CONTACT: client?.TELEPHONE_NO || "",
+        CLIENT_CONTACT_DETAILS: client?.TELEPHONE_NO || "",
         DELIVERY_ADDRESS: client?.DELIVERY_ADDRESS || "",
         EMAIL_ADDRESS: client?.EMAIL_ADDRESS || "",
+      };
+
+      const newClientDetails = {
         COUNTRY: client.COUNTRY || "",
         STATE_NAME: client.STATE_NAME || "",
         CITY_NAME: client.CITY_NAME || "",
-        zipCode: client.zipCode || "",
-      }));
-      setOpenCustomer(false);
+      };
+
+      setOrderForm(newForm);
+      setClientDetails(newClientDetails);
+      await saveOrderForm(newForm);
+      setSelectedClientName(client.CLIENT_NAME);
+      setOpenClient(false);
 
       const selectedCountryObj = countries.find((c) => c.name === client.COUNTRY);
       if (selectedCountryObj) setSelectedCountry(selectedCountryObj.isoCode);
 
-      const selectedStateObj = selectedCountryObj
-        ? State.getStatesOfCountry(selectedCountryObj.isoCode).find((s) => s.name === client.STATE_NAME)
-        : null;
-      if (selectedStateObj) setSelectedState(selectedStateObj.isoCode);
+      if (selectedCountryObj && client.STATE_NAME) {
+        const stateObj = State.getStatesOfCountry(selectedCountryObj.isoCode).find((s) => s.name === client.STATE_NAME);
+        if (stateObj) setSelectedState(stateObj.isoCode);
+      }
 
       await fetchPreviousAddresses(client.CLIENT_ID);
     },
-    [orderForm.CLIENT_ID],
+    [orderForm, saveOrderForm, countries],
   );
 
   const fetchPreviousAddresses = useCallback(
@@ -128,7 +253,7 @@ export default function ProceedToCheckPage() {
   );
 
   const handlePlaceOrder = useCallback(async () => {
-    if (saveToClientMaster && orderForm.CLIENT_ID) {
+    if (orderForm.CLIENT_ID) {
       try {
         const payload = {
           UserName: userData.userEmail,
@@ -140,30 +265,28 @@ export default function ProceedToCheckPage() {
         await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
       } catch (error) {
         console.error("Failed to save delivery address:", error);
+        toast({
+          variant: "destructive",
+          title: "Address Save Failed",
+          description: "Could not save delivery address to client profile",
+        });
       }
     }
 
-    setActiveTab("receipts");
-  }, [saveToClientMaster, orderForm, userData.userEmail, userData.clientURL, salesOrderSerialNo]);
+    // Final save before proceeding
+    const saved = await saveOrderForm(orderForm);
+    if (saved) {
+      setActiveTab("receipts");
+    }
+  }, [orderForm, userData, saveOrderForm]);
 
   const handleBillingSubmit = useCallback(
     async (e) => {
       e.preventDefault();
 
       try {
-        const payload = {
-          UserName: userData.userEmail,
-          DModelData: convertDataModelToStringData("SALES_ORDER_MASTER", {
-            SALES_ORDER_SERIAL_NO: orderForm.SALES_ORDER_SERIAL_NO,
-            CLIENT_ADDRESS: orderForm.CLIENT_ADDRESS,
-          }),
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
-
-        // Update CLIENT_MASTER if requested
         if (addBillingToClient && orderForm.CLIENT_ID) {
-          const clientPayload = {
+          const payload = {
             UserName: userData.userEmail,
             DModelData: convertDataModelToStringData("CLIENT_MASTER", {
               CLIENT_ID: orderForm.CLIENT_ID,
@@ -171,11 +294,17 @@ export default function ProceedToCheckPage() {
               COUNTRY: orderForm.COUNTRY,
               STATE_NAME: orderForm.STATE_NAME,
               CITY_NAME: orderForm.CITY_NAME,
-              zipCode: orderForm.zipCode,
             }),
           };
-          const response = await callSoapService(userData.clientURL, "DataModel_SaveData", clientPayload);
+          await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
         }
+
+        await saveOrderForm(orderForm);
+
+        toast({
+          title: "Billing Updated",
+          description: "Billing information saved successfully",
+        });
       } catch (error) {
         console.error("Failed to save billing details:", error);
         toast({
@@ -187,28 +316,61 @@ export default function ProceedToCheckPage() {
 
       setIsBillingModalOpen(false);
     },
-    [orderForm, userData, addBillingToClient],
+    [orderForm, userData, addBillingToClient, saveOrderForm],
   );
 
-  const handleAddressSelect = useCallback(() => {
-    if (selectedAddress) {
-      setOrderForm((prev) => ({
-        ...prev,
-        DELIVERY_ADDRESS: selectedAddress,
-      }));
-    }
-    setIsDeliveryDialogOpen(false);
-  }, [selectedAddress]);
+  const updateDeliveryAddress = useCallback(
+    async (address) => {
+      let payload = {};
+      if (typeof address === "string") {
+        payload = {
+          DELIVERY_ADDRESS: address,
+          GPS_LOCATION: orderForm.DELIVERY_ADDRESS === address ? orderForm.GPS_LOCATION : "",
+          GPS_LATITUDE: orderForm.DELIVERY_ADDRESS === address ? orderForm.GPS_LATITUDE : "",
+          GPS_LONGITUDE: orderForm.DELIVERY_ADDRESS === address ? orderForm.GPS_LONGITUDE : "",
+        };
+      } else if (typeof address === "object") {
+        payload = {
+          ...address,
+        };
+      }
+
+      const newForm = { ...orderForm, ...payload };
+      setOrderForm(newForm);
+      await saveOrderForm(newForm);
+    },
+    [orderForm, saveOrderForm],
+  );
+
+  const handleSaveNewAddress = useCallback(
+    async (newAddress) => {
+      await updateDeliveryAddress(newAddress);
+      setIsNewAddressDialogOpen(false);
+      if (orderForm.CLIENT_ID) {
+        fetchPreviousAddresses(orderForm.CLIENT_ID);
+      }
+    },
+    [updateDeliveryAddress, orderForm.CLIENT_ID, fetchPreviousAddresses],
+  );
+
+  const canProceedToReceipt = useMemo(() => {
+    const hasPaymentMethod = !!paymentMethod.type;
+    const hasDeliveryAddress = !!orderForm.DELIVERY_ADDRESS;
+    const hasBillingAddress = !!orderForm.CLIENT_ADDRESS;
+    const hasClient = !!orderForm.CLIENT_ID;
+    const isNonCod = nonCodMethods.includes(paymentMethod.type);
+    const paymentOk = isNonCod ? isPaymentSuccess : true;
+
+    return hasPaymentMethod && hasDeliveryAddress && hasBillingAddress && hasClient && paymentOk;
+  }, [paymentMethod, orderForm, isPaymentSuccess]);
 
   // Navigation
   const goToNext = useCallback(() => {
-    if (activeTab === "billing") setActiveTab("confirmation");
-    else if (activeTab === "confirmation") setActiveTab("receipts");
+    if (activeTab === "billing") setActiveTab("receipts");
   }, [activeTab]);
 
   const goToPrev = useCallback(() => {
-    if (activeTab === "confirmation") setActiveTab("billing");
-    else if (activeTab === "receipts") setActiveTab("confirmation");
+    if (activeTab === "receipts") setActiveTab("billing");
     else navigate("/cart-page");
   }, [activeTab, navigate]);
 
@@ -219,18 +381,12 @@ export default function ProceedToCheckPage() {
         onValueChange={setActiveTab}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger
             value="billing"
             className="flex items-center gap-2"
           >
             <CreditCard size={16} /> Bill & Payment
-          </TabsTrigger>
-          <TabsTrigger
-            value="confirmation"
-            className="flex items-center gap-2"
-          >
-            <ClipboardCheck size={16} /> Confirmation
           </TabsTrigger>
           <TabsTrigger
             value="receipts"
@@ -242,19 +398,22 @@ export default function ProceedToCheckPage() {
 
         {/* BILLING TAB */}
         <TabsContent value="billing">
-          <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="flex-1 space-y-4">
+          <div className="flex flex-col gap-2 lg:flex-row">
+            <div className="flex-1 space-y-2">
               <CustomerSelector
-                openCustomer={openCustomer}
-                setOpenCustomer={setOpenCustomer}
+                selectedClientName={selectedClientName}
+                openClient={openClient}
+                setOpenClient={setOpenClient}
                 handleSelectClient={handleSelectClient}
               />
 
               <BillingInfoCard
                 orderForm={orderForm}
+                clientDetails={clientDetails}
                 isBillingModalOpen={isBillingModalOpen}
                 setIsBillingModalOpen={setIsBillingModalOpen}
                 handleBillingChange={(field, value) => setOrderForm((prev) => ({ ...prev, [field]: value }))}
+                handleClientDetailsChange={(field, value) => setClientDetails((prev) => ({ ...prev, [field]: value }))}
                 setSelectedCountry={setSelectedCountry}
                 setSelectedState={setSelectedState}
                 countries={countries}
@@ -270,21 +429,32 @@ export default function ProceedToCheckPage() {
                 isLoadingAddresses={isLoadingAddresses}
                 selectedAddress={selectedAddress}
                 setSelectedAddress={setSelectedAddress}
-                orderForm={orderForm}
                 setIsNewAddressDialogOpen={setIsNewAddressDialogOpen}
+                onSelectAddress={updateDeliveryAddress}
+              />
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <OrderSummaryCard
+                itemCount={orderTotals.itemCount}
+                totalValue={orderTotals.totalValue}
+                discountPercent={orderTotals.discountPercent}
+                discountValue={orderTotals.discountValue}
+                subtotal={orderTotals.subtotal}
+                transportCharges={orderTotals.transportCharges}
+                taxableAmount={orderTotals.taxableAmount}
+                gstRate={orderTotals.gstRate}
+                gstAmount={orderTotals.gstAmount}
+                totalPayable={orderTotals.totalPayable}
+                showCharges={true}
+                isViewMode={true}
               />
 
               <PaymentMethodCard
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
-              />
-            </div>
-
-            <div className="flex-1 space-y-4">
-              <OrderSummaryCard
-                orderItems={orderItems}
-                orderForm={orderForm}
-                orderTotals={orderTotals}
+                initiateMockPayment={initiateMockPayment}
+                isProcessingPayment={isProcessingPayment}
               />
             </div>
           </div>
@@ -297,25 +467,14 @@ export default function ProceedToCheckPage() {
               Back to Cart
             </Button>
             <Button
-              onClick={goToNext}
+              onClick={handlePlaceOrder}
               className="gap-2"
-              disabled={!paymentMethod.type || !orderForm.DELIVERY_ADDRESS}
+              disabled={!canProceedToReceipt || isProcessingPayment}
             >
-              Continue to Confirmation <ArrowRight size={16} />
+              {isProcessingPayment ? "Processing..." : "Place Order"}
+              {!isProcessingPayment && <ArrowRight size={16} />}
             </Button>
           </div>
-        </TabsContent>
-
-        <TabsContent value="confirmation">
-          <ConfirmationTab
-            orderForm={orderForm}
-            paymentMethod={paymentMethod}
-            orderItems={orderItems}
-            orderTotals={orderTotals}
-            handlePlaceOrder={handlePlaceOrder}
-            goToPrev={goToPrev}
-            goToNext={goToNext}
-          />
         </TabsContent>
 
         <TabsContent value="receipts">
@@ -330,74 +489,45 @@ export default function ProceedToCheckPage() {
         </TabsContent>
       </Tabs>
 
-      <DeliveryAddressDialog
-        isDeliveryDialogOpen={isDeliveryDialogOpen}
-        setIsDeliveryDialogOpen={setIsDeliveryDialogOpen}
-        isLoadingAddresses={isLoadingAddresses}
-        previousAddresses={previousAddresses}
-        selectedAddress={selectedAddress}
-        setSelectedAddress={setSelectedAddress}
-        saveToClientMaster={saveToClientMaster}
-        setSaveToClientMaster={setSaveToClientMaster}
-        handleAddressSelect={handleAddressSelect}
-      />
-
       <AddDeliveryAddressDialog
         isNewAddressDialogOpen={isNewAddressDialogOpen}
         setIsNewAddressDialogOpen={setIsNewAddressDialogOpen}
         countries={countries}
         orderForm={orderForm}
         fetchPreviousAddresses={() => fetchPreviousAddresses(orderForm.CLIENT_ID)}
+        onSave={handleSaveNewAddress}
       />
     </div>
   );
 }
 
 // Helper functions
-function initialOrderForm(userData, salesOrderSerialNo) {
-  return {
-    COMPANY_CODE: userData.companyCode,
-    BRANCH_CODE: userData.branchCode,
-    SALES_ORDER_SERIAL_NO: salesOrderSerialNo || -1,
-    ORDER_NO: "",
-    ORDER_DATE: new Date().toISOString().split("T")[0],
-    CLIENT_ID: "",
-    CLIENT_NAME: "",
-    CLIENT_ADDRESS: "",
-    CLIENT_CONTACT: "",
-    INVOICE_ADDRESS: "",
-    EMP_NO: userData?.userEmployeeNo || "",
-    TOTAL_VALUE: 0,
-    DISCOUNT_VALUE: 0,
-    NET_VALUE: 0,
-    CURRENCY_NAME: "Rupees",
-    zipCode: "",
-    EMAIL_ADDRESS: "",
-    COUNTRY: "",
-    STATE_NAME: "",
-    CITY_NAME: "",
-    DELIVERY_ADDRESS: "",
-    DELIVERY_CONTACT_PERSON: "",
-    DELIVERY_CONTACT_NO: "",
-    GPS_LOCATION: "",
-    GPS_LATITUDE: "",
-    GPS_LONGITUDE: "",
-    USER_NAME: userData.userEmail,
-  };
-}
-
-function calculateOrderTotals(orderItems, discountValue) {
-  const subtotal =
+function calculateOrderTotals(orderItems, discountValue, discountPercent, transportCharges) {
+  const totalValue =
     orderItems?.reduce((sum, item) => {
-      const rate = item.NET_VALUE || 0;
+      const rate = item.RATE || 0;
       const qty = item.QTY || 0;
       return sum + rate * qty;
     }, 0) || 0;
 
-  const taxableAmount = subtotal - discountValue;
-  const taxRate = 0.18;
-  const taxAmount = taxableAmount * taxRate;
-  const orderTotal = taxableAmount + taxAmount;
+  const subtotal = totalValue - discountValue;
 
-  return { subtotal, discountValue, taxableAmount, taxAmount, orderTotal };
+  const taxableAmount = subtotal + transportCharges;
+  const gstRate = 0.18;
+  const gstAmount = taxableAmount * gstRate;
+
+  const totalPayable = taxableAmount + gstAmount;
+
+  return {
+    itemCount: orderItems.length,
+    totalValue,
+    discountPercent,
+    discountValue,
+    subtotal,
+    transportCharges,
+    taxableAmount,
+    gstRate,
+    gstAmount,
+    totalPayable,
+  };
 }

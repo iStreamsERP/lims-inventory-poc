@@ -10,9 +10,11 @@ import { Edit } from "lucide-react";
 
 export default function BillingInfoCard({
   orderForm,
+  clientDetails,
   isBillingModalOpen,
   setIsBillingModalOpen,
   handleBillingChange,
+  handleClientDetailsChange,
   setSelectedCountry,
   setSelectedState,
   countries,
@@ -77,11 +79,11 @@ export default function BillingInfoCard({
                     <div>
                       <Label htmlFor="COUNTRY">Country</Label>
                       <Select
-                        value={orderForm.COUNTRY}
+                        value={clientDetails.COUNTRY}
                         onValueChange={(value) => {
                           const countryObj = countries.find((c) => c.name === value);
                           if (countryObj) setSelectedCountry(countryObj.isoCode);
-                          handleBillingChange("COUNTRY", value);
+                          handleClientDetailsChange("COUNTRY", value);
                         }}
                         disabled={true}
                       >
@@ -197,19 +199,6 @@ export default function BillingInfoCard({
           <div className="space-y-2 text-sm">
             <p className="text-lg font-medium">{orderForm.CLIENT_NAME}</p>
             <p>{orderForm.CLIENT_ADDRESS}</p>
-            <p>
-              {orderForm.CITY_NAME}, {orderForm.STATE_NAME}, {orderForm.COUNTRY}
-            </p>
-            <div className="flex items-center space-x-2">
-              <p>
-                {" "}
-                <span className="font-medium">Phone:</span> {orderForm.CLIENT_CONTACT}
-              </p>
-              <p>
-                {" "}
-                <span className="font-medium">Email:</span> {orderForm.EMAIL_ADDRESS}
-              </p>
-            </div>
           </div>
         ) : (
           <p className="text-sm text-gray-500">Select a customer to view billing information</p>
