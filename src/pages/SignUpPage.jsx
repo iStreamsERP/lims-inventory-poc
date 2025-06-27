@@ -3,21 +3,37 @@ import logoLight from "@/assets/logo-light.png";
 import { SignUpStep1 } from "@/components/auth/SignUpSteps/SignUpStep1";
 import { SignUpStep2 } from "@/components/auth/SignUpSteps/SignUpStep2";
 import { SignUpStep3 } from "@/components/auth/SignUpSteps/SignUpStep3";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import animationData from "@/lotties/crm-animation-lotties.json";
+import { sendEmail } from "@/services/emailService";
+import { generateOTP } from "@/utils/generateOTP";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase.config";
-import { generateOTP } from "@/utils/generateOTP";
-import { sendEmail } from "@/services/emailService";
-import { Button } from "@/components/ui/button";
 
 const SignUpPage = () => {
-  const [step, setStep] = useState(1);
+  const [formValues, setFormValues] = useState({
+    name: "",
+    username: "",
+    email: "",
+    phone: "",
+    userType: "",
+    company: "",
+    gstNo: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    pinCode: "",
+    password: "",
+    confirmPassword: "",
+    acknowledged: false,
+  });
+
+  const [step, setStep] = useState(3);
   const [contactInfo, setContactInfo] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -139,6 +155,10 @@ const SignUpPage = () => {
       }
 
       if (otp === otpForEmail) {
+        setFormValues((prev) => ({
+          ...prev,
+          email: contactInfo,
+        }));
         setStep(3);
       } else {
         setError("Invalid OTP. Please check and try again.");
@@ -155,6 +175,10 @@ const SignUpPage = () => {
 
       try {
         const result = await confirmationResult.confirm(otp);
+        setFormValues((prev) => ({
+          ...prev,
+          phone: contactInfo,
+        }));
         console.log("User signed in:", result.user);
       } catch (err) {
         console.error("Invalid OTP:", err);
@@ -232,21 +256,10 @@ const SignUpPage = () => {
 
           {step === 3 && (
             <SignUpStep3
-              name={name}
-              setName={setName}
-              userType={userType}
-              setUserType={setUserType}
-              gstNo={gstNo}
-              setGstNo={setGstNo}
-              password={password}
-              setPassword={setPassword}
-              acknowledged={acknowledged}
-              setAcknowledged={setAcknowledged}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
-              loading={loading}
-              error={error}
+              initialValues={formValues}
+              setFormValues={setFormValues}
               handleSignup={handleSignup}
+              loading={loading}
             />
           )}
         </CardContent>

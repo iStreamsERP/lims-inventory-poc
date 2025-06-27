@@ -64,7 +64,7 @@ const ProductCategoryListPage = () => {
 
  return (
     <div className="container mx-auto flex flex-col gap-y-6">
-      <h1 className="title">All Categories</h1>
+      <h1 className="title">All Product Categories</h1>
 
       {loading ? (
         <div className="w-full">

@@ -127,7 +127,7 @@
   }
 
   .title {
-    @apply text-3xl font-semibold text-slate-900 transition-colors dark:text-slate-50;
+    @apply text-xl font-semibold text-slate-900 transition-colors dark:text-slate-50;
   }
 
   .text-muted-foreground {

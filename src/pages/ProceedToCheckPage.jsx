@@ -104,8 +104,6 @@ export default function ProceedToCheckPage() {
         throw new Error("Empty order master response");
       }
 
-      console.log(master);
-
       setOrderForm(master);
       setSelectedAddress(master.DELIVERY_ADDRESS || "");
       setSelectedClientName(master.CLIENT_NAME || "");

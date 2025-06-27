@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { callSoapService } from "@/api/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { convertServiceDate } from "@/utils/dateUtils";
+import { convertServiceDate, formatMicrosoftJsonDate } from "@/utils/dateUtils";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import { Check, ChevronsUpDown, Settings2, Trash2 } from "lucide-react";
 import { toWords } from "number-to-words";
@@ -94,36 +94,6 @@ const OrderFormPage = () => {
 
   // Master Form state
   const [masterFormData, setMasterFormData] = useState(initialMasterFormData);
-
-  // Detail Form Data
-  const [detailsFormData, setDetailsFormData] = useState({
-    COMPANY_CODE: userData?.companyCode || "",
-    BRANCH_CODE: userData?.branchCode || "",
-    SALES_ORDER_SERIAL_NO: -1,
-    ORDER_NO: "",
-    ORDER_DATE: new Date().toISOString().split("T")[0],
-    SERIAL_NO: -1,
-    ITEM_CODE: "",
-    SUB_MATERIAL_NO: "",
-    DESCRIPTION: "",
-    UOM_SALES: "",
-    UOM_STOCK: "",
-    CONVERSION_RATE: 1,
-    QTY: 0,
-    QTY_STOCK: 0,
-    CONVRATE_TO_MASTER: 0,
-    QTY_TO_MASTER: 0,
-    RATE: 0,
-    VALUE: 0,
-    DISCOUNT_VALUE: 0,
-    DISCOUNT_RATE: 0,
-    NET_VALUE: 0,
-    VALUE_IN_LC: 0,
-    DELETED_STATUS: 0,
-    USER_NAME: userData?.userEmail || "",
-    ENT_DATE: "",
-    TRANSPORT_CHARGE: "",
-  });
 
   // Calculate order summary values
   const { totalItem, subtotal, discount, total } = useMemo(() => {
@@ -608,12 +578,12 @@ const OrderFormPage = () => {
       // Save each item as a DETAIL record
       for (let i = 0; i < itemsToSend.length; i++) {
         const item = itemsToSend[i];
+        console.log(item);
         const rate = item.SALE_RATE || item.RATE || 0;
         const qty = item.QTY || 0;
         const lineValue = qty * rate;
 
         const detailModal = {
-          ...detailsFormData,
           COMPANY_CODE: masterFormData.COMPANY_CODE,
           BRANCH_CODE: masterFormData.BRANCH_CODE,
           SALES_ORDER_SERIAL_NO: newSerialNo,
@@ -624,7 +594,7 @@ const OrderFormPage = () => {
           SERIAL_NO: item.SERIAL_NO,
           ITEM_CODE: item.ITEM_CODE,
           SUB_MATERIAL_NO: item.SUB_MATERIAL_NO,
-          DESCRIPTION: item.ITEM_NAME,
+          DESCRIPTION: item.DESCRIPTION,
           UOM_SALES: item.UOM_STOCK,
           UOM_STOCK: item.UOM_STOCK,
           CONVERSION_RATE: 1,
@@ -641,7 +611,6 @@ const OrderFormPage = () => {
           TRANSPORT_CHARGE: 0,
           DELETED_STATUS: "F",
           USER_NAME: userData.userEmail,
-          ENT_DATE: "",
         };
 
         const detailPayload = {

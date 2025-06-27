@@ -42,7 +42,7 @@ export const AuthLayout = ({ children, animationData, logoLight, logoDark, title
     </div>
 
     <div className="flex flex-col justify-center overflow-y-auto bg-white px-4 dark:bg-slate-950 lg:p-8">
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-md overflow-y-auto">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>

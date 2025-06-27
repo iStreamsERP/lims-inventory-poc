@@ -48,3 +48,20 @@ export const convertServiceDate = (serviceDate) => {
   const day = ("0" + date.getDate()).slice(-2);
   return `${year}-${month}-${day}`;
 };
+
+// Utility function to convert the service date to "DD-MM-YYYY"
+export const formatMicrosoftJsonDate = (jsonDateString) => {
+  if (!jsonDateString) return "";
+
+  const match = jsonDateString.match(/\d+/);
+  if (!match) return "";
+
+  const timestamp = parseInt(match[0]);
+  const date = new Date(timestamp);
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const year = date.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};

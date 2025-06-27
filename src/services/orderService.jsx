@@ -53,3 +53,20 @@ export const fetchClientDetails = async (clientURL, clientId) => {
     return [];
   }
 };
+
+export const deleteSalesOrder = async ({ clientURL, userEmail, serialNo }) => {
+  const detailPayload = {
+    UserName: userEmail,
+    DataModelName: "SALES_ORDER_DETAILS",
+    WhereCondition: `SALES_ORDER_SERIAL_NO = ${serialNo}`,
+  };
+  await callSoapService(clientURL, "DataModel_DeleteData", detailPayload);
+
+  // Delete from SALES_ORDER_MASTER
+  const masterPayload = {
+    UserName: userEmail,
+    DataModelName: "SALES_ORDER_MASTER",
+    WhereCondition: `SALES_ORDER_SERIAL_NO = ${serialNo}`,
+  };
+  await callSoapService(clientURL, "DataModel_DeleteData", masterPayload);
+};

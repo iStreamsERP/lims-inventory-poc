@@ -72,23 +72,20 @@ const ServiceCategoryListPage = () => {
   });
 
   return (
-    <div className="mx-auto w-full">
-      <h1 className="mt-4 text-center text-5xl font-medium text-gray-800 dark:text-gray-200">
-        Simple and Affordable <br /> Pricing Plans
-      </h1>
+    <div className="mx-auto w-full space-y-1">
+      <h1 className="title">All Service Categories</h1>
 
       {loading && (
         <BarLoader
           height={2}
           width="100%"
-          className="mt-12"
         />
       )}
 
       {error && <div className="mt-4 text-center text-red-500">{error}</div>}
 
       {!loading && !error && (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {serviceData.map((serviceItem) => {
             // Calculate quantity for THIS specific item
             const existingCartItem = cart.find((cartItem) => cartItem.ITEM_CODE === serviceItem.ITEM_CODE);

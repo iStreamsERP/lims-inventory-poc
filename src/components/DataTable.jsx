@@ -60,7 +60,7 @@ export default function DataTable({
   });
 
   return (
-    <div className="flex flex-col gap-y-4">
+    <div className="flex flex-col gap-y-1">
       <h1 className="title">{title}</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">

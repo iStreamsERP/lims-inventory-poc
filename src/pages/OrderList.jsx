@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { deleteSalesOrder } from "@/services/orderService";
 
 const OrderList = () => {
   const { userData } = useAuth();
@@ -57,27 +58,25 @@ const OrderList = () => {
 
   const handleDelete = useCallback(
     async (item) => {
-      const result = window.confirm("Are you sure you want to delete this customer? This action cannot be undone.");
-      if (!result) return;
+      const confirmed = window.confirm("Are you sure you want to delete this customer? This action cannot be undone.");
+      if (!confirmed) return;
 
       try {
-        const payload = {
-          UserName: userData.userEmail,
-          DataModelName: "SALES_ORDER_MASTER",
-          WhereCondition: `SALES_ORDER_SERIAL_NO = ${item.SALES_ORDER_SERIAL_NO}`,
-        };
-
-        const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
-
-        toast({
-          title: response,
+        setLoading(true);
+        await deleteSalesOrder({
+          clientURL: userData.clientURL,
+          userEmail: userData.userEmail,
+          serialNo: item.SALES_ORDER_SERIAL_NO,
         });
+
+        toast({ title: "Sales order and details deleted successfully." });
       } catch (error) {
         toast({
           variant: "destructive",
           title: error?.message || "Delete failed",
         });
       } finally {
+        setLoading(false);
         fetchClientList();
       }
     },
