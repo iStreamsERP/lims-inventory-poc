@@ -20,18 +20,18 @@ export default function OrderSummaryCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between p-4">
         <div>
-          <CardTitle>Order Summary</CardTitle>
-          <CardDescription>Review your items</CardDescription>
+          <CardTitle className="text-lg">Order Summary</CardTitle>
+          <CardDescription className="text-xs">Review your items</CardDescription>
         </div>
 
         {showCharges && <Button variant="outline">Apply Discount</Button>}
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="p-4 pt-0">
+        <div className="space-y-2 text-lg">
           <div className="flex justify-between text-sm">
-            <span>Total (Before Discount) ({itemCount} Items)</span>
+            <span>Total ({itemCount} Items)</span>
             <span>{formatPrice(totalValue)}</span>
           </div>
           {showCharges && (

@@ -55,8 +55,7 @@ const CartItemImage = ({ ITEM_CODE, SUB_MATERIAL_NO }) => {
       alt="product"
       width={80}
       height={80}
-      className="rounded-md object-cover"
-      style={{ aspectRatio: "1/1" }}
+      className="w-14 aspect-square rounded-md object-cover"
     />
   );
 };

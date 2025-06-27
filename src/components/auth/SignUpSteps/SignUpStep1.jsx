@@ -65,7 +65,7 @@ export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, 
       Already have an account?{" "}
       <Link
         to="/login"
-        className="font-medium text-blue-600 hover:underline"
+        className="text-blue-600 hover:underline"
       >
         Log in
       </Link>

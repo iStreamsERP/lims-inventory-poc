@@ -1,17 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import animationData from "@/lotties/crm-animation-lotties.json";
 import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
-import { AuthLayout } from "@/layouts/AuthLayout";
 import { SignUpStep1 } from "@/components/auth/SignUpSteps/SignUpStep1";
 import { SignUpStep2 } from "@/components/auth/SignUpSteps/SignUpStep2";
 import { SignUpStep3 } from "@/components/auth/SignUpSteps/SignUpStep3";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { AuthLayout } from "@/layouts/AuthLayout";
+import animationData from "@/lotties/crm-animation-lotties.json";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase.config";
+import { generateOTP } from "@/utils/generateOTP";
+import { sendEmail } from "@/services/emailService";
+import { Button } from "@/components/ui/button";
 
 const SignUpPage = () => {
   const [step, setStep] = useState(1);
@@ -28,6 +31,8 @@ const SignUpPage = () => {
   const [isEmail, setIsEmail] = useState(true);
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
+  const [otpForEmail, setOtpForEmail] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
   const { login } = useAuth();
   const recaptchaRef = useRef(null);
@@ -61,51 +66,112 @@ const SignUpPage = () => {
 
   // Send OTP
   const handleSendOtp = async () => {
-    if (!contactInfo.match(/^\+\d{10,15}$/)) {
-      alert("Please enter a valid phone number with country code, e.g. +911234567890");
-      return;
-    }
+    setError("");
 
-    // If user has retried, clear old captcha
-    if (recaptchaRef.current) {
-      recaptchaRef.current.clear(); // remove previous widget
-      recaptchaRef.current = null;
-    }
+    if (isEmail) {
+      // Email OTP flow
+      if (!contactInfo.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        setError("Please enter a valid email address");
+        return;
+      }
 
-    const appVerifier = setupRecaptcha();
-    try {
-      const confirmation = await signInWithPhoneNumber(auth, contactInfo, appVerifier);
-      setConfirmationResult(confirmation);
-      alert("✅ OTP sent!");
-    } catch (err) {
-      console.error("Error sending OTP:", err);
-      if (err.code === "auth/too-many-requests") {
-        alert("⚠️ Too many SMS requests. Please wait a while before retrying.");
-      } else {
-        alert("Could not send OTP—check console.");
+      try {
+        setLoading(true);
+        // Generate 6-digit OTP
+        const generatedOtp = generateOTP(6);
+        setOtpForEmail(generatedOtp);
+
+        // Send via email API
+        const emailData = {
+          toEmail: contactInfo,
+          subject: "Your iStreams ERP Verification Code",
+          body: `Your verification code is: ${generatedOtp}`,
+          displayName: "iStreams ERP",
+        };
+
+        const response = await sendEmail(emailData);
+
+        console.log(response);
+
+        setOtpSent(true);
+        setOtpTimer(120);
+        setStep(2);
+        alert("OTP sent to your email!");
+      } catch (err) {
+        console.error("Email OTP error:", err);
+        setError("Failed to send OTP. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!contactInfo.match(/^\+\d{10,15}$/)) {
+        alert("Please enter a valid phone number with country code, e.g. +911234567890");
+        return;
+      }
+
+      // If user has retried, clear old captcha
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear(); // remove previous widget
+        recaptchaRef.current = null;
+      }
+
+      const appVerifier = setupRecaptcha();
+      try {
+        const confirmation = await signInWithPhoneNumber(auth, contactInfo, appVerifier);
+        setConfirmationResult(confirmation);
+
+        setOtpSent(true);
+        setOtpTimer(120);
+        setStep(2);
+        alert("✅ OTP sent!");
+      } catch (err) {
+        console.error("Error sending OTP:", err);
+        if (err.code === "auth/too-many-requests") {
+          alert("⚠️ Too many SMS requests. Please wait a while before retrying.");
+        } else {
+          alert("Could not send OTP—check console.");
+        }
       }
     }
   };
 
   // Verify OTP
   const handleVerifyOtp = async () => {
-    if (!confirmationResult) {
-      alert("Please request an OTP first.");
-      return;
-    }
-    if (otp.length === 0) {
-      alert("Enter the OTP you received.");
-      return;
-    }
+    if (isEmail) {
+      // Email verification
+      if (otp === otpForEmail) {
+        alert("Email verified successfully!");
+        setStep(3); // Proceed to next step
+      } else {
+        setError("Invalid OTP. Please check and try again.");
+      }
+    } else {
+      if (!confirmationResult) {
+        alert("Please request an OTP first.");
+        return;
+      }
+      if (otp.length === 0) {
+        alert("Enter the OTP you received.");
+        return;
+      }
 
-    try {
-      const result = await confirmationResult.confirm(otp);
-      console.log("User signed in:", result.user);
-      alert("🎉 Phone number verified!");
-    } catch (err) {
-      console.error("Invalid OTP:", err);
-      alert("❌ Invalid OTP, please try again.");
+      try {
+        const result = await confirmationResult.confirm(otp);
+        console.log("User signed in:", result.user);
+        alert("🎉 Phone number verified!");
+      } catch (err) {
+        console.error("Invalid OTP:", err);
+        alert("❌ Invalid OTP, please try again.");
+      }
     }
+  };
+
+  // Reset OTP state when going back
+  const handleBack = () => {
+    setStep(step - 1);
+    setError("");
+    setOtp("");
+    setOtpForEmail(""); // Reset email OTP
   };
 
   // Handle signup submission
@@ -138,26 +204,6 @@ const SignUpPage = () => {
       subtitle={stepSubtitles[step]}
     >
       <Card className="border-0 shadow-none">
-        {step !== 1 && (
-          <CardHeader>
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mr-2"
-                onClick={() => {
-                  setStep(step - 1);
-                  setError("");
-                  if (step === 2) setOtp("");
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <CardTitle className="text-xl">{stepTitles[step]}</CardTitle>
-            </div>
-          </CardHeader>
-        )}
-
         <CardContent>
           {step === 1 && (
             <SignUpStep1
@@ -182,7 +228,7 @@ const SignUpPage = () => {
               error={error}
               handleVerifyOtp={handleVerifyOtp}
               handleSendOtp={handleSendOtp}
-              goBack={() => setStep(1)}
+              handleBack={handleBack}
             />
           )}
 
