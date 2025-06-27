@@ -3,8 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
-export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, loading, error, handleSendOtp }) => (
+export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, loading, error, setError, handleSendOtp }) => (
   <div className="space-y-2">
     <div>
       <Label className="mb-2 block">How would you like to sign up?</Label>
@@ -15,6 +17,7 @@ export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, 
           onClick={() => {
             setIsEmail(true);
             setContactInfo("");
+            setError("");
           }}
         >
           <Mail size={16} /> Email
@@ -25,22 +28,42 @@ export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, 
           onClick={() => {
             setIsEmail(false);
             setContactInfo("");
+            setError("");
           }}
         >
           <Smartphone size={16} /> Phone
         </Button>
       </div>
-
-      <Label htmlFor="contact">{isEmail ? "Email Address" : "Phone Number"}</Label>
-      <Input
-        id="contact"
-        placeholder={isEmail ? "name@example.com" : "9876543210"}
-        value={contactInfo}
-        onChange={(e) => setContactInfo(e.target.value)}
-        type={isEmail ? "email" : "tel"}
-        required
-        className="mt-1"
-      />
+      {isEmail ? (
+        <>
+          <Label htmlFor="contact">Email Address</Label>
+          <Input
+            id="contact"
+            placeholder="name@example.com"
+            value={contactInfo}
+            onChange={(e) => setContactInfo(e.target.value.trim())}
+            type="email"
+            required
+            className="mt-1"
+          />
+        </>
+      ) : (
+        <>
+          <Label htmlFor="phone">Phone Number</Label>
+          <PhoneInput
+            country={"in"}
+            value={contactInfo.startsWith("+") ? contactInfo.slice(1) : contactInfo}
+            onChange={(phone) => setContactInfo(`+${phone}`)}
+            inputProps={{
+              name: "phone",
+              required: true,
+              autoFocus: true,
+              id: "phone",
+            }}
+            inputStyle={{ width: "100%" }}
+          />
+        </>
+      )}
     </div>
 
     {error && <div className="rounded bg-red-100 p-2 text-sm text-red-700">{error}</div>}
@@ -48,7 +71,7 @@ export const SignUpStep1 = ({ isEmail, setIsEmail, contactInfo, setContactInfo, 
     <Button
       type="button"
       onClick={handleSendOtp}
-      disabled={loading}
+      disabled={contactInfo.trim() === "" || loading}
       className="mt-2 w-full"
     >
       {loading ? (

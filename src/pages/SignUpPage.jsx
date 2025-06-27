@@ -91,12 +91,9 @@ const SignUpPage = () => {
 
         const response = await sendEmail(emailData);
 
-        console.log(response);
-
         setOtpSent(true);
         setOtpTimer(120);
         setStep(2);
-        alert("OTP sent to your email!");
       } catch (err) {
         console.error("Email OTP error:", err);
         setError("Failed to send OTP. Please try again.");
@@ -104,11 +101,6 @@ const SignUpPage = () => {
         setLoading(false);
       }
     } else {
-      if (!contactInfo.match(/^\+\d{10,15}$/)) {
-        alert("Please enter a valid phone number with country code, e.g. +911234567890");
-        return;
-      }
-
       // If user has retried, clear old captcha
       if (recaptchaRef.current) {
         recaptchaRef.current.clear(); // remove previous widget
@@ -127,9 +119,9 @@ const SignUpPage = () => {
       } catch (err) {
         console.error("Error sending OTP:", err);
         if (err.code === "auth/too-many-requests") {
-          alert("⚠️ Too many SMS requests. Please wait a while before retrying.");
+          setError("Too many SMS requests. Please wait a while before retrying.");
         } else {
-          alert("Could not send OTP—check console.");
+          setError("Could not send OTP. Please try again.");
         }
       }
     }
@@ -137,17 +129,23 @@ const SignUpPage = () => {
 
   // Verify OTP
   const handleVerifyOtp = async () => {
+    setError("");
+
     if (isEmail) {
       // Email verification
+      if (!otp) {
+        setError("Please enter the OTP");
+        return;
+      }
+
       if (otp === otpForEmail) {
-        alert("Email verified successfully!");
-        setStep(3); // Proceed to next step
+        setStep(3);
       } else {
         setError("Invalid OTP. Please check and try again.");
       }
     } else {
       if (!confirmationResult) {
-        alert("Please request an OTP first.");
+        setError("Please request an OTP first.");
         return;
       }
       if (otp.length === 0) {
@@ -158,10 +156,9 @@ const SignUpPage = () => {
       try {
         const result = await confirmationResult.confirm(otp);
         console.log("User signed in:", result.user);
-        alert("🎉 Phone number verified!");
       } catch (err) {
         console.error("Invalid OTP:", err);
-        alert("❌ Invalid OTP, please try again.");
+        setError("Invalid OTP, please try again.");
       }
     }
   };
@@ -213,6 +210,7 @@ const SignUpPage = () => {
               setContactInfo={setContactInfo}
               loading={loading}
               error={error}
+              setError={setError}
               handleSendOtp={handleSendOtp}
             />
           )}
