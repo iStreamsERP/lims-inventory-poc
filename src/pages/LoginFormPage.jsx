@@ -12,6 +12,7 @@ import { useCallback, useState } from "react";
 import Lottie from "react-lottie";
 import { Link, useNavigate } from "react-router-dom";
 import { getNameFromEmail } from "../utils/emailHelpers";
+import { AuthLayout } from "@/layouts/AuthLayout";
 
 // Use the proxy path for the public service.
 const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
@@ -210,149 +211,117 @@ const LoginFormPage = () => {
   );
 
   return (
-    <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-slate-200 p-10 dark:bg-slate-900 lg:flex">
-        <div>
-          <img
-            src={logoLight}
-            alt="iStreams ERP Solutions | CRM"
-            className="dark:hidden"
-          />
-          <img
-            src={logoDark}
-            alt="iStreams ERP Solutions | CRM"
-            className="hidden dark:block"
-          />
-        </div>
+    <AuthLayout
+      animationData={animationData}
+      logoLight={logoLight}
+      logoDark={logoDark}
+      title="Login!"
+      subtitle="Enter your credentials to access your account"
+    >
+      <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
+        <form
+          onSubmit={handleLogin}
+          className="space-y-4"
+        >
+          <div className="grid w-full items-center gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <Input
+                name="email"
+                id="email"
+                placeholder="username@domain.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-        <div>
-          <Lottie
-            options={lottieOptions}
-            height={350}
-            width={400}
-          />
-        </div>
-
-        <div>
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;Manage your documents efficiently and streamline your business operations with our powerful Document Management System.&rdquo;
-            </p>
-
-            <footer className="text-sm text-gray-400">- iStreams ERP Solutions</footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="flex flex-col justify-center bg-slate-100 px-6 dark:bg-slate-950 lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">Login!</h1>
-            <p className="text-sm text-muted-foreground">Please enter log in details below</p>
-          </div>
-          <form
-            onSubmit={handleLogin}
-            className="space-y-4"
-          >
-            <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
+            <div className="flex flex-col space-y-1.5">
+              <div className="relative flex gap-2">
                 <Input
-                  name="email"
-                  id="email"
-                  placeholder="username@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  name="password"
+                  id="password"
+                  placeholder="*******"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-              </div>
-
-              <div className="flex flex-col space-y-1.5">
-                <div className="relative flex gap-2">
-                  <Input
-                    name="password"
-                    id="password"
-                    placeholder="*******"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transform cursor-pointer"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember-me"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked)}
-                />
-                <label
-                  htmlFor="remember-me"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                <span
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transform cursor-pointer"
+                  onClick={() => setShowPassword((prev) => !prev)}
                 >
-                  Remember me
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium leading-none hover:underline"
-                >
-                  Forgot Password?
-                </Link>
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </span>
               </div>
             </div>
+          </div>
 
-            {error && <div className="mb-4 rounded bg-red-500 p-2 text-white">{error}</div>}
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Please wait
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-            <div className="flex items-center text-xs uppercase">
-              <Separator className="flex-1" />
-              <span className="whitespace-nowrap px-2 text-gray-400">Or continue with</span>
-              <Separator className="flex-1" />
-            </div>
-            <Button
-              variant="outline"
-              className="w-full"
-            >
-              <MailOpen /> Login with Email
-            </Button>
-
-            <p className="text-center text-xs text-gray-400">
-              Don't have an account?
-              <Link
-                to="/signup"
-                className="text-blue-500"
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked)}
+              />
+              <label
+                htmlFor="remember-me"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                {" "}
-                Sign Up
+                Remember me
+              </label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium leading-none hover:underline"
+              >
+                Forgot Password?
               </Link>
-            </p>
-          </form>
-        </div>
+            </div>
+          </div>
+
+          {error && <div className="mb-4 rounded bg-red-500 p-2 text-white">{error}</div>}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Please wait
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+          <div className="flex items-center text-xs uppercase">
+            <Separator className="flex-1" />
+            <span className="whitespace-nowrap px-2 text-gray-400">Or continue with</span>
+            <Separator className="flex-1" />
+          </div>
+          <Button
+            variant="outline"
+            className="w-full"
+          >
+            <MailOpen /> Login with Email
+          </Button>
+
+          <p className="text-center text-xs text-gray-400">
+            Don't have an account?
+            <Link
+              to="/signup"
+              className="text-blue-500 hover:underline"
+            >
+              {" "}
+              Sign Up
+            </Link>
+          </p>
+        </form>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
