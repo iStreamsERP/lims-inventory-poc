@@ -33,6 +33,8 @@ export default function ProductFormPage() {
     ITEM_SIZE: "",
     ITEM_TYPE: "",
     GROUP_LEVEL1: "",
+    GROUP_LEVEL2: "",
+    GROUP_LEVEL3: "",
     SUB_MATERIAL_BASED_ON: [],
     SUPPLIER_NAME: "",
     SALE_RATE: "",
@@ -47,8 +49,6 @@ export default function ProductFormPage() {
     UOM_STOCK: "",
     UOM_PURCHASE: "",
     UOM_SUBMATERIAL: "",
-    GROUP_LEVEL2: "Consumables",
-    GROUP_LEVEL3: "Consumables",
   };
 
   const { id } = useParams();
@@ -60,6 +60,9 @@ export default function ProductFormPage() {
   const [commandInputValue, setCommandInputValue] = useState("");
   const [categoryData, setCategoryData] = useState([]);
   const [openCategoryData, setOpenCategoryData] = useState(false);
+  const [subCategoryData, setSubCategoryData] = useState([]);
+  const [openSubCategoryData, setOpenSubCategoryData] = useState(false);
+
   const [uomList, setUomList] = useState([]);
   const [opened, setOpened] = useState(false);
   const [openSubMaterialDetails, setOpenSubMaterialDetails] = useState(false);
@@ -129,18 +132,14 @@ export default function ProductFormPage() {
 
         return validTypes.includes(value.type.toLowerCase());
       }),
-   SUB_MATERIALS_MODE: Yup.string().oneOf(["T", "F"]).required(),
-    SUB_MATERIAL_BASED_ON: Yup.array().test(
-    "sub-material-required",
-    "At least one option must be selected",
-    function (value) {
+    SUB_MATERIALS_MODE: Yup.string().oneOf(["T", "F"]).required(),
+    SUB_MATERIAL_BASED_ON: Yup.array().test("sub-material-required", "At least one option must be selected", function (value) {
       const { SUB_MATERIALS_MODE } = this.parent;
       if (SUB_MATERIALS_MODE === "T") {
         return value && value.length > 0;
       }
       return true;
-    }
-  ),
+    }),
   });
 
   // Formik initialization
@@ -205,7 +204,7 @@ export default function ProductFormPage() {
     },
   });
 
- console.log("Formik initialized with values:", formik.values);
+  console.log("Formik initialized with values:", formik.values);
 
   // Get tab errors
   const getTabErrors = (tabName) => {
@@ -229,6 +228,7 @@ export default function ProductFormPage() {
       try {
         setLoading(true);
         await fetchCategoryUsingQuery();
+        await fetchSubCategoryUsingQuery();
         await fetchUom();
 
         if (id) {
@@ -271,6 +271,23 @@ export default function ProductFormPage() {
       toast({
         variant: "destructive",
         title: `Error fetching categories: ${error.message}`,
+      });
+    }
+  }, [userData, toast]);
+
+  const fetchSubCategoryUsingQuery = useCallback(async () => {
+    try {
+      const payload = {
+        SQLQuery:
+          "SELECT DISTINCT GROUP_LEVEL2 from INVT_MATERIAL_MASTER WHERE GROUP_LEVEL2 IS NOT NULL AND GROUP_LEVEL2 &lt;&gt; '' AND COST_CODE = 'MXXXX' ORDER BY GROUP_LEVEL2",
+      };
+
+      const response = await callSoapService(userData.clientURL, "DataModel_GetDataFrom_Query", payload);
+      setSubCategoryData(response);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: `Error fetching sub categories: ${error.message}`,
       });
     }
   }, [userData, toast]);
@@ -368,7 +385,7 @@ export default function ProductFormPage() {
         <h1 className="title">{formik.values.ITEM_CODE === "(NEW)" ? "Create Product" : "Edit Product"}</h1>
         {/* Global Error Summary */}
         {formik.submitCount > 0 && Object.keys(formik.errors).length > 0 && (
-          <div className="mb-4 rounded-lg bg-red-50 p-1 text-red-800 text-xs">
+          <div className="mb-4 rounded-lg bg-red-50 p-1 text-xs text-red-800">
             <h3 className="font-bold">Please fix the following errors:</h3>
             <ul className="list-disc pl-5">
               {Object.entries(formik.errors).map(([key, error]) => (
@@ -419,7 +436,9 @@ export default function ProductFormPage() {
                       </div>
 
                       <div className="mt-3 w-full">
-                        <Label htmlFor="ITEM_NAME">Item Name<span className="text-red-500">*</span></Label>
+                        <Label htmlFor="ITEM_NAME">
+                          Item Name<span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           name="ITEM_NAME"
                           id="ITEM_NAME"
@@ -433,7 +452,9 @@ export default function ProductFormPage() {
                       </div>
 
                       <div className="mt-3 w-full">
-                        <Label htmlFor="SUPPLIER_NAME">Supplier Ref<span className="text-red-500">*</span></Label>
+                        <Label htmlFor="SUPPLIER_NAME">
+                          Supplier Ref<span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           name="SUPPLIER_NAME"
                           id="SUPPLIER_NAME"
@@ -450,7 +471,9 @@ export default function ProductFormPage() {
 
                       <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row">
                         <div className="w-full">
-                          <Label htmlFor="SALE_RATE">Sales Price<span className="text-red-500">*</span></Label>
+                          <Label htmlFor="SALE_RATE">
+                            Sales Price<span className="text-red-500">*</span>
+                          </Label>
                           <Input
                             name="SALE_RATE"
                             id="SALE_RATE"
@@ -463,7 +486,9 @@ export default function ProductFormPage() {
                           {formik.touched.SALE_RATE && formik.errors.SALE_RATE && <p className="text-xs text-red-500">{formik.errors.SALE_RATE}</p>}
                         </div>
                         <div className="w-full">
-                          <Label>UoM<span className="text-red-500">*</span></Label>
+                          <Label>
+                            UoM<span className="text-red-500">*</span>
+                          </Label>
                           <Popover
                             open={opened}
                             onOpenChange={setOpened}
@@ -544,7 +569,9 @@ export default function ProductFormPage() {
 
                   <div className="mt-3 flex w-full flex-col gap-2 lg:flex-row">
                     <div className="w-full">
-                      <Label htmlFor="SALE_MARGIN_PTG">Margin %<span className="text-red-500">*</span></Label>
+                      <Label htmlFor="SALE_MARGIN_PTG">
+                        Margin %<span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         name="SALE_MARGIN_PTG"
                         id="SALE_MARGIN_PTG"
@@ -560,7 +587,9 @@ export default function ProductFormPage() {
                     </div>
 
                     <div className="w-full">
-                      <Label>Category<span className="text-red-500">*</span></Label>
+                      <Label>
+                        Category<span className="text-red-500">*</span>
+                      </Label>
                       <Popover
                         open={openCategoryData}
                         onOpenChange={setOpenCategoryData}
@@ -631,6 +660,77 @@ export default function ProductFormPage() {
                       {formik.touched.GROUP_LEVEL1 && formik.errors.GROUP_LEVEL1 && (
                         <p className="text-sm text-red-500">{formik.errors.GROUP_LEVEL1}</p>
                       )}
+                    </div>
+
+                    <div className="w-full">
+                      <Label>Sub Category</Label>
+                      <Popover
+                        open={openSubCategoryData}
+                        onOpenChange={setOpenSubCategoryData}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openSubCategoryData}
+                            className="w-full justify-between"
+                          >
+                            {formik.values.GROUP_LEVEL2 || "Select sub category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search sub category..."
+                              className="h-9"
+                              onValueChange={setCommandInputValue}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                <div className="flex items-center justify-between">
+                                  <span>No sub category found.</span>
+                                  {commandInputValue && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        const newValue = toTitleCase(commandInputValue.trim());
+                                        if (newValue) {
+                                          setSubCategoryData((prev) => [...prev, { GROUP_LEVEL2: newValue }]);
+                                          formik.setFieldValue("GROUP_LEVEL2", newValue);
+                                          setOpenSubCategoryData(false);
+                                        }
+                                      }}
+                                    >
+                                      Add “{commandInputValue}”
+                                    </Button>
+                                  )}
+                                </div>
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {subCategoryData.map((item, index) => (
+                                  <CommandItem
+                                    key={index}
+                                    value={item.GROUP_LEVEL2}
+                                    onSelect={() => {
+                                      formik.setFieldValue("GROUP_LEVEL2", item.GROUP_LEVEL2);
+                                      setOpenSubCategoryData(false);
+                                    }}
+                                  >
+                                    {item.GROUP_LEVEL2}
+                                    <Check
+                                      className={cn(
+                                        "ml-auto h-4 w-4",
+                                        formik.values.GROUP_LEVEL2 === item.GROUP_LEVEL2 ? "opacity-100" : "opacity-0",
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
@@ -725,7 +825,9 @@ export default function ProductFormPage() {
                     {(formik.values.SUB_MATERIALS_MODE === "T" || subProductCount > 0) && (
                       <>
                         <div className="mt-3 w-full">
-                          <Label className="block text-sm font-medium">Select sub product details<span className="text-red-500">*</span></Label>
+                          <Label className="block text-sm font-medium">
+                            Select sub product details<span className="text-red-500">*</span>
+                          </Label>
 
                           <Popover
                             open={openSubMaterialDetails}
@@ -786,8 +888,7 @@ export default function ProductFormPage() {
                               </Command>
                             </PopoverContent>
                           </Popover>
-                         {(formik.touched.SUB_MATERIAL_BASED_ON || formik.submitCount > 0) && 
-                          formik.errors.SUB_MATERIAL_BASED_ON && (
+                          {(formik.touched.SUB_MATERIAL_BASED_ON || formik.submitCount > 0) && formik.errors.SUB_MATERIAL_BASED_ON && (
                             <p className="text-sm text-red-500">{formik.errors.SUB_MATERIAL_BASED_ON}</p>
                           )}
                         </div>

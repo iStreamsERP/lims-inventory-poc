@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { removeItem, updateItemQuantity } from "@/slices/cartSlice";
+import { clearCart, removeItem, updateItemQuantity } from "@/slices/cartSlice";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { toTitleCase } from "@/utils/stringUtils";
@@ -178,15 +178,25 @@ const CartPage = () => {
     <div className="grid gap-4">
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Shopping Cart</h1>
-          <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
+        <div className="flex items-start justify-between gap-12">
+          <div>
+            <h1 className="text-2xl font-bold">Shopping Cart</h1>
+            <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
+          </div>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => dispatch(clearCart())}
+          >
+            Clear Cart
+          </Button>
         </div>
         <Link
           to="/categories"
           className="flex items-center gap-2 text-sm font-semibold hover:underline"
         >
-          Continue Shopping <MoveRight size={16} />
+          Add More Items <MoveRight size={16} />
         </Link>
       </div>
 
@@ -242,11 +252,11 @@ const CartPage = () => {
                     </Button>
                   </div>
 
-                  <div className="flex items-center justify-start gap-1 md:justify-end">
+                  <div className="flex items-center justify-start gap-2 md:justify-end">
                     <p className="text-sm font-semibold">{formatPrice(item.finalSaleRate * item.itemQty)}</p>
 
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       className="h-5 w-5 p-0"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;

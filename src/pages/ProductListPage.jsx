@@ -136,6 +136,11 @@ const ProductListPage = () => {
       cell: ({ row }) => <div className="capitalize">{row.getValue("GROUP_LEVEL1") || "-"}</div>,
     },
     {
+      accessorKey: "GROUP_LEVEL2",
+      header: "Sub Cateogry",
+      cell: ({ row }) => <div className="capitalize">{row.getValue("GROUP_LEVEL2") || "-"}</div>,
+    },
+    {
       accessorKey: "SALE_RATE",
       header: ({ column }) => {
         return (

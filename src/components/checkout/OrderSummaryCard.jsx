@@ -36,18 +36,18 @@ export default function OrderSummaryCard({
           </div>
           {showCharges && (
             <>
-              <div className="flex justify-between text-sm text-green-500">
+              <div className="flex justify-between text-sm text-red-500">
                 <span>Discount ({discountPercent}%)</span>
                 <span>-{formatPrice(discountValue)}</span>
               </div>
               <div className="flex justify-between text-sm font-semibold">
                 <span>Subtotal (After Discount)</span>
-                <span>-{formatPrice(subtotal)}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
 
               <div className="flex justify-between text-sm">
                 <span>Transport Charges</span>
-                <span>-{formatPrice(transportCharges)}</span>
+                <span>{formatPrice(transportCharges)}</span>
               </div>
               <div className="flex justify-between text-sm font-semibold">
                 <span>Taxable Amount</span>
