@@ -33,8 +33,11 @@ const SignUpPage = () => {
     acknowledged: false,
   });
 
-  const [step, setStep] = useState(3);
+  const [step, setStep] = useState(1);
   const [contactInfo, setContactInfo] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [isEmail, setIsEmail] = useState(true);
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [userType, setUserType] = useState("");
@@ -44,7 +47,6 @@ const SignUpPage = () => {
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
-  const [isEmail, setIsEmail] = useState(true);
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
   const [otpForEmail, setOtpForEmail] = useState("");
@@ -159,6 +161,7 @@ const SignUpPage = () => {
           ...prev,
           email: contactInfo,
         }));
+        setEmailVerified(true);
         setStep(3);
       } else {
         setError("Invalid OTP. Please check and try again.");
@@ -179,6 +182,8 @@ const SignUpPage = () => {
           ...prev,
           phone: contactInfo,
         }));
+        setPhoneVerified(true);
+        setStep(3);
         console.log("User signed in:", result.user);
       } catch (err) {
         console.error("Invalid OTP:", err);
@@ -195,10 +200,21 @@ const SignUpPage = () => {
     setOtpForEmail(""); // Reset email OTP
   };
 
+  // Handle optional verification in step 3
+  const handleOptionalVerify = (contact, isEmail) => {
+    if (isEmail) {
+      setEmailVerified(true);
+      setFormValues((prev) => ({ ...prev, email: contact }));
+    } else {
+      setPhoneVerified(true);
+      setFormValues((prev) => ({ ...prev, phone: contact }));
+    }
+  };
+
   // Handle signup submission
   const handleSignup = useCallback(
     async (e) => {
-      // ... (same logic as before)
+      // ... (your existing signup logic)
     },
     [contactInfo, password, login, navigate],
   );
@@ -260,6 +276,10 @@ const SignUpPage = () => {
               setFormValues={setFormValues}
               handleSignup={handleSignup}
               loading={loading}
+              isEmailPrimary={isEmail}
+              emailVerified={emailVerified}
+              phoneVerified={phoneVerified}
+              onOptionalVerify={handleOptionalVerify}
             />
           )}
         </CardContent>
