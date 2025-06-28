@@ -55,7 +55,7 @@ const CartItemImage = ({ ITEM_CODE, SUB_MATERIAL_NO }) => {
       alt="product"
       width={80}
       height={80}
-      className="w-14 aspect-square rounded-md object-cover"
+      className="w-10 aspect-square rounded-md object-cover"
     />
   );
 };

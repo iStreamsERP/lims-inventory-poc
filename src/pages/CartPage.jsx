@@ -175,7 +175,7 @@ const CartPage = () => {
   }, [prepareMasterData, saveOrderDetails, cart, userData, navigate, toast]);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
@@ -192,15 +192,12 @@ const CartPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Cart Items */}
-        <div className="col-span-2 space-y-2 md:max-h-[59vh] md:overflow-y-auto">
+        <div className="col-span-2 md:max-h-[59vh] md:overflow-y-auto">
           {cart.length === 0 ? (
             <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
             cart.map((item, idx) => (
-              <div
-                key={`${item.ITEM_CODE}-${item.SUB_MATERIAL_NO}-${idx}`}
-                className="space-y-4"
-              >
+              <div key={`${item.ITEM_CODE}-${item.SUB_MATERIAL_NO}-${idx}`}>
                 <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[2fr_1fr_1fr]">
                   <div className="flex items-start gap-3">
                     <CartItemImage
@@ -208,7 +205,7 @@ const CartPage = () => {
                       SUB_MATERIAL_NO={item.SUB_MATERIAL_NO}
                     />
                     <div>
-                      <h3 className="text-lg font-medium">{item.ITEM_NAME || item.ITEM_NAME}</h3>
+                      <h3 className="text-sm font-medium">{item.ITEM_NAME || item.ITEM_NAME}</h3>
                       <div className="flex items-center gap-2">
                         {<p className="text-xs text-gray-500">{toTitleCase(item.ITEM_GROUP)}</p>}
                         {item.saleUom && <p className="text-xs text-gray-500">Range: {item.saleUom}</p>}
@@ -222,34 +219,35 @@ const CartPage = () => {
                   <div className="flex w-full items-center justify-start gap-2 md:justify-center">
                     <Button
                       variant="outline"
-                      className="h-6 w-6"
+                      className="h-5 w-5 p-0"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
                         dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty - 1 }));
                       }}
                       disabled={item.itemQty <= 1}
                     >
-                      <Minus size={10} />
+                      <Minus size={8} />
                     </Button>
-                    <span className="ml-0 text-lg">{item.itemQty}</span>
+                    <span className="text-sm">{item.itemQty}</span>
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-5 w-5 p-0"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
                         dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty + 1 }));
                       }}
                     >
-                      <Plus size={10} />
+                      <Plus size={4} />
                     </Button>
                   </div>
 
                   <div className="flex items-center justify-start gap-1 md:justify-end">
-                    <p className="text-lg font-semibold">{formatPrice(item.finalSaleRate * item.itemQty)}</p>
+                    <p className="text-sm font-semibold">{formatPrice(item.finalSaleRate * item.itemQty)}</p>
 
                     <Button
-                      variant="ghost"
+                      variant="outline"
+                      className="h-5 w-5 p-0"
                       onClick={() => {
                         const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
                         dispatch(removeItem({ id: lineKey }));
@@ -260,7 +258,7 @@ const CartPage = () => {
                     </Button>
                   </div>
                 </div>
-                <Separator />
+                <Separator className="my-2" />
               </div>
             ))
           )}

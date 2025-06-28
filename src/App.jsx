@@ -35,6 +35,7 @@ import UserRolePage from "./pages/UserRolePage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PhoneAuth from "./PhoneAuth";
+import RfqListPage from "./pages/RfqListPage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -96,6 +97,11 @@ const App = () => {
             { path: "/new-quotation", element: <OrderFormPage /> },
             { path: "/edit-quotation/:id", element: <OrderFormPage /> },
             { path: "/view-quotation/:id", element: <OrderFormPage /> },
+
+            { path: "rfq", element: <RfqListPage /> },
+            // { path: "/new-quotation", element: <OrderFormPage /> },
+            // { path: "/edit-quotation/:id", element: <OrderFormPage /> },
+            // { path: "/view-quotation/:id", element: <OrderFormPage /> },
 
             { path: "users", element: <UserListPage /> },
             { path: "user-role", element: <UserRolePage /> },

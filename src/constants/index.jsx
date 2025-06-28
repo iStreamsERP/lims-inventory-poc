@@ -44,6 +44,11 @@ export const getNavbarLinks = (isAdmin) => [
         icon: ScrollText,
         path: "/quotations",
       },
+      {
+        label: "RFQ",
+        icon: ScrollText,
+        path: "/rfq",
+      },
     ],
   },
   {
