@@ -155,7 +155,6 @@ export const SignUpStep3 = ({
   // Adjust validation schema
   const SignupSchema = Yup.object().shape({
     name: Yup.string().required("Full Name is required"),
-    username: Yup.string().required("Username is required"),
     email: Yup.string()
       .email("Invalid email")
       .test("verified-email", "Email must be verified", function (value) {
@@ -210,22 +209,6 @@ export const SignUpStep3 = ({
               />
               <ErrorMessage
                 name="name"
-                component="div"
-                className="mt-1 text-sm text-red-500"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                name="username"
-                value={values.username}
-                onChange={handleChange}
-                className="mt-1"
-              />
-              <ErrorMessage
-                name="username"
                 component="div"
                 className="mt-1 text-sm text-red-500"
               />

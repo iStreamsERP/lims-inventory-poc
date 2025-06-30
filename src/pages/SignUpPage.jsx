@@ -17,7 +17,6 @@ import { auth } from "../../firebase.config";
 const SignUpPage = () => {
   const [formValues, setFormValues] = useState({
     name: "",
-    username: "",
     email: "",
     phone: "",
     userType: "",
