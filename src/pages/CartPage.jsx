@@ -9,7 +9,7 @@ import { clearCart, removeItem, updateItemQuantity } from "@/slices/cartSlice";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { formatPrice } from "@/utils/formatPrice";
 import { toTitleCase } from "@/utils/stringUtils";
-import { Minus, MoveRight, Plus, X } from "lucide-react";
+import { Minus, MoveRight, Plus, Trash, Trash2, X } from "lucide-react";
 import { toWords } from "number-to-words";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -161,6 +161,8 @@ const CartPage = () => {
         description: `Order #${newSerialNo} has been saved`,
       });
 
+      dispatch(clearCart());
+
       navigate("/proceed-to-check", { state: { newSerialNo } });
     } catch (error) {
       console.error(error);
@@ -176,33 +178,34 @@ const CartPage = () => {
 
   return (
     <div className="grid gap-4">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <div className="flex items-start justify-between gap-12">
-          <div>
-            <h1 className="text-2xl font-bold">Shopping Cart</h1>
-            <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
-          </div>
-
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => dispatch(clearCart())}
-          >
-            Clear Cart
-          </Button>
-        </div>
-        <Link
-          to="/categories"
-          className="flex items-center gap-2 text-sm font-semibold hover:underline"
-        >
-          Add More Items <MoveRight size={16} />
-        </Link>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Cart Items */}
         <div className="col-span-2 md:max-h-[59vh] md:overflow-y-auto">
+          <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <div className="flex items-start justify-between gap-12">
+              <div>
+                <h1 className="text-2xl font-bold">Shopping Cart</h1>
+                <p className="text-sm text-gray-500">Review items and proceed to checkout.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="link"
+                size="sm"
+                className="text-red-500"
+                onClick={() => dispatch(clearCart())}
+              >
+                Clear Cart
+              </Button>
+              <Link
+                to="/categories"
+                className="flex items-center gap-2 text-sm font-semibold hover:underline"
+              >
+                Add more items <MoveRight size={16} />
+              </Link>
+            </div>
+          </div>
           {cart.length === 0 ? (
             <p className="text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
@@ -222,6 +225,7 @@ const CartPage = () => {
                         {item.ITEM_FINISH && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH}</p>}
                         {item.ITEM_SIZE && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE}</p>}
                         {item.ITEM_TYPE && <p className="text-xs text-gray-500">Variant: {item.ITEM_TYPE}</p>}
+                        <span className="text-xs text-gray-500">Sale Price: {formatPrice(item.finalSaleRate)}</span>
                       </div>
                     </div>
                   </div>
@@ -263,7 +267,7 @@ const CartPage = () => {
                         dispatch(removeItem({ id: lineKey }));
                       }}
                     >
-                      <X className="h-5 w-5" />
+                      <Trash2 className="h-5 w-5 text-red-500" />
                       <span className="sr-only">Remove</span>
                     </Button>
                   </div>

@@ -66,10 +66,10 @@ export default function OrderSummaryCard({
             <span>{formatPrice(totalPayable)}</span>
           </div>
 
-          <Separator />
+          {/* <Separator />
           <div className="flex justify-between text-sm font-medium text-green-600">
             <span>You will save on this order</span>
-          </div>
+          </div> */}
 
           {!isViewMode && (
             <div className="space-y-3">

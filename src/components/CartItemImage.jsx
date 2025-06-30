@@ -43,11 +43,11 @@ const CartItemImage = ({ ITEM_CODE, SUB_MATERIAL_NO }) => {
     };
   }, [ITEM_CODE, SUB_MATERIAL_NO]);
 
-  if (loading) return <div className="h-20 w-20 animate-pulse rounded-md bg-gray-200" />;
+  if (loading) return <div className="h-10 w-10 animate-pulse rounded-md bg-gray-200" />;
 
-  if (error) return <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed bg-gray-200 text-xs">Error</div>;
+  if (error) return <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed bg-gray-200 text-xs">Error</div>;
 
-  if (!imageUrl) return <div className="h-20 w-20 rounded-md bg-slate-200 dark:bg-slate-700" />;
+  if (!imageUrl) return <div className="h-10 w-10 rounded-md bg-slate-200 dark:bg-slate-700" />;
 
   return (
     <img
@@ -55,7 +55,7 @@ const CartItemImage = ({ ITEM_CODE, SUB_MATERIAL_NO }) => {
       alt="product"
       width={80}
       height={80}
-      className="w-10 aspect-square rounded-md object-cover"
+      className="aspect-square w-10 rounded-md object-cover"
     />
   );
 };

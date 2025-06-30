@@ -204,8 +204,6 @@ export default function ProductFormPage() {
     },
   });
 
-  console.log("Formik initialized with values:", formik.values);
-
   // Get tab errors
   const getTabErrors = (tabName) => {
     const tabFields = {

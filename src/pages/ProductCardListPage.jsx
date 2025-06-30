@@ -307,30 +307,13 @@ export default function ProductCardListPage() {
       <h1 className="title">Explore {id}</h1>
 
       <div className="flex flex-col gap-2 lg:flex-row">
-        {/* Filter Sidebar (Desktop) */}
-        <div className="hidden w-full flex-shrink-0 lg:block lg:w-72">
-          <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Filters</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-            <FilterSidebar />
-          </div>
-        </div>
-
         {/* Main Content */}
         <div className="flex-1">
-          {/* Mobile Filters Button */}
-          <div className="mb-2 flex justify-end lg:hidden">
+          {/* Sub-category Tabs */}
+          <div className="relative mb-2 flex gap-2">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline">
+                <Button>
                   <Filter className="mr-2 h-4 w-4" /> Filters
                 </Button>
               </SheetTrigger>
@@ -346,10 +329,7 @@ export default function ProductCardListPage() {
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
 
-          {/* Sub-category Tabs */}
-          <div className="relative mb-2">
             <div className="relative">
               {showLeftScroll && (
                 <Button
@@ -364,12 +344,12 @@ export default function ProductCardListPage() {
 
               <div
                 ref={scrollContainerRef}
-                className="scrollbar-hide flex w-full gap-2 overflow-x-auto scroll-smooth pb-2"
+                className="scrollbar-hide flex w-full max-w-full gap-2 overflow-x-auto scroll-smooth pb-2"
                 onScroll={() => {
                   if (scrollContainerRef.current) {
                     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
                     setShowLeftScroll(scrollLeft > 0);
-                    setShowRightScroll(scrollLeft < scrollWidth - clientWidth);
+                    setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 5);
                   }
                 }}
               >
@@ -503,8 +483,8 @@ export default function ProductCardListPage() {
           ) : filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="mb-4 h-16 w-16 rounded-full bg-gray-100" />
-              <div className="mb-2 text-lg font-medium text-gray-800">No products found</div>
-              <p className="mb-6 max-w-md text-gray-600">Try adjusting your filters or selecting a different category</p>
+              <div className="text-lg font-medium">No products found</div>
+              <p className="mb-6 max-w-md text-sm">Try adjusting your filters or selecting a different category</p>
               <Button onClick={clearFilters}>Clear Filters</Button>
             </div>
           ) : (
@@ -526,7 +506,7 @@ export default function ProductCardListPage() {
                               className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="flex flex-col items-center justify-center text-gray-400">
+                            <div className="flex flex-col items-center justify-center">
                               <div className="h-16 w-16 rounded-lg bg-gray-200" />
                               <span className="mt-2 text-xs">No Image</span>
                             </div>
@@ -542,14 +522,14 @@ export default function ProductCardListPage() {
                       <CardContent className="p-3">
                         <Link to={`/product-detail/${product.ITEM_CODE}`}>
                           <h2
-                            className="mb-1 line-clamp-1 text-sm font-medium text-gray-800"
+                            className="mb-1 line-clamp-1 text-sm font-medium"
                             title={product.ITEM_NAME}
                           >
                             {product.ITEM_NAME}
                           </h2>
                         </Link>
                         <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-gray-900">{formatPrice(product.SALE_RATE)}</span>
+                          <span className="text-lg font-bold">{formatPrice(product.SALE_RATE)}</span>
                           <Button
                             size="sm"
                             className="h-8 w-8 p-0"

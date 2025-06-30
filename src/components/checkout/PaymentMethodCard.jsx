@@ -16,11 +16,11 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
     cardName: "",
     cardNumber: "",
     expiry: "",
-    cvv: ""
+    cvv: "",
   });
 
   const handlePayment = () => {
-    if (paymentMethod.type === "wallet" && !phonePeUPI) {
+    if (paymentMethod.type === "upi" && !phonePeUPI) {
       alert("Please enter your UPI ID");
       return;
     }
@@ -28,7 +28,7 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
   };
 
   const handleCardChange = (field, value) => {
-    setCardDetails(prev => ({ ...prev, [field]: value }));
+    setCardDetails((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -40,11 +40,11 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
       <CardContent>
         <Tabs
           value={paymentMethod.type}
-          onValueChange={(type) => setPaymentMethod(prev => ({ ...prev, type }))}
+          onValueChange={(type) => setPaymentMethod((prev) => ({ ...prev, type }))}
           className="space-y-4"
         >
           <TabsList className="grid grid-cols-4">
-            <TabsTrigger value="wallet">Wallet</TabsTrigger>
+            <TabsTrigger value="upi">UPI</TabsTrigger>
             <TabsTrigger value="card">Card</TabsTrigger>
             <TabsTrigger value="netbanking">Net Banking</TabsTrigger>
             <TabsTrigger value="cod">Cash on Delivery</TabsTrigger>
@@ -52,13 +52,13 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
 
           {/* Wallet */}
           <TabsContent
-            value="wallet"
+            value="upi"
             className="space-y-4"
           >
-            <Label>Select Wallet</Label>
+            <Label>Select UPI</Label>
             <Select onValueChange={setSelectedWallet}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose a Wallet" />
+                <SelectValue placeholder="Choose a UPI" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="phonepe">PhonePe</SelectItem>
@@ -87,7 +87,7 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
                   Processing...
                 </>
               ) : (
-                `Pay with ${selectedWallet || 'Wallet'}`
+                `Pay with ${selectedWallet || "UPI"}`
               )}
             </Button>
           </TabsContent>
@@ -98,16 +98,16 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
             className="space-y-4"
           >
             <Label>Cardholder Name</Label>
-            <Input 
-              placeholder="Cardholder Name" 
+            <Input
+              placeholder="Cardholder Name"
               value={cardDetails.cardName}
-              onChange={(e) => handleCardChange('cardName', e.target.value)}
+              onChange={(e) => handleCardChange("cardName", e.target.value)}
             />
 
             <Label>Card Type</Label>
             <Select
               value={paymentMethod.cardType}
-              onValueChange={(value) => setPaymentMethod(prev => ({ ...prev, cardType: value }))}
+              onValueChange={(value) => setPaymentMethod((prev) => ({ ...prev, cardType: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Card Type" />
@@ -120,33 +120,33 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
             </Select>
 
             <Label>Card Number</Label>
-            <Input 
-              placeholder="1234 5678 9012 3456" 
+            <Input
+              placeholder="1234 5678 9012 3456"
               value={cardDetails.cardNumber}
-              onChange={(e) => handleCardChange('cardNumber', e.target.value)}
+              onChange={(e) => handleCardChange("cardNumber", e.target.value)}
             />
 
             <div className="flex gap-4">
               <div className="w-full">
                 <Label>CVV</Label>
-                <Input 
-                  placeholder="123" 
+                <Input
+                  placeholder="123"
                   value={cardDetails.cvv}
-                  onChange={(e) => handleCardChange('cvv', e.target.value)}
+                  onChange={(e) => handleCardChange("cvv", e.target.value)}
                 />
               </div>
               <div className="w-full">
                 <Label>Expiry Date</Label>
-                <Input 
-                  placeholder="MM/YY" 
+                <Input
+                  placeholder="MM/YY"
                   value={cardDetails.expiry}
-                  onChange={(e) => handleCardChange('expiry', e.target.value)}
+                  onChange={(e) => handleCardChange("expiry", e.target.value)}
                 />
               </div>
             </div>
 
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={handlePayment}
               disabled={isProcessingPayment}
             >
@@ -178,8 +178,8 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
                 <SelectItem value="axis">Axis Bank</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={handlePayment}
               disabled={isProcessingPayment}
             >
@@ -210,11 +210,22 @@ export default function PaymentMethodCard({ paymentMethod, setPaymentMethod, ini
             </div>
             <Label>Additional Notes (Optional)</Label>
             <Textarea placeholder="E.g. Call before delivery, bring change, etc." />
-            <Button 
-              className="w-full" 
-              onClick={() => setPaymentMethod(prev => ({ ...prev, type: "cod" }))}
+            <Button
+              className="w-full"
+              onClick={() => {
+                setPaymentMethod((prev) => ({ ...prev, type: "cod" }));
+                initiateMockPayment(); // trigger COD processing
+              }}
+              disabled={isProcessingPayment}
             >
-              Confirm Order
+              {isProcessingPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Order"
+              )}
             </Button>
           </TabsContent>
         </Tabs>

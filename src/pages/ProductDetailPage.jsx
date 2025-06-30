@@ -64,7 +64,7 @@ const ProductDetailPage = () => {
         SQLQuery: `SELECT 
           m.ITEM_CODE, 
           m.ITEM_NAME, 
-          m.SALE_RATE AS mainSaleRate,
+          m.SALE_RATE,
           m.ITEM_BRAND,
           m.GROUP_LEVEL1,
           m.UOM_STOCK,
@@ -106,7 +106,7 @@ const ProductDetailPage = () => {
                   ITEM_FINISH: null,
                   ITEM_SIZE: null,
                   ITEM_TYPE: null,
-                  finalSaleRate: item.mainSaleRate,
+                  finalSaleRate: item.SALE_RATE,
                 },
               ];
 

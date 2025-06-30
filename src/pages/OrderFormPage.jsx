@@ -897,11 +897,9 @@ const OrderFormPage = () => {
         <div className="col-span-12 space-y-4 lg:col-span-3">
           <OrderSummaryCard
             isViewMode={isViewMode}
-            totalItem={totalItem}
-            subtotal={subtotal}
-            discount={discount}
-            total={total}
-            isLoading={loading}
+            itemCount={totalItem}
+            totalValue={subtotal}
+            totalPayable={subtotal}
             onProceed={handleProceedToCheckout}
           />
         </div>

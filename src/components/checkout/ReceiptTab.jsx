@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { convertServiceDate } from "@/utils/dateUtils";
 import { formatPrice } from "@/utils/formatPrice";
 
 export default function ReceiptTab({ orderForm, paymentMethod, orderItems, orderTotals, navigate }) {
@@ -26,7 +27,7 @@ export default function ReceiptTab({ orderForm, paymentMethod, orderItems, order
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Date:</span>
-                <span>{orderForm?.ORDER_DATE}</span>
+                <span>{convertServiceDate(orderForm?.ORDER_DATE)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>

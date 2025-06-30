@@ -172,10 +172,26 @@ export default function AddDeliveryAddressDialog({ isNewAddressDialogOpen, setIs
   };
 
   const handleFieldChange = (field, value) => {
-    setNewAddressForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setNewAddressForm((prev) => {
+      const updatedForm = { ...prev, [field]: value };
+
+      // Generate complete address by concatenating fields
+      const completeAddress = [
+        updatedForm.streetAddress,
+        updatedForm.neighborhood,
+        updatedForm.city,
+        updatedForm.state,
+        updatedForm.country,
+        updatedForm.zipCode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return {
+        ...updatedForm,
+        address: completeAddress,
+      };
+    });
 
     // Clear validation error for this field
     if (validationErrors[field]) {
@@ -256,25 +272,6 @@ export default function AddDeliveryAddressDialog({ isNewAddressDialogOpen, setIs
 
             {/* Address Form */}
             <div className="space-y-4">
-              <div>
-                <Label
-                  htmlFor="new-address"
-                  className="flex items-center gap-2"
-                >
-                  Complete Address <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="new-address"
-                  value={newAddressForm.address}
-                  onChange={(e) => handleFieldChange("address", e.target.value)}
-                  className={`w-full ${validationErrors.address ? "border-red-500" : ""}`}
-                  placeholder="Enter complete address or use location picker above"
-                  rows={3}
-                  required
-                />
-                {validationErrors.address && <p className="mt-1 text-sm text-red-600">{validationErrors.address}</p>}
-              </div>
-
               {/* Additional Address Fields */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -355,6 +352,25 @@ export default function AddDeliveryAddressDialog({ isNewAddressDialogOpen, setIs
                     onChange={(e) => handleFieldChange("zipCode", e.target.value)}
                     placeholder="Enter ZIP or postal code"
                   />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="new-address"
+                    className="flex items-center gap-2"
+                  >
+                    Complete Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="new-address"
+                    value={newAddressForm.address}
+                    onChange={(e) => handleFieldChange("address", e.target.value)}
+                    className={`w-full ${validationErrors.address ? "border-red-500" : ""}`}
+                    placeholder="Enter complete address or use location picker above"
+                    rows={3}
+                    required
+                  />
+                  {validationErrors.address && <p className="mt-1 text-sm text-red-600">{validationErrors.address}</p>}
                 </div>
               </div>
             </div>

@@ -83,6 +83,8 @@ export default function ProceedToCheckPage() {
           title: "Payment Successful",
           description: `Your payment via ${paymentMethod.type === "card" ? paymentMethod.cardType : paymentMethod.type} has been processed`,
         });
+
+        setActiveTab("receipts");
       } else {
         toast({
           variant: "destructive",
@@ -457,7 +459,7 @@ export default function ProceedToCheckPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-between">
+          {/* <div className="mt-6 flex justify-between">
             <Button
               variant="outline"
               onClick={goToPrev}
@@ -472,7 +474,7 @@ export default function ProceedToCheckPage() {
               {isProcessingPayment ? "Processing..." : "Place Order"}
               {!isProcessingPayment && <ArrowRight size={16} />}
             </Button>
-          </div>
+          </div> */}
         </TabsContent>
 
         <TabsContent value="receipts">
