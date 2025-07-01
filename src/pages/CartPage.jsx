@@ -225,35 +225,37 @@ const CartPage = () => {
                         {item.ITEM_FINISH && <p className="text-xs text-gray-500">Color: {item.ITEM_FINISH}</p>}
                         {item.ITEM_SIZE && <p className="text-xs text-gray-500">Size: {item.ITEM_SIZE}</p>}
                         {item.ITEM_TYPE && <p className="text-xs text-gray-500">Variant: {item.ITEM_TYPE}</p>}
-                        <span className="text-xs text-gray-500">Sale Price: {formatPrice(item.finalSaleRate)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex w-full items-center justify-start gap-2 md:justify-center">
-                    <Button
-                      variant="outline"
-                      className="h-5 w-5 p-0"
-                      onClick={() => {
-                        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
-                        dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty - 1 }));
-                      }}
-                      disabled={item.itemQty <= 1}
-                    >
-                      <Minus size={8} />
-                    </Button>
-                    <span className="text-sm">{item.itemQty}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-5 w-5 p-0"
-                      onClick={() => {
-                        const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
-                        dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty + 1 }));
-                      }}
-                    >
-                      <Plus size={4} />
-                    </Button>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex w-full items-center justify-start gap-2 md:justify-center">
+                      <Button
+                        variant="outline"
+                        className="h-5 w-5 p-0"
+                        onClick={() => {
+                          const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
+                          dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty - 1 }));
+                        }}
+                        disabled={item.itemQty <= 1}
+                      >
+                        <Minus size={8} />
+                      </Button>
+                      <span className="text-sm">{item.itemQty}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-5 w-5 p-0"
+                        onClick={() => {
+                          const lineKey = item.SUB_MATERIAL_NO ?? item.ITEM_CODE;
+                          dispatch(updateItemQuantity({ id: lineKey, qty: item.itemQty + 1 }));
+                        }}
+                      >
+                        <Plus size={4} />
+                      </Button>
+                    </div>
+                    <span className="text-xs">{formatPrice(item.finalSaleRate)}</span>
                   </div>
 
                   <div className="flex items-center justify-start gap-2 md:justify-end">
