@@ -1,12 +1,11 @@
-import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PacmanLoader } from "react-spinners";
+import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import { Plus, Settings2 } from "lucide-react";
 import { useState } from "react";
+import { PacmanLoader } from "react-spinners";
 
 export default function DataTable({
   title,
@@ -63,7 +62,7 @@ export default function DataTable({
     <div className="flex flex-col gap-y-1">
       <h1 className="title">{title}</h1>
       <div className="w-full">
-        <div className="grid grid-cols-1 items-center gap-2 pb-2 sm:grid-cols-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
           <Input
             placeholder="Global Search..."
             value={table.getState().globalFilter ?? ""}
@@ -73,10 +72,7 @@ export default function DataTable({
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="ml-auto"
-                >
+                <Button variant="outline">
                   <Settings2 /> View
                 </Button>
               </DropdownMenuTrigger>

@@ -63,7 +63,7 @@ const ProductCategoryListPage = () => {
   }, [fetchCategories]);
 
  return (
-    <div className="container mx-auto flex flex-col gap-y-6">
+    <div className="container mx-auto flex flex-col gap-y-2">
       <h1 className="title">All Product Categories</h1>
 
       {loading ? (
