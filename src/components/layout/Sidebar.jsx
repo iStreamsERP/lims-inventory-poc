@@ -121,7 +121,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                         title={link.label}
                       >
                         {/* Consistent icon size */}
-                        <link.icon size={16} className="flex-shrink-0" />
+                        {/* <link.icon size={16} className="flex-shrink-0" /> */}
                         {!collapsed && (
                           <p className="break-words max-w-[calc(100%-1rem)] leading-snug">
                             {link.label}

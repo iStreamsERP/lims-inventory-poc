@@ -1,4 +1,6 @@
-import { ChartColumn, Headset, Home, LibraryBig, Package, ScrollText, ShieldUser, ShoppingBag, Tags, UserPlus } from "lucide-react";
+import {
+  Home
+} from "lucide-react";
 
 export const getNavbarLinks = (isAdmin) => [
   {
@@ -9,79 +11,60 @@ export const getNavbarLinks = (isAdmin) => [
         icon: Home,
         path: "/",
       },
-      {
-        label: "Customers",
-        icon: UserPlus,
-        path: "/customers",
-      },
-      {
-        label: "Product Category",
-        icon: Package,
-        path: "/categories",
-      },
-      {
-        label: "Service Category",
-        icon: Tags,
-        path: "/service-category-list",
-      },
-      {
-        label: "Products",
-        icon: ShoppingBag,
-        path: "/products",
-      },
-      {
-        label: "Services",
-        icon: Headset,
-        path: "/services",
-      },
-      {
-        label: "Orders",
-        icon: ChartColumn,
-        path: "/orders",
-      },
-      {
-        label: "Quotation",
-        icon: ScrollText,
-        path: "/quotations",
-      },
-      {
-        label: "RFQ",
-        icon: ScrollText,
-        path: "/rfq",
-      },
     ],
   },
   {
-    title: "Access Control",
+    title: "Forms",
     links: [
       {
-        label: "User Administration",
-        icon: ShieldUser,
+        label: "Inventory Management",
+        icon: "ShieldUser",
         children: [
           {
-            label: "Users",
-            icon: LibraryBig,
-            path: "/users",
+            label: "Material Master",
+            icon: "Home",
+            path: "/material-master",
           },
           {
-            label: "User Role",
-            icon: LibraryBig,
-            path: "/user-role",
+            label: "Material Requisition",
+            icon: "Home",
+            path: "/material-requisition",
           },
           {
-            label: "User Access Rights",
-            icon: LibraryBig,
-            path: "/user-access-rights",
+            label: "Material Issue Note",
+            icon: "Home",
+            path: "/material-issue-note",
           },
           {
-            label: "Role Access Rights",
-            icon: LibraryBig,
-            path: "/role-access-rights",
+            label: "Purchase Order",
+            icon: "Home",
+            path: "/purchase-order",
+          },
+        ],
+      },
+      {
+        label: "Procurement Management",
+        icon: "ShieldUser",
+        children: [
+          {
+            label: "RFQ Rate Viewer",
+            icon: "Home",
+            path: "/rfq-rate-viewer",
           },
           {
-            label: "Category Access Rights",
-            icon: LibraryBig,
-            path: "/category-access-rights",
+            label: "RFQ List",
+            icon: "Home",
+            path: "/material-requisition",
+          },
+          {
+            label: "RFQ short list process",
+            icon: "Home",
+            path: "/purchase-order",
+          },
+          {
+            label: "RFQ comparison",
+            icon: "Home",
+            path: "/purchase-requisition",
           },
         ],
       },
