@@ -14,6 +14,7 @@ import Rfq from "@/pages/rfq";
 import RfqRateComparisionPortal from "@/pages/RfqRateComparisionPortal";
 import RfqOffical from "@/pages/RfqOffical";
 import RfqDetailsPage from "@/pages/RfqDetailsPage";
+import Ilms from "@/pages/Ilms";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
             { path: "/rfq", element: <Rfq /> },
            
             {path: "/rfq-rate-comparision",element: <RfqRateComparisionPortal />},
+            {path: "/ilms",element: <Ilms />},
         ],
       },
     ],
