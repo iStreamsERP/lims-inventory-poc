@@ -117,7 +117,7 @@ export default function Ilms() {
   const handleRemoveMaterial = (itemCode) => {
     setMaterials(materials.filter((m) => m.ITEM_CODE !== itemCode));
   };
-ssss
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -153,6 +153,7 @@ ssss
             />
           </div>
         </div>
+        <img src={"./ilmsIcons/anchor (2).png"} className="w-16 h-16" alt="mo img"/>
       </form>
     </div>
   );

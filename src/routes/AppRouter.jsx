@@ -16,6 +16,11 @@ import RfqOffical from "@/pages/RfqOffical";
 import RfqDetailsPage from "@/pages/RfqDetailsPage";
 import Ilms from "@/pages/Ilms";
 import Ilmsc from "@/pages/ilmsc";
+import CartImg from "@/pages/CartImg";
+import Cart from "@/pages/CartProducts";
+import CartProducts from "@/pages/CartProducts";
+import ReactInputsChange from "@/pages/ReactnputChange";
+import GalePass from "@/pages/GalePass";
 
 export const router = createBrowserRouter([
   {
@@ -51,6 +56,11 @@ export const router = createBrowserRouter([
             {path: "/rfq-rate-comparision",element: <RfqRateComparisionPortal />},
             {path: "/ilms",element: <Ilms />},
             {path: "/ilms-comp-click",element: <Ilmsc />},
+            {path: "/cart-img",element: <CartImg />},
+            {path: "/cart",element: <CartProducts />},
+            {path: "/cart/:category",element: <CartProducts />},
+            {path: "/inp",element: <ReactInputsChange />},
+            {path: "/gatepass",element: <GalePass />},
         ],
       },
     ],
