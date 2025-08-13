@@ -21,6 +21,8 @@ import Cart from "@/pages/CartProducts";
 import CartProducts from "@/pages/CartProducts";
 import ReactInputsChange from "@/pages/ReactnputChange";
 import GalePass from "@/pages/GalePass";
+import GatePass from "@/pages/GatePass";
+import Test from "@/pages/Test";
 
 export const router = createBrowserRouter([
   {
@@ -61,6 +63,8 @@ export const router = createBrowserRouter([
             {path: "/cart/:category",element: <CartProducts />},
             {path: "/inp",element: <ReactInputsChange />},
             {path: "/gatepass",element: <GalePass />},
+            {path: "/gate",element: <GatePass />},
+            {path: "/test",element: <Test />},
         ],
       },
     ],
