@@ -23,6 +23,7 @@ import ReactInputsChange from "@/pages/ReactnputChange";
 import GalePass from "@/pages/GalePass";
 import GatePass from "@/pages/GatePass";
 import Test from "@/pages/Test";
+import Release from "@/pages/Release";
 
 export const router = createBrowserRouter([
   {
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
             {path: "/gatepass",element: <GalePass />},
             {path: "/gate",element: <GatePass />},
             {path: "/test",element: <Test />},
+            {path: "/release",element: <Release />},
         ],
       },
     ],

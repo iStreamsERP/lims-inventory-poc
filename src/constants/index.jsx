@@ -66,6 +66,11 @@ export const getNavbarLinks = (isAdmin) => [
             icon: "Home",
             path: "/purchase-requisition",
           },
+          {
+            label: "Release",
+            icon: "Home",
+            path: "/release",
+          },
         ],
       },
     ],
