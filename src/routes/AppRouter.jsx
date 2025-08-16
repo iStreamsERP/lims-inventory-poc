@@ -24,6 +24,7 @@ import GalePass from "@/pages/GalePass";
 import GatePass from "@/pages/GatePass";
 import Test from "@/pages/Test";
 import Release from "@/pages/Release";
+import Crud from "@/pages/MyWorks/Crud";
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
     path: "/signup",
     element: <SignUpPage />,
   },
+  {path: "/crud",element: <Crud />},
   {
     path: "/forgot-password",
     element: <ForgetPasswordPage />,
@@ -67,7 +69,9 @@ export const router = createBrowserRouter([
             {path: "/gate",element: <GatePass />},
             {path: "/test",element: <Test />},
             {path: "/release",element: <Release />},
-        ],
+            
+            
+          ],
       },
     ],
   },

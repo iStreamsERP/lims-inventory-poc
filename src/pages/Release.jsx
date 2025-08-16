@@ -222,9 +222,9 @@
 
 import React, { useState } from "react";
 import ReleaseComponent from "./ReleaseComponent";
-import { getIssues, masterData, masterDetails } from "./constants";
 
-export const getIssues = [
+
+ const getIssues = [
   {
     ITEM_LABEL: "Pending Preservation Debits For Gate Pass",
     ITEM_VALUE: "pendingDebits",
@@ -245,7 +245,7 @@ export const getIssues = [
   },
 ];
 
-export const masterData = [
+ const masterData = [
   {
     CUS_CD: "4966",
     DEM_NO: "25Q0001",
@@ -333,7 +333,7 @@ export const masterData = [
   },
 ];
 
-export const masterDetails = [
+ const masterDetails = [
   {
     CUS_CD: "4966",
     DEM_NO: "25Q0001",
