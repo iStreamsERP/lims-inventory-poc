@@ -25,6 +25,7 @@ import GatePass from "@/pages/GatePass";
 import Test from "@/pages/Test";
 import Release from "@/pages/Release";
 import Crud from "@/pages/MyWorks/Crud";
+import IssueConsolidation from "@/pages/MyWorks/IssueConsolidation";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
     element: <SignUpPage />,
   },
   {path: "/crud",element: <Crud />},
+  {path: "/issue",element: <IssueConsolidation />},
   {
     path: "/forgot-password",
     element: <ForgetPasswordPage />,
