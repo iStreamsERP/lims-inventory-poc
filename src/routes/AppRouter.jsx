@@ -26,6 +26,8 @@ import Test from "@/pages/Test";
 import Release from "@/pages/Release";
 import Crud from "@/pages/MyWorks/Crud";
 import IssueConsolidation from "@/pages/MyWorks/IssueConsolidation";
+import Consolidation from "@/pages/MyWorks/Consolidation";
+import InputStandards from "@/pages/MyWorks/InputStandards";
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +40,8 @@ export const router = createBrowserRouter([
   },
   {path: "/crud",element: <Crud />},
   {path: "/issue",element: <IssueConsolidation />},
+    {path: "/consolidation",element: <Consolidation />},
+    {path: "/inputStd",element: <InputStandards />},
   {
     path: "/forgot-password",
     element: <ForgetPasswordPage />,
@@ -71,6 +75,7 @@ export const router = createBrowserRouter([
             {path: "/gate",element: <GatePass />},
             {path: "/test",element: <Test />},
             {path: "/release",element: <Release />},
+          
             
             
           ],
