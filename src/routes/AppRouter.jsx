@@ -28,6 +28,7 @@ import Crud from "@/pages/MyWorks/Crud";
 import IssueConsolidation from "@/pages/MyWorks/IssueConsolidation";
 import Consolidation from "@/pages/MyWorks/Consolidation";
 import InputStandards from "@/pages/MyWorks/InputStandards";
+import ArrayOfMapp from "@/pages/MyWorks/ArrayOfMapp";
 
 export const router = createBrowserRouter([
   {
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
    {path: "/rfq-offcial",element: <RfqOffical />},
             {path: "/rfq-details/:id",element: <RfqDetailsPage />},
             {path: "/rfq-details",element: <RfqDetailsPage />},
+            {path: "/arr",element: <ArrayOfMapp />},
   {
     path: "/",
     element: <ProtectedRoute />,
